@@ -9,6 +9,8 @@ export interface EditorTarget {
   isNew: boolean
   /** Categoria e tags herdadas do filtro ativo ao criar pelo "+". */
   defaults?: { categoryId: string | null; tags: string[] }
+  /** Atalho do "+": a nota nova já abre gravando, com a câmera ou com os arquivos escolhidos. */
+  start?: { record: true } | { camera: true } | { files: File[] }
 }
 
 /** Largura a partir da qual o layout é de desktop. Igual ao breakpoint em app.css. */
@@ -177,11 +179,12 @@ class AppState {
   }
 
   /** Nota nova; sem `defaults`, herda a categoria e as tags do filtro ativo. */
-  openNew(defaults?: { categoryId: string | null; tags: string[] }) {
+  openNew(defaults?: { categoryId: string | null; tags: string[] }, start?: EditorTarget['start']) {
     this.editor = {
       id: uuidv7(),
       isNew: true,
       defaults: defaults ?? { categoryId: this.filter.categoryId, tags: [...this.filter.tags] },
+      start,
     }
   }
 

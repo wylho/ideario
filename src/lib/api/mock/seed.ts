@@ -27,6 +27,8 @@ export interface SeedFile {
   kb: number
   noteId: string
   daysAgo: number
+  /** No meio do texto da nota (com player), em vez de anexo à parte. */
+  inline?: true
 }
 
 export interface SeedNote {
@@ -83,8 +85,8 @@ export const SEED_FILES: SeedFile[] = [
   { hash: 'file-aula14', name: 'Aula de conversação 14.m4a', kind: 'audio', mime: 'audio/mp4', kb: 6240, noteId: 'n3', daysAgo: 1 },
   { hash: 'file-valuation', name: 'Valuation - modelo.xlsx', kind: 'sheet', mime: XLSX, kb: 512, noteId: 'n4', daysAgo: 3 },
   { hash: 'file-pauta', name: 'Pauta 1:1 outubro.docx', kind: 'doc', mime: DOCX, kb: 64, noteId: 'n5', daysAgo: 0 },
-  { hash: 'file-reuniao', name: 'Gravação da reunião de pauta.mp4', kind: 'video', mime: 'video/mp4', kb: 7340, noteId: 'n5', daysAgo: 4 },
-  { hash: 'file-shadowing', name: 'Shadowing ep. 42.mp3', kind: 'audio', mime: 'audio/mpeg', kb: 4380, noteId: 'n15', daysAgo: 2 },
+  { hash: 'file-reuniao', name: 'Gravação da reunião de pauta.mp4', kind: 'video', mime: 'video/mp4', kb: 7340, noteId: 'n5', daysAgo: 4, inline: true },
+  { hash: 'file-shadowing', name: 'Shadowing ep. 42.mp3', kind: 'audio', mime: 'audio/mpeg', kb: 4380, noteId: 'n15', daysAgo: 2, inline: true },
   { hash: 'file-avaliacao', name: 'Avaliação Q1 - consolidado.pdf', kind: 'pdf', mime: PDF, kb: 1240, noteId: 'n16', daysAgo: 4 },
   { hash: 'file-lista3', name: 'Lista de exercícios 3.pdf', kind: 'pdf', mime: PDF, kb: 860, noteId: 'n19', daysAgo: 1 },
   { hash: 'file-gastos', name: 'Gastos de setembro.xlsx', kind: 'sheet', mime: XLSX, kb: 96, noteId: 'n24', daysAgo: 12 },
@@ -100,6 +102,9 @@ const h3 = (text: string): RichNode => ({ type: 'heading', attrs: { level: 3 }, 
 const bold = (text: string): RichNode => ({ type: 'text', text, marks: [{ type: 'bold' }] })
 const ul = (...items: string[]): RichNode => ({ type: 'bulletList', content: items.map((t) => ({ type: 'listItem', content: [p(t)] })) })
 const img = (hash: string): RichNode => ({ type: 'noteImage', attrs: { hash } })
+/** Fotos lado a lado. */
+const row = (...hashes: string[]): RichNode => ({ type: 'imageRow', content: hashes.map(img) })
+const file = (hash: string): RichNode => ({ type: 'noteFile', attrs: { hash } })
 const check = (items: [string, boolean][]): RichNode => ({
   type: 'taskList',
   content: items.map(([t, done]) => ({ type: 'taskItem', attrs: { checked: done }, content: [p(t)] })),
@@ -147,7 +152,7 @@ export function seedNotes(): SeedNote[] {
     {
       id: 'n5', title: '1:1 com o time — pauta', categoryId: 'cat-gestao', tags: ['reunião'], color: 'lilac', pinned: false,
       reminderAt: at(0, 15), updatedAt: hoursAgo(5),
-      body: doc(check([['Retomar metas do trimestre', false], ['Feedback do projeto de onboarding', false], ['Férias de dezembro', true]])),
+      body: doc(check([['Retomar metas do trimestre', false], ['Feedback do projeto de onboarding', false], ['Férias de dezembro', true]]), file('file-reuniao')),
     },
     {
       id: 'n6', title: 'Horários e estacionamento', categoryId: 'cat-hospital', tags: [], color: 'none', pinned: false,
@@ -176,7 +181,7 @@ export function seedNotes(): SeedNote[] {
     {
       id: 'n10', title: 'Paleta outono', categoryId: 'cat-aromate', tags: ['cor', 'referência'], color: 'none', pinned: false,
       reminderAt: null, updatedAt: hoursAgo(96),
-      body: doc(img('img-outono'), img('img-arcos'), p('Testar terracota com verde-musgo.')),
+      body: doc(row('img-outono', 'img-arcos'), p('Testar terracota com verde-musgo.')),
     },
     {
       id: 'n11', title: 'Moodboard lavanda', categoryId: 'cat-linvo', tags: ['cor'], color: 'none', pinned: false,
@@ -204,7 +209,7 @@ export function seedNotes(): SeedNote[] {
     {
       id: 'n15', title: 'Shadowing: episódio 42', categoryId: 'cat-fluency', tags: ['estudo', 'pronúncia'], color: 'sage', pinned: false,
       reminderAt: at(-1, 7, 30), reminderDone: true, updatedAt: hoursAgo(28),
-      body: doc(check([['Ouvir uma vez sem legenda', true], ['Repetir em voz alta, frase a frase', true], ['Gravar e comparar', false]]), p('Atenção ao "th" e ao ritmo das frases longas.')),
+      body: doc(check([['Ouvir uma vez sem legenda', true], ['Repetir em voz alta, frase a frase', true], ['Gravar e comparar', false]]), file('file-shadowing'), p('Atenção ao "th" e ao ritmo das frases longas.')),
     },
     {
       id: 'n16', title: 'Feedbacks do trimestre', categoryId: 'cat-gestao', tags: ['reunião', 'feedback'], color: 'none', pinned: false,
@@ -240,7 +245,7 @@ export function seedNotes(): SeedNote[] {
     {
       id: 'n21', title: 'Viagem para Paraty', categoryId: null, tags: ['viagem'], color: 'sky', pinned: false,
       reminderAt: at(9, 8), updatedAt: hoursAgo(40),
-      body: doc(img('img-praia'), check([['Reservar pousada', true], ['Protetor solar', false], ['Repelente', false], ['Câmera e baterias', false]]), img('img-folhagem')),
+      body: doc(row('img-praia', 'img-folhagem', 'img-mata'), check([['Reservar pousada', true], ['Protetor solar', false], ['Repelente', false], ['Câmera e baterias', false]])),
     },
     {
       id: 'n22', title: 'Fontes para testar', categoryId: 'cat-linvo', tags: ['tipografia'], color: 'none', pinned: false,

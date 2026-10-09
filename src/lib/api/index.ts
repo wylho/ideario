@@ -1,7 +1,7 @@
 // Camada de dados da UI. Na Fase 0 é atendida por um mock em memória;
 // na Fase 1 a mesma interface passa a chamar os comandos Tauri (`invoke`) do núcleo Rust.
 import type {
-  AttachmentRow, Box, Category, Filter, NoteDetail, NoteInput, NotePatch, NoteSort, NoteSummary, Settings, SyncState, SyncStatus, TagCount, Tone, ViewCounts,
+  Attachment, AttachmentRow, Box, Category, Filter, NoteDetail, NoteInput, NotePatch, NoteSort, NoteSummary, Settings, SyncState, SyncStatus, TagCount, Tone, ViewCounts,
 } from '../types'
 import { invoke, isTauri } from '@tauri-apps/api/core'
 import { mockApi } from './mock'
@@ -45,10 +45,12 @@ export interface Api {
 
   /** URL local de uma imagem (miniatura ou tamanho cheio). Nunca depende de rede. */
   imageUrl(hash: string, size?: 'thumb' | 'full'): string
+  /** URL local para tocar ou mostrar um anexo (vídeo, áudio, imagem). Vazia se o conteúdo não está aqui. */
+  mediaUrl(hash: string): string
+  /** Importa um arquivo do computador (ou uma gravação) e devolve o anexo pronto para entrar na nota. */
+  importFile(file: Blob, name: string): Promise<Attachment>
   /** Salva uma cópia do anexo onde o usuário escolher (no app: diálogo "Salvar como"; no navegador: download). */
   downloadAttachment(a: Pick<AttachmentRow, 'hash' | 'name' | 'mime'>): Promise<void>
-  /** Imagens disponíveis no seletor do editor. Só existe enquanto não há importação real (Fase 3). */
-  sampleImages(): Promise<AttachmentRow[]>
 
   /** Avisa quando os dados mudam (edição local ou, no futuro, sync). Devolve a função de cancelamento. */
   subscribe(fn: () => void): () => void

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <!-- Gravador de voz e câmera dentro da nota: o macOS pede o motivo ao usuário na primeira vez. -->
+  <key>NSMicrophoneUsageDescription</key>
+  <string>O Ideario usa o microfone para gravar áudios dentro das suas notas.</string>
+  <key>NSCameraUsageDescription</key>
+  <string>O Ideario usa a câmera para tirar fotos dentro das suas notas.</string>
+</dict>
+</plist>

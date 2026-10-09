@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { KIND_ICONS } from '../lib/file-kinds'
   import { Bell, Check, Paperclip } from '@lucide/svelte'
   import { api } from '../lib/api'
   import { app } from '../lib/app.svelte'
@@ -30,10 +31,13 @@
   role="button"
   aria-label={n.label}
 >
-  {#if n.cover}
-    <div class="card-media">
-      <img src={api.imageUrl(n.cover.hash, 'thumb')} alt="" style:aspect-ratio="{n.cover.width}/{n.cover.height}" decoding="async" />
-      {#if n.imageCount > 1}<span class="more">+{n.imageCount - 1}</span>{/if}
+  {#if n.cover.length}
+    <!-- Uma foto, ou a primeira linha de fotos lado a lado: mesma altura, larguras pela proporção de cada uma. -->
+    <div class="card-media" class:row={n.cover.length > 1}>
+      {#each n.cover as c (c.hash)}
+        <img src={api.imageUrl(c.hash, 'thumb')} alt="" style:aspect-ratio="{c.width}/{c.height}" style:flex-grow={c.width / c.height} decoding="async" />
+      {/each}
+      {#if n.imageCount > n.cover.length}<span class="more">+{n.imageCount - n.cover.length}</span>{/if}
     </div>
   {/if}
   <div class="card-body">
@@ -52,6 +56,9 @@
             <p class="pv-task" class:done={b.done} style:--depth={b.depth}>
               <span class="box">{#if b.done}<Check size={10} strokeWidth={3} />{/if}</span><span>{@render rich(b.text)}</span>
             </p>
+          {:else if b.kind === 'file'}
+            {@const Icon = KIND_ICONS[b.fileKind]}
+            <p class="pv-file"><Icon size={14} /><span>{b.text}</span></p>
           {:else if b.kind === 'code'}
             <pre class="pv-code">{b.text}</pre>
           {:else if b.kind === 'bullet' || b.kind === 'ordered'}

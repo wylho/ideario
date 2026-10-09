@@ -176,14 +176,14 @@ test('lembrete definido no editor aparece na aba', async ({ page }) => {
 
 test('arquivos: tipos, ordenação, grade e nota de origem', async ({ page }) => {
   await tab(page, 'Arquivos')
-  await expect(page.locator('.stats b').first()).toHaveText('25')
+  await expect(page.locator('.stats b').first()).toHaveText('26')
   // tipo, ordem e grade ficam no menu dinâmico do topo
   await page.getByRole('button', { name: /^Tipo de arquivo/ }).click()
   await page.getByRole('menuitemradio', { name: 'PDFs' }).click()
   await expect(page.locator('.f-row')).toHaveCount(5)
   await page.getByRole('button', { name: 'Tipo de arquivo: PDFs' }).click()
   await page.getByRole('menuitemradio', { name: 'Todos os tipos' }).click()
-  await expect(page.locator('.f-row')).toHaveCount(25)
+  await expect(page.locator('.f-row')).toHaveCount(26)
   await page.getByRole('button', { name: /^Ordenar/ }).click()
   await page.getByRole('menuitemradio', { name: 'Tamanho' }).click()
   await expect(page.locator('.f-row .f-name').first()).toHaveText('Manual de marca Linvo v3.pdf')
@@ -199,10 +199,10 @@ test('arquivos: tipos, ordenação, grade e nota de origem', async ({ page }) =>
 
 test('moodboard: filtro por tom e visualizador', async ({ page }) => {
   await tab(page, 'Moodboard')
-  await expect(page.locator('.mood-tile')).toHaveCount(14)
+  await expect(page.locator('.mood-tile')).toHaveCount(15)
   await page.getByRole('button', { name: /^Tom das imagens/ }).click()
   await page.getByRole('menuitemradio', { name: 'Verdes' }).click()
-  await expect(page.locator('.mood-tile')).toHaveCount(2)
+  await expect(page.locator('.mood-tile')).toHaveCount(3)
   await page.locator('.mood-tile', { hasText: 'Paleta outono' }).click()
   await expect(page.locator('.lb-pal code')).toHaveCount(5)
   await expect(page.locator('.lb-opt')).toContainText('−92%')
@@ -686,7 +686,7 @@ test('desktop: filtro de tipo como ícones no topo; tocar de novo tira o filtro'
   await expect(pdf).toHaveAttribute('aria-pressed', 'true')
   await expect(page.locator('.f-row')).toHaveCount(5)
   await pdf.click()
-  await expect(page.locator('.f-row')).toHaveCount(25)
+  await expect(page.locator('.f-row')).toHaveCount(26)
   // "Outros documentos" junta Word, planilhas e o resto
   await page.locator('.filter-group').getByRole('button', { name: 'Outros documentos' }).click()
   await expect(page.locator('.f-row .f-name')).toContainText(['Pauta 1:1 outubro.docx'])
@@ -695,8 +695,8 @@ test('desktop: filtro de tipo como ícones no topo; tocar de novo tira o filtro'
   await expect(page.locator('.f-row')).toHaveCount(1)
   await page.locator('.filter-group').getByRole('button', { name: 'Vídeo' }).click()
   await page.locator('.view-switch').getByRole('button', { name: /Moodboard/ }).click()
-  await page.locator('.filter-group').getByRole('button', { name: 'Verdes' }).click()
-  await expect(page.locator('.mood-tile')).toHaveCount(2)
+  await page.getByRole('button', { name: 'Verdes' }).click()
+  await expect(page.locator('.mood-tile')).toHaveCount(3)
 })
 
 test('arquivos em grade: toda miniatura é quadrada, foto ou não', async ({ page }) => {
@@ -705,7 +705,7 @@ test('arquivos em grade: toda miniatura é quadrada, foto ou não', async ({ pag
   await page.getByRole('button', { name: 'Ver em grade' }).click()
   const sizes = await page.locator('.f-tile img, .f-tile .f-ico').evaluateAll((els) =>
     els.map((e) => { const r = e.getBoundingClientRect(); return [r.width, r.height] }))
-  expect(sizes.length).toBe(25)
+  expect(sizes.length).toBe(26)
   for (const [w, h] of sizes) expect(Math.abs(w - h)).toBeLessThan(1)
 })
 
@@ -732,7 +732,8 @@ test('arquivos: baixar pelo menu de contexto e pelo visualizador', async ({ page
 
 test('bloco de código: único lugar com fonte mono; aparece no card', async ({ page }) => {
   await newNote(page)
-  await page.getByRole('button', { name: 'Bloco de código' }).click()
+  await page.getByRole('button', { name: 'Inserir' }).click()
+  await page.getByRole('menuitem', { name: 'Bloco de código' }).click()
   await page.keyboard.type('const x = 1')
   await expect(page.locator('#corpo pre')).toHaveText('const x = 1')
   await back(page)
@@ -744,4 +745,85 @@ test('bloco de código: único lugar com fonte mono; aparece no card', async ({ 
   ])
   expect(fonts[0]).toMatch(/mono/i)
   expect(fonts[1]).not.toMatch(/mono/i)
+})
+
+test.describe('mídia no editor', () => {
+  const openNote = async (page: Page, title: string) => {
+    await page.locator('.card', { hasText: title }).first().click()
+    await expect(page.locator('#titulo')).toHaveValue(title)
+  }
+  // PNG 4×2 (proporção 2:1), para importar como foto
+  const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAQAAAACCAYAAAB/qH1jAAAAEklEQVR4nGM4URHwHxkzoAsAAFo1FHl3zjQAAAAAAElFTkSuQmCC', 'base64')
+
+  test('fotos lado a lado: aparecem no editor e na capa do card', async ({ page }) => {
+    await expect(page.locator('.card', { hasText: 'Paleta outono' }).locator('.card-media.row img')).toHaveCount(2)
+    await openNote(page, 'Paleta outono')
+    await expect(page.locator('#corpo .img-row img')).toHaveCount(2)
+  })
+
+  test('arrastar uma foto para a borda de outra põe as duas na mesma linha', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 })
+    await newNote(page)
+    // uma de cada vez: entram como fotos soltas, uma embaixo da outra
+    const photo = page.locator('input[type=file][accept="image/*"]')
+    await photo.setInputFiles({ name: 'a.png', mimeType: 'image/png', buffer: png })
+    await photo.setInputFiles({ name: 'b.png', mimeType: 'image/png', buffer: png })
+    const imgs = page.locator('#corpo > img')
+    await expect(imgs).toHaveCount(2)
+    const a = (await imgs.first().boundingBox())!
+    const b = (await imgs.nth(1).boundingBox())!
+    // arrasta a de baixo até a borda direita da de cima
+    await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2)
+    await page.mouse.down()
+    await page.mouse.move(b.x + b.width / 2 + 8, b.y + b.height / 2 - 8)
+    await page.mouse.move(a.x + a.width - 12, a.y + a.height / 2, { steps: 8 })
+    await expect(imgs.first()).toHaveAttribute('data-drop', 'right')
+    await page.mouse.up()
+    await expect(page.locator('#corpo .img-row img')).toHaveCount(2)
+    // botões da foto selecionada: tirar da linha desfaz
+    await page.getByRole('button', { name: 'Tirar da linha' }).click()
+    await expect(page.locator('#corpo .img-row')).toHaveCount(0)
+    await expect(imgs).toHaveCount(2)
+    // e pôr ao lado da de cima junta de novo, sem arrastar (toque e teclado)
+    await page.getByRole('button', { name: 'Pôr ao lado da foto de cima' }).click()
+    await expect(page.locator('#corpo .img-row img')).toHaveCount(2)
+  })
+
+  test('importar várias fotos de uma vez: entram lado a lado; outros arquivos viram cartão', async ({ page }) => {
+    await newNote(page)
+    await page.locator('input[type=file][accept="image/*"]').setInputFiles([
+      { name: 'a.png', mimeType: 'image/png', buffer: png },
+      { name: 'b.png', mimeType: 'image/png', buffer: png },
+    ])
+    await expect(page.locator('#corpo .img-row img')).toHaveCount(2)
+    await page.locator('input[type=file]:not([accept])').setInputFiles({ name: 'contrato.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4') })
+    await expect(page.locator('#corpo .nf-card')).toContainText('contrato.pdf')
+    await back(page)
+    await expect(page.locator('.card .pv-file', { hasText: 'contrato.pdf' })).toHaveCount(1)
+    await tab(page, 'Arquivos')
+    await expect(page.locator('.f-row', { hasText: 'contrato.pdf' })).toHaveCount(1)
+  })
+
+  test('áudio no meio da nota toca no player', async ({ page }) => {
+    await expect(page.locator('.card', { hasText: 'Shadowing' }).locator('.pv-file')).toContainText('Shadowing ep. 42.mp3')
+    await openNote(page, 'Shadowing: episódio 42')
+    const play = page.getByRole('button', { name: /^Tocar Shadowing/ })
+    await play.click()
+    await expect(page.getByRole('button', { name: /^Pausar Shadowing/ })).toBeVisible()
+  })
+})
+
+test.describe('gravador de voz', () => {
+  test.use({ permissions: ['microphone'] })
+
+  test('gravar dentro da nota vira um áudio com player', async ({ page }) => {
+    await newNote(page)
+    await page.getByRole('button', { name: 'Inserir' }).click()
+    await page.getByRole('menuitem', { name: 'Gravar áudio' }).click()
+    await expect(page.locator('.rec-time')).toContainText('Gravando')
+    await page.waitForTimeout(1200)
+    await page.getByRole('button', { name: 'Parar' }).click()
+    await expect(page.locator('#corpo .nf-card .player')).toHaveCount(1)
+    await expect(page.locator('#corpo .nf-card')).toContainText('Gravação')
+  })
 })
