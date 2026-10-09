@@ -16,6 +16,10 @@
     [] as NoteSummary[],
   )
   const isTrash = $derived(app.box === 'trash')
+  // Marca de desempenho: quando a lista aparece pela primeira vez (meta do SPEC §4.1: < 300 ms a frio).
+  $effect(() => {
+    if (notes.ready && !performance.getEntriesByName('ideario:lista').length) performance.mark('ideario:lista')
+  })
   const pinned = $derived(isTrash ? [] : notes.current.filter((n) => n.pinned))
   const rest = $derived(isTrash ? notes.current : notes.current.filter((n) => !n.pinned))
 
@@ -74,8 +78,9 @@
     {#if app.layout === 'grid'}
       <Masonry {items} key={(n) => n.id} estimate={estimateCard} item={card} flip={!!app.dragId} minWidth={app.wide ? 210 : 190} gap={app.wide ? 14 : 10} />
     {:else}
+      <!-- lista: a mesma grade virtualizada, com uma coluna só -->
       <div class="stack">
-        {#each items as n (n.id)}<div class="m-item" data-key={n.id}><NoteCard {n} /></div>{/each}
+        <Masonry {items} key={(n) => n.id} estimate={estimateCard} item={card} flip={!!app.dragId} columns={1} gap={10} />
       </div>
     {/if}
   </div>

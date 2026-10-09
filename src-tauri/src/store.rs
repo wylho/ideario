@@ -71,7 +71,6 @@ pub struct NoteSummary {
     pub id: String,
     pub title: String,
     pub label: String,
-    pub excerpt: String,
     pub preview: Box<RawValue>,
     pub cover: Vec<Cover>,
     pub image_count: i64,
@@ -330,7 +329,7 @@ impl Store {
         }
     }
 
-    const SUMMARY_COLS: &'static str = "n.id, n.title, n.label, n.body_text, n.preview_json, n.cover_json, n.image_count, n.file_count, \
+    const SUMMARY_COLS: &'static str = "n.id, n.title, n.label, NULL, n.preview_json, n.cover_json, n.image_count, n.file_count, \
         n.category_id, n.color, n.pinned, n.archived, n.trashed_at, n.reminder_at, n.reminder_done, n.created_at, n.updated_at, n.position";
 
     fn summaries(&self, sql: &str, args: &[rusqlite::types::Value]) -> Result<Vec<NoteSummary>> {
@@ -342,14 +341,12 @@ impl Store {
     }
 
     fn summary_row(r: &Row) -> rusqlite::Result<NoteSummary> {
-        let text: String = r.get(3)?;
         let preview: String = r.get(4)?;
         let cover: String = r.get(5)?;
         Ok(NoteSummary {
             id: r.get(0)?,
             title: r.get(1)?,
             label: r.get(2)?,
-            excerpt: text.chars().take(280).collect(),
             preview: RawValue::from_string(preview).unwrap_or_else(|_| RawValue::from_string("[]".into()).unwrap()),
             // provisório: só os hashes; as dimensões entram em fill_tags_and_covers
             cover: serde_json::from_str::<Vec<String>>(&cover)
@@ -1224,5 +1221,43 @@ mod tests {
         assert_eq!(s.list_images(&Filter::default(), "", None).unwrap().len(), 1);
         assert_eq!(s.get_note("a").unwrap().unwrap().media.len(), 2);
         assert_eq!(s.view_counts(&Filter::default(), "").unwrap().files, 2);
+    }
+}
+
+#[cfg(test)]
+mod bench {
+    use super::*;
+    use serde_json::json;
+
+    /// `cargo test --release --lib bench -- --ignored --nocapture`
+    #[test]
+    #[ignore]
+    fn list_5000() {
+        let s = Store::memory();
+        for i in 0..5000 {
+            let p = |t: String| json!({"type":"paragraph","content":[{"type":"text","text":t}]});
+            s.save_note(&NoteInput {
+                id: format!("{i:05}"),
+                title: format!("Nota {i}"),
+                body: json!({"type":"doc","content":[p(format!("Texto de exemplo número {i} com reunião, orçamento e #tag{}", i % 20)), p("Mais uma linha.".into())]}),
+                category_id: None,
+                color: "none".into(),
+                pinned: false,
+                archived: false,
+                trashed_at: None,
+                reminder_at: None,
+                reminder_done: false,
+                tags: vec![],
+            })
+            .unwrap();
+        }
+        let f = Filter::default();
+        for _ in 0..2 {
+            let t = std::time::Instant::now();
+            let v = s.list_notes(&f, "active", "", "custom").unwrap();
+            let q = t.elapsed();
+            let json = serde_json::to_string(&v).unwrap();
+            println!("list: {:?} consulta, {:?} total com JSON ({} KB)", q, t.elapsed(), json.len() / 1024);
+        }
     }
 }

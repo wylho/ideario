@@ -8,7 +8,7 @@ import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import zlib from 'node:zlib'
 
-const APP = resolve('src-tauri/target/debug/ideario')
+const APP = resolve(process.env.IDEARIO_APP ?? 'src-tauri/target/debug/ideario')
 const DATA = mkdtempSync(join(tmpdir(), 'ideario-native-'))
 const PORT = 4444
 let failures = 0

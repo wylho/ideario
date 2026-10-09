@@ -206,7 +206,7 @@ function summarize(n: StoredNote): NoteSummary {
     return a ? [{ hash: h, width: a.width ?? 4, height: a.height ?? 3 }] : []
   })
   return {
-    id: n.id, title: n.title, label: labelOf(n), excerpt: p.text.slice(0, 280), preview: p.preview,
+    id: n.id, title: n.title, label: labelOf(n), preview: p.preview,
     cover, imageCount: p.images.length, fileCount: n.files.length + p.files.length,
     categoryId: n.categoryId, color: n.color, pinned: n.pinned, archived: n.archived, trashedAt: n.trashedAt,
     reminderAt: n.reminderAt, reminderDone: n.reminderDone, tags: tagsOf(n), createdAt: n.createdAt, updatedAt: n.updatedAt,

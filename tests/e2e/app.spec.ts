@@ -1,7 +1,11 @@
 import { expect, test, type Page } from '@playwright/test'
 
 // Cada teste abre o app do zero; o mock recomeça com os dados de exemplo.
+// O relógio fica fixo às 10h de hoje (horário de Brasília): os lembretes de exemplo ("hoje às 15h", "hoje às 19h30")
+// são sempre futuros, não importa a hora em que os testes rodam. Os timers seguem normais.
 test.beforeEach(async ({ page }) => {
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date())
+  await page.clock.setFixedTime(new Date(`${today}T10:00:00-03:00`))
   await page.goto('/')
   await expect(page.locator('.card').first()).toBeVisible()
 })

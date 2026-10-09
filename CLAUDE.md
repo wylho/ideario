@@ -25,13 +25,17 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
   Para regenerar: `npx tauri icon src-tauri/icons/source/icon-manifest.json` (e o `.icns` a partir de `macos.svg`).
 - **Tipografia:** fonte do sistema em toda a UI, para parecer nativo (substitui Bricolage/Figtree/JetBrains Mono do protótipo).
   No Linux o núcleo lê a fonte do GNOME/KDE (`src-tauri/src/system_fonts.rs`); nos demais, `system-ui`.
-- D3 e D5 continuam em aberto (SPEC §11).
+- **D5:** categorias só com cor (sem ícone).
+- D3 continua em aberto (SPEC §11); decidir antes da Fase 5.
 
 ## Estado atual
-- **Fase 0 concluída.** Tauri 2 + Svelte 5 com porte visual do protótipo e dados de exemplo em memória.
-- A UI só fala com `src/lib/api` (interface `Api`). Hoje ela é atendida por `src/lib/api/mock`, que faz o papel do núcleo
-  Rust (projeção de trecho/checklist/capa, busca sem acento, escopos). Na Fase 1 a interface passa a chamar `invoke`,
-  e o mock continua servindo o modo navegador (`npm run dev`) e os testes e2e.
+- **Fase 0 e Fase 1 concluídas.** No app, a UI fala com o núcleo Rust (`src/lib/api/tauri.ts` → `src-tauri/src/commands.rs`):
+  SQLite com FTS5 (`store.rs`: migrações por `user_version`, corpo da nota em JSON do TipTap + colunas derivadas;
+  vira Y.Doc na Fase 2), projeção no núcleo (`projection.rs`), anexos por hash com protocolo `att://` (`attachments.rs`),
+  categorias e tags gerenciáveis, nota de boas-vindas no primeiro uso. Medido (release, 5 mil notas): consulta 12–15 ms,
+  busca 7 ms, reabrir com a lista na tela em ~0,5 s (lista virtualizada a partir de 200 itens, `Masonry.svelte`).
+- A UI só fala com `src/lib/api` (interface `Api`). No navegador (`npm run dev`, prévia) e nos testes e2e ela é atendida
+  pelo mock (`src/lib/api/mock`, dados de exemplo), que precisa acompanhar o núcleo método a método.
 - Layout responsivo (pedido do usuário: desktop primeiro): < 640 px = protótipo de celular; 640–959 px = gaveta + abas,
   largura total; ≥ 960 px = como o Google Keep: barra superior fixa (☰ e marca à esquerda; ações e visões ancoradas à direita, visões no canto; nuvem e campo de busca só crescem na folga, sem mover nada) e, abaixo, lateral (`NavList`)
   que recolhe para um trilho de ícones (o topo não se move), editor e configurações como diálogo central.
@@ -64,5 +68,8 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
 - Prévia dos cards: a projeção entrega `preview` (blocos na ordem do documento) e `label`; a UI não parseia o corpo.
 - Tags: `tags` na nota guarda só as manuais; as `#tags` do corpo são derivadas na projeção (evita gravar tags pela metade
   durante o salvamento contínuo).
-- Verificação: `npm run check`, `npm run test:e2e`, `npm run tauri build`.
-- **Próximo passo: Fase 1 (núcleo local: SQLite, migrações, CRUD, FTS5).**
+- Verificação: `npm run check`, `npm run test:e2e` (relógio fixo às 10h), `cargo test` em `src-tauri`, testes no app
+  nativo (`npx tauri build --debug --no-bundle && xvfb-run -a node tests/native/run.mjs`; precisa de webkit2gtk-driver e
+  tauri-driver), desempenho (`tests/native/perf.mjs`, build de release) e `npm run tauri build`.
+- Release: `.github/workflows/release.yml` (Actions → Release → Run workflow; precisa estar no branch padrão).
+- **Próximo passo: Fase 2 (Y.Doc por nota via yrs; o corpo em JSON vira o estado Yjs, colunas derivadas iguais).**
