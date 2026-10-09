@@ -14,6 +14,15 @@ export interface EditorTarget {
 /** Largura a partir da qual o layout é de desktop. Igual ao breakpoint em app.css. */
 export const WIDE_MIN = 960
 
+const SIDEBAR_KEY = 'ideario.sidebar'
+function readSidebar() {
+  try {
+    return localStorage.getItem(SIDEBAR_KEY) !== '0'
+  } catch {
+    return true
+  }
+}
+
 class AppState {
   view = $state<View>('notes')
   filter = $state<Filter>({ categoryId: null, tags: [] })
@@ -28,6 +37,8 @@ class AppState {
   toast = $state<string | null>(null)
   /** Janela larga (desktop): barra lateral fixa no lugar da gaveta e das abas de baixo. */
   wide = $state(false)
+  /** Desktop: barra lateral aberta ou recolhida. Fica guardado no aparelho. */
+  sidebarOpen = $state(readSidebar())
 
   /** Sobe a cada mudança nos dados; as consultas da UI dependem dele. */
   revision = $state(0)
@@ -99,6 +110,21 @@ class AppState {
 
   clearFilter() {
     this.filter = { categoryId: null, tags: [] }
+  }
+
+  toggleSidebar() {
+    this.sidebarOpen = !this.sidebarOpen
+    try {
+      localStorage.setItem(SIDEBAR_KEY, this.sidebarOpen ? '1' : '0')
+    } catch {
+      // sem armazenamento: vale só nesta sessão
+    }
+  }
+
+  /** O ☰ do canto: no desktop recolhe/abre a barra lateral; no celular abre a gaveta. */
+  toggleNav() {
+    if (this.wide) this.toggleSidebar()
+    else this.drawerOpen = true
   }
 
   openBox(box: Box) {

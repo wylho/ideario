@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Plus } from '@lucide/svelte'
+  import { Menu, Plus } from '@lucide/svelte'
   import { app } from './lib/app.svelte'
   import TopBar from './components/TopBar.svelte'
   import TabBar from './components/TabBar.svelte'
@@ -21,7 +21,10 @@
   function onKeydown(e: KeyboardEvent) {
     const mod = e.ctrlKey || e.metaKey
     if (!mod || e.altKey || app.editor) return
-    if (e.key.toLowerCase() === 'n' && !e.shiftKey) {
+    if (e.key === '\\' && app.wide) {
+      e.preventDefault()
+      app.toggleSidebar()
+    } else if (e.key.toLowerCase() === 'n' && !e.shiftKey) {
       e.preventDefault()
       app.openNew()
     } else if (e.key.toLowerCase() === 'f') {
@@ -33,14 +36,20 @@
 
 <svelte:window onkeydown={onKeydown} />
 
-<div class="shell" class:wide={app.wide}>
+<div class="shell" class:wide={app.wide} class:side-closed={app.wide && !app.sidebarOpen}>
   {#if app.wide}
-    <aside class="sidebar" aria-label="Navegação">
-      <div class="drawer-head">
-        <span class="brand">Ideario</span>
-        <span class="meta">Sincronizado · Drive</span>
+    <!-- Recolhida, a barra sai da ordem de foco; o ☰ passa para o topo, no mesmo lugar. -->
+    <aside class="sidebar" aria-label="Navegação" inert={!app.sidebarOpen}>
+      <div class="sidebar-inner">
+        <div class="side-head">
+          <button class="icon-btn" aria-label="Ocultar barra lateral" aria-expanded="true" title="Ocultar barra lateral (Ctrl+\)" onclick={() => app.toggleSidebar()}>
+            <Menu size={20} />
+          </button>
+          <span class="brand">Ideario</span>
+          <span class="meta">Sincronizado · Drive</span>
+        </div>
+        <NavList />
       </div>
-      <NavList />
     </aside>
   {/if}
 
