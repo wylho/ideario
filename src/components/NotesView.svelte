@@ -2,7 +2,9 @@
   import { Archive, StickyNote, Trash2 } from '@lucide/svelte'
   import { api } from '../lib/api'
   import { app, live } from '../lib/app.svelte'
+  import { estimateCard } from '../lib/layout'
   import Empty from './Empty.svelte'
+  import Masonry from './Masonry.svelte'
   import NoteCard from './NoteCard.svelte'
   import type { NoteSummary } from '../lib/types'
 
@@ -12,12 +14,16 @@
   const rest = $derived(isTrash ? notes.current : notes.current.filter((n) => !n.pinned))
 </script>
 
+{#snippet card(n: NoteSummary)}<NoteCard {n} />{/snippet}
+
 {#snippet grid(list: NoteSummary[])}
-  <div class={app.layout === 'grid' ? 'masonry' : 'stack'}>
-    {#each list as n (n.id)}
-      <NoteCard {n} />
-    {/each}
-  </div>
+  {#if app.layout === 'grid'}
+    <Masonry items={list} key={(n) => n.id} estimate={estimateCard} item={card} minWidth={app.wide ? 210 : 190} gap={app.wide ? 14 : 10} />
+  {:else}
+    <div class="stack">
+      {#each list as n (n.id)}<NoteCard {n} />{/each}
+    </div>
+  {/if}
 {/snippet}
 
 {#if notes.ready && !notes.current.length}

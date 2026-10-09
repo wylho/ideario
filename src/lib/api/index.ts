@@ -3,6 +3,7 @@
 import type {
   AttachmentRow, Category, NoteDetail, NoteInput, NoteSummary, Scope, Settings, SyncStatus, TagCount, Tone,
 } from '../types'
+import { invoke, isTauri } from '@tauri-apps/api/core'
 import { mockApi } from './mock'
 
 export interface Api {
@@ -37,3 +38,6 @@ export interface Api {
 }
 
 export const api: Api = mockApi
+
+/** Versão do núcleo Rust; `null` quando a UI roda fora do Tauri (navegador). */
+export const coreVersion = (): Promise<string | null> => (isTauri() ? invoke<string>('app_version') : Promise.resolve(null))

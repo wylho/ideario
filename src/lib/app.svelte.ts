@@ -11,6 +11,9 @@ export interface EditorTarget {
   defaults?: { categoryId: string | null; tags: string[] }
 }
 
+/** Largura a partir da qual o layout é de desktop. Igual ao breakpoint em app.css. */
+export const WIDE_MIN = 960
+
 class AppState {
   view = $state<View>('notes')
   scope = $state<Scope>({ kind: 'all' })
@@ -21,6 +24,8 @@ class AppState {
   editor = $state<EditorTarget | null>(null)
   lightbox = $state<AttachmentRow | null>(null)
   toast = $state<string | null>(null)
+  /** Janela larga (desktop): barra lateral fixa no lugar da gaveta e das abas de baixo. */
+  wide = $state(false)
 
   /** Sobe a cada mudança nos dados; as consultas da UI dependem dele. */
   revision = $state(0)
@@ -31,6 +36,12 @@ class AppState {
   #toastTimer: ReturnType<typeof setTimeout> | undefined
 
   constructor() {
+    const mq = matchMedia(`(min-width: ${WIDE_MIN}px)`)
+    this.wide = mq.matches
+    mq.addEventListener('change', (e) => {
+      this.wide = e.matches
+      if (e.matches) this.drawerOpen = false
+    })
     api.subscribe(() => {
       this.revision++
       void this.loadShared()

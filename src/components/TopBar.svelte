@@ -7,7 +7,9 @@
 </script>
 
 <header class="topbar">
-  <button class="icon-btn" aria-label="Abrir menu" onclick={() => (app.drawerOpen = true)}><Menu size={20} /></button>
+  {#if !app.wide}
+    <button class="icon-btn" aria-label="Abrir menu" onclick={() => (app.drawerOpen = true)}><Menu size={20} /></button>
+  {/if}
   <label class="search">
     <Search size={16} aria-hidden="true" />
     <input id="busca" bind:value={app.query} {placeholder} autocomplete="off" spellcheck="false" />
