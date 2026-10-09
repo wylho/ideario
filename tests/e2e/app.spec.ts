@@ -98,7 +98,7 @@ test('filtro por tag e por categoria; o "+" herda o filtro', async ({ page }) =>
 test('fixar, cor, arquivar, lixeira e restaurar', async ({ page }) => {
   const note = () => cards(page).filter({ hasText: 'Horários e estacionamento' })
   await note().click()
-  await page.getByLabel('Fixar').click()
+  await page.locator('.editor').getByLabel('Fixar').click()
   await page.getByLabel('Cor da nota').click()
   await page.getByLabel('Lilás').click()
   await page.keyboard.press('Escape')
@@ -534,9 +534,10 @@ test.describe('ordenar e arrastar', () => {
   async function dragCard(page: Page, from: string, to: string, where: 'before' | 'after' = 'before') {
     const a = (await cards(page).filter({ hasText: from }).boundingBox())!
     const b = (await cards(page).filter({ hasText: to }).boundingBox())!
-    await page.mouse.move(a.x + 30, a.y + 20)
+    // pega pelo meio (os cantos têm o check e o alfinete)
+    await page.mouse.move(a.x + 60, a.y + a.height / 2)
     await page.mouse.down()
-    await page.mouse.move(a.x + 40, a.y + 30, { steps: 3 })
+    await page.mouse.move(a.x + 70, a.y + a.height / 2 + 10, { steps: 3 })
     const y = where === 'before' ? b.y + 10 : b.y + b.height - 10
     await page.mouse.move(b.x + 30, y, { steps: 12 })
     await page.waitForTimeout(150)
@@ -860,4 +861,76 @@ test('arquivos: áudio abre no visualizador com player', async ({ page }) => {
   await page.locator('.f-row', { hasText: 'Aula de conversação' }).click()
   await page.getByRole('button', { name: /^Tocar Aula de conversação/ }).click()
   await expect(page.getByRole('button', { name: /^Pausar Aula de conversação/ })).toBeVisible()
+})
+
+test.describe('seleção múltipla', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 })
+    await page.getByRole('button', { name: 'Ver em lista' }).click()
+  })
+  const outras = (page: Page) => page.locator('.drag-section').last().locator('.card')
+
+  test('check no hover, Shift seleciona o intervalo; arquivar em lote com Desfazer', async ({ page }) => {
+    const list = outras(page)
+    const first = list.nth(0)
+    await first.hover()
+    await expect(first.locator('.card-check')).toBeVisible()
+    await first.locator('.card-check').click()
+    await expect(page.locator('.sel-count')).toHaveText('1 selecionada')
+    await list.nth(3).locator('.card-check').click({ modifiers: ['Shift'] })
+    await expect(page.locator('.sel-count')).toHaveText('4 selecionadas')
+    const titles = await list.locator('h3').evaluateAll((els) => els.slice(0, 4).map((e) => e.textContent))
+    await page.getByRole('button', { name: 'Arquivar', exact: true }).click()
+    await expect(page.locator('.toast span')).toHaveText('4 notas arquivadas')
+    await expect(page.locator('.sel-count')).toHaveCount(0)
+    for (const t of titles) await expect(page.locator('.card h3', { hasText: t! })).toHaveCount(0)
+    await page.locator('.toast').getByRole('button', { name: 'Desfazer' }).click()
+    for (const t of titles) await expect(page.locator('.card h3', { hasText: t! }).first()).toBeVisible()
+  })
+
+  test('Ctrl+clique seleciona; com seleção ativa o clique marca em vez de abrir; Esc limpa', async ({ page }) => {
+    const list = outras(page)
+    await list.nth(0).click({ modifiers: ['Control'] })
+    await list.nth(2).click()
+    await expect(page.locator('.sel-count')).toHaveText('2 selecionadas')
+    await expect(page.locator('.editor')).toHaveCount(0)
+    await page.keyboard.press('Escape')
+    await expect(page.locator('.sel-count')).toHaveCount(0)
+    await page.keyboard.press('Control+a')
+    await expect(page.locator('.sel-count')).toHaveText(`${await page.locator('.card').count()} selecionadas`)
+  })
+
+  test('retângulo com o mouse a partir do espaço vazio marca as notas que toca', async ({ page }) => {
+    // as fixadas ficam no topo: as três cabem na tela
+    const list = page.locator('.drag-section').first().locator('.card')
+    const a = (await list.nth(0).boundingBox())!
+    const c = (await list.nth(2).boundingBox())!
+    // começa na margem à esquerda dos cards (espaço vazio) e desce até o terceiro
+    await page.mouse.move(a.x - 12, a.y + 4)
+    await page.mouse.down()
+    await page.mouse.move(a.x + 40, c.y + 10, { steps: 6 })
+    await expect(page.locator('.marquee')).toBeVisible()
+    await page.mouse.up()
+    await expect(page.locator('.marquee')).toHaveCount(0)
+    await expect(page.locator('.sel-count')).toHaveText('3 selecionadas')
+    await expect(page.locator('.editor')).toHaveCount(0)
+  })
+
+  test('fixar pelo alfinete do hover', async ({ page }) => {
+    const card = outras(page).first()
+    const title = await card.locator('h3').textContent()
+    await card.hover()
+    await card.getByRole('button', { name: 'Fixar' }).click()
+    await expect(page.locator('.drag-section').first().locator('.card h3', { hasText: title! })).toHaveCount(1)
+  })
+})
+
+test('celular: "Selecionar" no menu de contexto inicia a seleção', async ({ page }) => {
+  await page.locator('.card').first().click({ button: 'right' })
+  await page.getByRole('menuitem', { name: 'Selecionar' }).click()
+  await expect(page.locator('.sel-count')).toHaveText('1 selecionada')
+  await page.locator('.card').nth(1).click()
+  await expect(page.locator('.sel-count')).toHaveText('2 selecionadas')
+  await page.getByRole('button', { name: 'Limpar seleção' }).click()
+  await expect(page.locator('.sel-count')).toHaveCount(0)
 })

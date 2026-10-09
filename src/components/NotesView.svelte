@@ -4,6 +4,7 @@
   import { app, live } from '../lib/app.svelte'
   import { createCardDrag } from '../lib/drag.svelte'
   import { estimateCard } from '../lib/layout'
+  import { marquee } from '../lib/marquee'
   import Empty from './Empty.svelte'
   import Masonry from './Masonry.svelte'
   import NoteCard from './NoteCard.svelte'
@@ -24,6 +25,22 @@
     const by = new Map<string, NoteSummary[]>()
     for (const n of rest) by.set(n.categoryId ?? '', [...(by.get(n.categoryId ?? '') ?? []), n])
     return [...by].map(([id, items]) => ({ id, cat: app.category(id), items }))
+  })
+
+  // Ordem na tela (fixadas, depois as outras; na ordem por categoria, grupo a grupo): base do Shift+clique e do Ctrl+A.
+  $effect(() => {
+    app.visibleNotes = [...pinned, ...(app.sort === 'category' ? groups.flatMap((g) => g.items) : rest)]
+  })
+  // Notas que saíram da tela (arquivadas, filtradas…) saem da seleção.
+  $effect(() => {
+    const ids = new Set(app.visibleNotes.map((n) => n.id))
+    for (const id of [...app.selected]) if (!ids.has(id)) app.selected.delete(id)
+  })
+
+  // Retângulo de seleção com o mouse, no espaço vazio da lista.
+  $effect(() => {
+    const content = document.querySelector<HTMLElement>('.content')
+    return content ? marquee(content) : undefined
   })
 
   // Arrastar: ordem personalizada. Numa ordem por data ou título, a ordem atual vira a personalizada;

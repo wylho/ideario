@@ -42,6 +42,14 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
   Lixeira: ícone de esvaziar (vassoura, neutro, com confirmação, só quando há notas). Nada de controles soltos no meio do conteúdo.
 - Contorno: tudo o que é card ou miniatura (cards, listas de lembretes/arquivos, miniaturas, moodboard, fotos no
   editor, blocos das configurações) usa o mesmo `--card-edge` translúcido; `--line` fica para controles e separadores.
+- Temas (`src/lib/palettes.ts`, `theme.svelte.ts`): Sistema (padrão; o núcleo lê destaque/esquema do GNOME, KDE, Windows,
+  macOS em `src-tauri/src/system_theme.rs`), Ideario, Papel, Grafite, Floresta; claro/escuro/automático à parte.
+- Mídia no editor (`src/lib/editor/media.ts`): fotos lado a lado (`imageRow`, 2–4, arrastar como no Gutenberg + botões na foto
+  selecionada), anexos inline (`noteFile`: vídeo, áudio com player, documentos), gravador e câmera (`capture.svelte.ts`).
+  A capa do card é a primeira foto ou a primeira linha de fotos. "+" em leque (`FabMenu`) com atalhos.
+- Seleção múltipla (Notas): check no canto (hover), Ctrl/Shift+clique, retângulo com o mouse (`marquee.ts`), Ctrl+A, Esc;
+  a barra superior vira `SelectionBar` com ações em lote e Desfazer.
+- CI (`.github/workflows/build.yml`): verificação + instaladores de macOS (universal), Windows e Linux nos Artifacts.
 - Menus de contexto: `ContextMenu.svelte` (clique direito, Shift+F10, toque longo) + itens em `src/lib/menus.ts`.
   O menu do navegador é bloqueado fora de campos de texto (`main.ts`). Ações com "Desfazer" no toast.
 - Prévia dos cards: a projeção entrega `preview` (blocos na ordem do documento) e `label`; a UI não parseia o corpo.

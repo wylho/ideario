@@ -3,6 +3,7 @@
   import { Menu, Search, X } from '@lucide/svelte'
   import SyncIndicator from './SyncIndicator.svelte'
   import ViewActions from './ViewActions.svelte'
+  import SelectionBar from './SelectionBar.svelte'
   import ViewSwitch from './ViewSwitch.svelte'
   import { app } from '../lib/app.svelte'
   import { viewInfo } from '../lib/views'
@@ -50,7 +51,10 @@
   </label>
 {/snippet}
 
-<header class="topbar" class:appbar={app.wide}>
+<header class="topbar" class:appbar={app.wide} class:selecting={app.selected.size > 0}>
+  {#if app.selected.size}
+    <SelectionBar />
+  {:else}
   <div class="top-left">
     <button
       class="icon-btn nav-btn"
@@ -89,6 +93,8 @@
     {/if}
     <ViewActions />
   </div>
+
+  {/if}
 
   {#if app.wide}
     <span class="top-sep" aria-hidden="true"></span>

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { KIND_ICONS } from '../lib/file-kinds'
-  import { Bell, Check, Paperclip } from '@lucide/svelte'
+  import { Bell, Check, Paperclip, Pin, PinOff } from '@lucide/svelte'
   import { api } from '../lib/api'
   import { app } from '../lib/app.svelte'
   import { fmtReminder, isOverdue, withHashtags } from '../lib/format'
@@ -13,7 +13,17 @@
 
   const cat = $derived(app.category(n.categoryId))
   const hasMeta = $derived(n.reminderAt != null || !!cat || n.tags.length > 0 || n.fileCount > 0)
-  const open = () => app.openNote(n.id)
+  const selected = $derived(app.selected.has(n.id))
+  const selecting = $derived(app.selected.size > 0)
+  // Com seleção ativa, tocar no card marca ou desmarca; Ctrl/⌘+clique e Shift+clique também selecionam, como numa pasta.
+  function activate(e: MouseEvent | KeyboardEvent) {
+    if (selecting || e.shiftKey || e.ctrlKey || e.metaKey) app.toggleSelect(n.id, e.shiftKey)
+    else app.openNote(n.id)
+  }
+  const togglePin = (e: MouseEvent) => {
+    e.stopPropagation()
+    void api.updateNote(n.id, { pinned: !n.pinned })
+  }
 </script>
 
 {#snippet rich(text: string)}{#each withHashtags(text) as s, i (i)}{#if s.tag}<span class="hashtag">{s.text}</span>{:else}{s.text}{/if}{/each}{/snippet}
@@ -24,13 +34,26 @@
   {...trigger}
   class="card c-{n.color}"
   class:drag-source={app.dragId === n.id}
+  class:selected
   data-note-id={n.id}
-  onclick={open}
-  onkeydown={(e) => e.key === 'Enter' && e.target === e.currentTarget && open()}
+  onclick={activate}
+  onkeydown={(e) => e.key === 'Enter' && e.target === e.currentTarget && activate(e)}
   tabindex="0"
   role="button"
   aria-label={n.label}
 >
+  <!-- Só com mouse por cima (ou já selecionada): marcar para seleção múltipla e fixar. -->
+  <button
+    class="card-check"
+    aria-label={selected ? 'Desmarcar nota' : 'Selecionar nota'}
+    aria-pressed={selected}
+    onclick={(e) => { e.stopPropagation(); app.toggleSelect(n.id, e.shiftKey) }}
+  ><Check size={14} strokeWidth={3} /></button>
+  {#if n.trashedAt == null && !selecting}
+    <button class="card-pin" aria-label={n.pinned ? 'Desafixar' : 'Fixar'} title={n.pinned ? 'Desafixar' : 'Fixar'} onclick={togglePin}>
+      {#if n.pinned}<PinOff size={16} />{:else}<Pin size={16} />{/if}
+    </button>
+  {/if}
   {#if n.cover.length}
     <!-- Uma foto, ou a primeira linha de fotos lado a lado: mesma altura, larguras pela proporção de cada uma. -->
     <div class="card-media" class:row={n.cover.length > 1}>
