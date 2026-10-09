@@ -173,6 +173,17 @@ fn write_once(path: &Path, bytes: &[u8]) -> Result<(), String> {
     std::fs::rename(&tmp, path).map_err(|e| e.to_string())
 }
 
+/// Prévia feita na interface (primeira página do PDF, um quadro do vídeo), em PNG: vira a miniatura WebP.
+/// Sem bytes = não deu para fazer a prévia; fica marcado para não tentar de novo.
+pub fn save_preview(data: &Path, hash: &str, png: &[u8]) -> Result<(), String> {
+    let path = thumb_path(data, hash);
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+    let thumb = if png.is_empty() { Vec::new() } else { media::thumbnail(png)? };
+    std::fs::write(path, thumb).map_err(|e| e.to_string())
+}
+
 pub fn thumb_path(data: &Path, hash: &str) -> PathBuf {
     data.join("thumbs").join(format!("{hash}.webp"))
 }
@@ -218,13 +229,19 @@ pub fn serve(store: &Store, data: &Path, req: &Request<Vec<u8>>) -> Response<Vec
     if hash.is_empty() {
         return not_found();
     }
-    if req.uri().query() == Some("thumb") {
-        if let Ok(bytes) = std::fs::read(thumb_path(data, &hash)) {
-            return Response::builder()
-                .header(header::CONTENT_TYPE, "image/webp")
-                .header(header::CACHE_CONTROL, "max-age=31536000, immutable")
-                .body(bytes)
-                .unwrap_or_else(|_| status_only(StatusCode::INTERNAL_SERVER_ERROR));
+    if req.uri().query().is_some_and(|q| q.split('&').any(|p| p == "thumb")) {
+        match std::fs::read(thumb_path(data, &hash)) {
+            // Vazio = já tentou e não há prévia (PDF protegido, vídeo sem codec): a interface mostra o ícone.
+            Ok(bytes) if !bytes.is_empty() => {
+                return Response::builder()
+                    .header(header::CONTENT_TYPE, "image/webp")
+                    .header(header::CACHE_CONTROL, "no-cache")
+                    .body(bytes)
+                    .unwrap_or_else(|_| status_only(StatusCode::INTERNAL_SERVER_ERROR));
+            }
+            // Foto ainda sem miniatura: vai a foto. Outros tipos: sem prévia (ainda).
+            _ if store.attachment_kind(&hash).ok().flatten().as_deref() == Some("image") => {}
+            _ => return not_found(),
         }
     }
     let Ok(bytes) = std::fs::read(dir(data).join(&hash)) else { return not_found() };
@@ -249,6 +266,8 @@ pub fn serve(store: &Store, data: &Path, req: &Request<Vec<u8>>) -> Response<Vec
             (start <= end && start < len).then_some((start, end))
         });
     let base = Response::builder()
+        // A página (outra origem: tauri://localhost) lê o arquivo com fetch, para o pdf.js desenhar a prévia.
+        .header(header::ACCESS_CONTROL_ALLOW_ORIGIN, "*")
         .header(header::CONTENT_TYPE, mime)
         .header(header::ACCEPT_RANGES, "bytes")
         .header(header::CACHE_CONTROL, "max-age=31536000, immutable");
@@ -306,6 +325,30 @@ mod tests {
         let b = import(&store, &tmp, &jpg, "IMG_0042.JPG", "image/jpeg").unwrap();
         assert_eq!((b.mime.as_str(), b.bytes, b.orig_bytes), ("image/jpeg", jpg.len() as i64, None));
         assert!(thumb_path(&tmp, &b.hash).exists());
+        let _ = std::fs::remove_dir_all(&tmp);
+    }
+
+    #[test]
+    fn pdf_preview_made_by_the_interface_becomes_the_thumbnail() {
+        let tmp = std::env::temp_dir().join(format!("ideario-test-{}", uuid::Uuid::now_v7()));
+        let store = Store::memory();
+        let a = import(&store, &tmp, b"%PDF-1.4 conteudo", "Contrato.pdf", "application/pdf").unwrap();
+        let thumb = || serve(&store, &tmp, &Request::builder().uri(format!("att://localhost/{}?thumb", a.hash)).body(Vec::new()).unwrap());
+        assert_eq!(thumb().status(), StatusCode::NOT_FOUND, "sem prévia ainda: a interface mostra o ícone");
+        // primeira página desenhada pelo pdf.js (aqui, um PNG qualquer de 800×1100)
+        let page = image::RgbImage::from_pixel(800, 1100, image::Rgb([250, 250, 250]));
+        let mut png = Vec::new();
+        image::ImageEncoder::write_image(image::codecs::png::PngEncoder::new(&mut png), page.as_raw(), 800, 1100, image::ExtendedColorType::Rgb8).unwrap();
+        save_preview(&tmp, &a.hash, &png).unwrap();
+        let t = thumb();
+        assert_eq!(t.status(), StatusCode::OK);
+        assert_eq!(image::load_from_memory(t.body()).unwrap().height(), 400);
+        // sem prévia possível: fica marcado e continua sem miniatura
+        let b = import(&store, &tmp, b"%PDF-1.4 outro", "b.pdf", "application/pdf").unwrap();
+        save_preview(&tmp, &b.hash, &[]).unwrap();
+        assert!(thumb_path(&tmp, &b.hash).exists());
+        let r = serve(&store, &tmp, &Request::builder().uri(format!("att://localhost/{}?thumb", b.hash)).body(Vec::new()).unwrap());
+        assert_eq!(r.status(), StatusCode::NOT_FOUND);
         let _ = std::fs::remove_dir_all(&tmp);
     }
 

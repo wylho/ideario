@@ -60,6 +60,8 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             commands::import_path,
+            commands::pending_previews,
+            commands::set_preview,
             app_version,
             background::set_background,
             commands::list_notes,

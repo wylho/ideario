@@ -23,7 +23,8 @@ pub enum Block {
     Ordered { text: String, n: i64, depth: u32 },
     Task { text: String, done: bool, depth: u32 },
     #[serde(rename_all = "camelCase")]
-    File { text: String, file_kind: String },
+    /// `hash`: para a interface pedir a miniatura (foto, primeira página do PDF, quadro do vídeo).
+    File { text: String, file_kind: String, hash: String },
     Code { text: String },
     More { count: usize },
 }
@@ -148,8 +149,8 @@ fn block(n: &Value, depth: u32, p: &mut Projection, file: &dyn Fn(&str) -> Optio
         "noteFile" => {
             if let Some(h) = hash_attr(n) {
                 if let Some((name, file_kind)) = file(&h) {
+                    p.blocks.push(Block::File { text: name, file_kind, hash: h.clone() });
                     p.files.push(h);
-                    p.blocks.push(Block::File { text: name, file_kind });
                 }
             }
         }
@@ -277,7 +278,7 @@ mod tests {
         assert_eq!(p.files, vec!["pdf"]);
         assert_eq!(p.preview.iter().filter(|b| matches!(b, Block::Task { .. })).count(), 12);
         assert_eq!(p.preview[12], Block::More { count: 3 });
-        assert_eq!(p.preview.last(), Some(&Block::File { text: "Roteiro.pdf".into(), file_kind: "pdf".into() }));
-        assert_eq!(serde_json::to_value(&p.preview[13]).unwrap(), json!({"kind":"file","text":"Roteiro.pdf","fileKind":"pdf"}));
+        assert_eq!(p.preview.last(), Some(&Block::File { text: "Roteiro.pdf".into(), file_kind: "pdf".into(), hash: "pdf".into() }));
+        assert_eq!(serde_json::to_value(&p.preview[13]).unwrap(), json!({"kind":"file","text":"Roteiro.pdf","fileKind":"pdf","hash":"pdf"}));
     }
 }

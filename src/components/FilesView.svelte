@@ -1,4 +1,5 @@
 <script lang="ts">
+  import FilePreview from './FilePreview.svelte'
   import { File as FileIcon, FileAudio, FileSpreadsheet, FileText, FileVideoCamera, Paperclip } from '@lucide/svelte'
   import { api } from '../lib/api'
   import { app, live } from '../lib/app.svelte'
@@ -58,7 +59,7 @@
         <ContextMenu items={() => attachmentMenu(r)}>
           {#snippet children(trigger)}
         <button {...trigger} class="f-row" onclick={() => open(r)}>
-          {#if r.kind === 'image'}<img class="f-thumb" src={api.imageUrl(r.hash, 'thumb')} alt="" />{:else}{@render fileIcon(r)}{/if}
+          {#if r.kind === 'image'}<img class="f-thumb" src={api.imageUrl(r.hash, 'thumb')} alt="" />{:else}<span class="f-prev"><FilePreview hash={r.hash} kind={r.kind}>{@render fileIcon(r)}</FilePreview></span>{/if}
           <span class="f-text">
             <span class="f-name">{r.name}</span>
             <span class="f-sub">
@@ -82,7 +83,7 @@
       <ContextMenu items={() => attachmentMenu(r)}>
         {#snippet children(trigger)}
       <button {...trigger} class="f-tile" onclick={() => open(r)}>
-        {#if r.kind === 'image'}<img src={api.imageUrl(r.hash, 'thumb')} alt="" />{:else}{@render fileIcon(r, true)}{/if}
+        {#if r.kind === 'image'}<img src={api.imageUrl(r.hash, 'thumb')} alt="" />{:else}<span class="f-prev big"><FilePreview hash={r.hash} kind={r.kind}>{@render fileIcon(r, true)}</FilePreview></span>{/if}
         <span class="f-name">{r.name}</span>
         <span class="f-sub">{fmtBytes(r.bytes)}</span>
       </button>

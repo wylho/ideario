@@ -38,7 +38,7 @@ export type PreviewBlock =
   | { kind: 'ordered'; text: string; n: number; depth: number }
   | { kind: 'task'; text: string; done: boolean; depth: number }
   /** Anexo no meio do texto (vídeo, áudio, PDF…): mostrado como uma linha com ícone. */
-  | { kind: 'file'; text: string; fileKind: AttachmentKind }
+  | { kind: 'file'; text: string; fileKind: AttachmentKind; hash: string }
   /** Bloco de código: as primeiras linhas, sem formatação. */
   | { kind: 'code'; text: string }
   /** Tarefas que não couberam na prévia (máx. 4) ou texto cortado. */

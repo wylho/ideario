@@ -121,6 +121,11 @@ pub fn derive(bytes: &[u8]) -> Result<(Vec<u8>, Vec<String>, Tone), String> {
     Ok((encode_webp(&small, THUMB_QUALITY)?, palette.iter().map(|c| hex(c.rgb)).collect(), tone))
 }
 
+/// Só a miniatura WebP de uma imagem (prévia de PDF ou vídeo gerada na interface).
+pub fn thumbnail(bytes: &[u8]) -> Result<Vec<u8>, String> {
+    encode_webp(&shrink(&decode(bytes)?, THUMB_SIDE)?, THUMB_QUALITY)
+}
+
 /// Lê a imagem já na orientação certa (a câmera grava "deitada" e anota a rotação no EXIF).
 fn decode(bytes: &[u8]) -> Result<DynamicImage, String> {
     let reader = ImageReader::new(Cursor::new(bytes)).with_guessed_format().map_err(|e| e.to_string())?;

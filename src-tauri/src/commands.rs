@@ -272,6 +272,29 @@ pub async fn import_path(core: Core_<'_>, path: String) -> Result<Attachment> {
     import(&core, bytes, name, mime).await
 }
 
+/// PDFs e vídeos ainda sem prévia: a interface gera (pdf.js, um quadro do vídeo) e devolve por `set_preview`.
+#[tauri::command]
+pub fn pending_previews(core: Core_) -> Result<Vec<Value>> {
+    let all = core.with(|s| s.previewable())?;
+    Ok(all
+        .into_iter()
+        .filter(|(h, _)| !attachments::thumb_path(&core.data, h).exists())
+        .map(|(hash, kind)| json!({ "hash": hash, "kind": kind }))
+        .collect())
+}
+
+/// Prévia em PNG (corpo binário; hash no cabeçalho `x-hash`). Corpo vazio = sem prévia possível.
+#[tauri::command]
+pub async fn set_preview(core: Core_<'_>, request: Request<'_>) -> Result<()> {
+    let InvokeBody::Raw(png) = request.body() else { return Err("prévia ausente".into()) };
+    let hash: String = request.headers().get("x-hash").and_then(|v| v.to_str().ok()).unwrap_or("").chars().filter(char::is_ascii_hexdigit).collect();
+    if hash.is_empty() {
+        return Err("anexo ausente".into());
+    }
+    let (data, png) = (core.data.clone(), png.clone());
+    tauri::async_runtime::spawn_blocking(move || attachments::save_preview(&data, &hash, &png)).await.map_err(|e| e.to_string())?
+}
+
 /// Salva uma cópia do anexo na pasta Downloads e devolve onde ficou.
 #[tauri::command]
 pub fn download_attachment(app: AppHandle, core: Core_, hash: String, name: String) -> Result<String> {

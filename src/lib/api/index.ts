@@ -1,7 +1,7 @@
 // Camada de dados da UI. No app, os comandos Tauri (`invoke`) do núcleo Rust (SQLite local, Fase 1);
 // no navegador (`npm run dev`, prévia) e nos testes e2e, um mock em memória com dados de exemplo.
 import type {
-  Attachment, AttachmentRow, Box, Category, Filter, NoteDetail, NoteInput, NotePatch, NoteSort, NoteSummary, Settings, SyncState, SyncStatus, TagCount, Tone, ViewCounts,
+  Attachment, AttachmentKind, AttachmentRow, Box, Category, Filter, NoteDetail, NoteInput, NotePatch, NoteSort, NoteSummary, Settings, SyncState, SyncStatus, TagCount, Tone, ViewCounts,
 } from '../types'
 import { invoke, isTauri } from '@tauri-apps/api/core'
 import { mockApi } from './mock'
@@ -62,6 +62,10 @@ export interface Api {
   mediaUrl(hash: string): string
   /** Importa um arquivo do computador (ou uma gravação) e devolve o anexo pronto para entrar na nota. */
   importFile(file: Blob, name: string): Promise<Attachment>
+  /** PDFs e vídeos sem prévia ainda (a interface gera a imagem; no navegador, nenhum). */
+  pendingPreviews(): Promise<{ hash: string; kind: AttachmentKind }[]>
+  /** Prévia em PNG (primeira página do PDF, um quadro do vídeo); vazio = não foi possível. */
+  setPreview(hash: string, png: Uint8Array): Promise<void>
   /** Só no app: importa pelo caminho um arquivo arrastado do sistema (lido no núcleo). */
   importPath(path: string): Promise<Attachment>
   /** Salva uma cópia do anexo (no app: na pasta Downloads, e devolve o caminho; no navegador: download, e devolve null). */

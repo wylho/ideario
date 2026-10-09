@@ -153,7 +153,7 @@ function project(body: RichDoc): Projection {
         const a = typeof n.attrs?.hash === 'string' ? attachments.get(n.attrs.hash) : undefined
         if (a) {
           files.push(a.hash)
-          blocks.push({ kind: 'file', text: a.name, fileKind: a.kind })
+          blocks.push({ kind: 'file', text: a.name, fileKind: a.kind, hash: a.hash })
         }
         return
       }
@@ -598,6 +598,10 @@ export const mockApi: Api = {
     }
     return ''
   },
+
+  // Prévias de PDF e vídeo são feitas só no app (o mock não guarda o conteúdo dos exemplos).
+  pendingPreviews: () => done([]),
+  setPreview: () => done(undefined),
 
   // No navegador os arquivos arrastados chegam como File (importFile); caminhos só existem no app.
   async importPath() {
