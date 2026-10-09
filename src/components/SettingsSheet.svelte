@@ -80,7 +80,7 @@
           <section class="set-group">
             <h3>Fotos</h3>
             <div class="set-row">
-              <span><b>Qualidade</b><small>Aplicada ao importar.</small></span>
+              <span><b>Qualidade</b><small>Aplicada ao importar. Só as fotos são comprimidas: PDFs, documentos, áudio e vídeo ficam exatamente como foram anexados.</small></span>
               <Picker
                 id="qualidade"
                 bind:value={settings.photoQuality}

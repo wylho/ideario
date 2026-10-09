@@ -1,7 +1,7 @@
 // Estado da interface e dados compartilhados entre as telas.
 // Visão (como ver) e filtro (o que ver) são independentes: trocar um nunca desfaz o outro.
 import { api } from './api'
-import type { AttachmentKind, AttachmentRow, Box, Category, FileSort, Filter, NoteSort, SyncState, TagCount, Tone, View, ViewCounts } from './types'
+import type { AttachmentRow, Box, Category, FileGroup, FileSort, Filter, NoteSort, SyncState, TagCount, Tone, View, ViewCounts } from './types'
 import { uuidv7 } from './uuid'
 
 export interface EditorTarget {
@@ -49,7 +49,7 @@ class AppState {
   filesSort = $state<FileSort>('recent')
   filesLayout = $state<'grid' | 'list'>('list')
   /** Arquivos: tipo mostrado (null = todos). */
-  filesKind = $state<AttachmentKind | null>(null)
+  filesKind = $state<FileGroup | null>(null)
   /** Moodboard: tom mostrado (null = todos). */
   moodTone = $state<Tone | null>(null)
   /** Lembretes: mostrar os concluídos no fim da lista. */

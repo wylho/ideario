@@ -176,14 +176,14 @@ test('lembrete definido no editor aparece na aba', async ({ page }) => {
 
 test('arquivos: tipos, ordenação, grade e nota de origem', async ({ page }) => {
   await tab(page, 'Arquivos')
-  await expect(page.locator('.stats b').first()).toHaveText('24')
+  await expect(page.locator('.stats b').first()).toHaveText('25')
   // tipo, ordem e grade ficam no menu dinâmico do topo
   await page.getByRole('button', { name: /^Tipo de arquivo/ }).click()
   await page.getByRole('menuitemradio', { name: 'PDFs' }).click()
   await expect(page.locator('.f-row')).toHaveCount(5)
   await page.getByRole('button', { name: 'Tipo de arquivo: PDFs' }).click()
   await page.getByRole('menuitemradio', { name: 'Todos os tipos' }).click()
-  await expect(page.locator('.f-row')).toHaveCount(24)
+  await expect(page.locator('.f-row')).toHaveCount(25)
   await page.getByRole('button', { name: /^Ordenar/ }).click()
   await page.getByRole('menuitemradio', { name: 'Tamanho' }).click()
   await expect(page.locator('.f-row .f-name').first()).toHaveText('Manual de marca Linvo v3.pdf')
@@ -664,7 +664,14 @@ test('desktop: filtro de tipo como ícones no topo; tocar de novo tira o filtro'
   await expect(pdf).toHaveAttribute('aria-pressed', 'true')
   await expect(page.locator('.f-row')).toHaveCount(5)
   await pdf.click()
-  await expect(page.locator('.f-row')).toHaveCount(24)
+  await expect(page.locator('.f-row')).toHaveCount(25)
+  // "Outros documentos" junta Word, planilhas e o resto
+  await page.locator('.filter-group').getByRole('button', { name: 'Outros documentos' }).click()
+  await expect(page.locator('.f-row .f-name')).toContainText(['Pauta 1:1 outubro.docx'])
+  await expect(page.locator('.f-row', { hasText: '.xlsx' })).not.toHaveCount(0)
+  await page.locator('.filter-group').getByRole('button', { name: 'Vídeo' }).click()
+  await expect(page.locator('.f-row')).toHaveCount(1)
+  await page.locator('.filter-group').getByRole('button', { name: 'Vídeo' }).click()
   await page.locator('.view-switch').getByRole('button', { name: /Moodboard/ }).click()
   await page.locator('.filter-group').getByRole('button', { name: 'Verdes' }).click()
   await expect(page.locator('.mood-tile')).toHaveCount(2)
@@ -676,6 +683,6 @@ test('arquivos em grade: toda miniatura é quadrada, foto ou não', async ({ pag
   await page.getByRole('button', { name: 'Ver em grade' }).click()
   const sizes = await page.locator('.f-tile img, .f-tile .f-ico').evaluateAll((els) =>
     els.map((e) => { const r = e.getBoundingClientRect(); return [r.width, r.height] }))
-  expect(sizes.length).toBe(24)
+  expect(sizes.length).toBe(25)
   for (const [w, h] of sizes) expect(Math.abs(w - h)).toBeLessThan(1)
 })

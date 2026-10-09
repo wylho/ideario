@@ -83,6 +83,7 @@ export const SEED_FILES: SeedFile[] = [
   { hash: 'file-aula14', name: 'Aula de conversação 14.m4a', kind: 'audio', mime: 'audio/mp4', kb: 6240, noteId: 'n3', daysAgo: 1 },
   { hash: 'file-valuation', name: 'Valuation - modelo.xlsx', kind: 'sheet', mime: XLSX, kb: 512, noteId: 'n4', daysAgo: 3 },
   { hash: 'file-pauta', name: 'Pauta 1:1 outubro.docx', kind: 'doc', mime: DOCX, kb: 64, noteId: 'n5', daysAgo: 0 },
+  { hash: 'file-reuniao', name: 'Gravação da reunião de pauta.mp4', kind: 'video', mime: 'video/mp4', kb: 7340, noteId: 'n5', daysAgo: 4 },
   { hash: 'file-shadowing', name: 'Shadowing ep. 42.mp3', kind: 'audio', mime: 'audio/mpeg', kb: 4380, noteId: 'n15', daysAgo: 2 },
   { hash: 'file-avaliacao', name: 'Avaliação Q1 - consolidado.pdf', kind: 'pdf', mime: PDF, kb: 1240, noteId: 'n16', daysAgo: 4 },
   { hash: 'file-lista3', name: 'Lista de exercícios 3.pdf', kind: 'pdf', mime: PDF, kb: 860, noteId: 'n19', daysAgo: 1 },
