@@ -4,7 +4,8 @@
   import { api, coreVersion } from '../lib/api'
   import { app } from '../lib/app.svelte'
   import { ago } from '../lib/format'
-  import { theme, type ThemePref } from '../lib/theme.svelte'
+  import { paletteColors, theme, type ThemePref } from '../lib/theme.svelte'
+  import { DESKTOPS, PALETTES, type DesktopId, type PaletteId } from '../lib/palettes'
   import Picker from './Picker.svelte'
   import type { PhotoQuality, Settings, SyncStatus } from '../lib/types'
 
@@ -27,6 +28,13 @@
     if (runs++ > 0) void api.saveSettings(snap)
   })
 
+  // Sistema primeiro: é o padrão e faz o app parecer nativo.
+  const THEMES: { id: PaletteId; label: string; hint: string }[] = [
+    { id: 'system', label: 'Sistema', hint: '' },
+    ...Object.entries(PALETTES).map(([id, p]) => ({ id: id as PaletteId, label: p.label, hint: p.hint })),
+  ]
+  const systemName = $derived(`Cores do ${DESKTOPS[theme.system.desktop ?? 'gnome'].label}`)
+
   const usedBytes = $derived(status?.cacheUsedBytes ?? 0)
   const gb = (n: number) => n.toString().replace('.', ',')
 </script>
@@ -43,18 +51,50 @@
         <div class="sheet-scroll">
           <section class="set-group">
             <h3>Aparência</h3>
+            <div class="theme-grid" role="radiogroup" aria-label="Tema">
+              {#each THEMES as t (t.id)}
+                {@const c = paletteColors(t.id, theme.mode, theme.system)}
+                <button
+                  class="theme-tile"
+                  role="radio"
+                  aria-checked={theme.palette === t.id}
+                  onclick={() => theme.setPalette(t.id)}
+                >
+                  <span class="theme-swatch" style:background={c.bg} aria-hidden="true">
+                    <span class="theme-card" style:background={c.surface} style:border-color={c.line}>
+                      <i style:background={c.fg}></i><i style:background={c.muted}></i>
+                    </span>
+                    <span class="theme-dots">
+                      <i style:background={c.accent}></i>{#each c.notes.slice(0, 3) as n (n)}<i style:background={n}></i>{/each}
+                    </span>
+                  </span>
+                  <span class="theme-name">{t.label}</span>
+                  <small>{t.id === 'system' ? systemName : t.hint}</small>
+                </button>
+              {/each}
+            </div>
+            {#if theme.palette === 'system' && !theme.native}
+              <div class="set-row">
+                <span><b>Prévia do sistema</b><small>Só no navegador. No app, as cores vêm da área de trabalho.</small></span>
+                <Picker
+                  id="sistema"
+                  bind:value={() => theme.simDesktop, (v) => theme.setSimDesktop(v)}
+                  options={Object.entries(DESKTOPS).map(([id, d]) => [id, d.label]) as [DesktopId, string][]}
+                />
+              </div>
+            {/if}
             <div class="set-row">
-              <span><b>Tema</b></span>
+              <span><b>Claro ou escuro</b></span>
               <ToggleGroup.Root
                 type="single"
                 value={theme.pref}
                 onValueChange={(v) => v && theme.set(v as ThemePref)}
                 class="seg tight"
-                aria-label="Tema"
+                aria-label="Claro ou escuro"
               >
                 <ToggleGroup.Item value="light" class="seg-item"><Sun size={15} />Claro</ToggleGroup.Item>
                 <ToggleGroup.Item value="dark" class="seg-item"><Moon size={15} />Escuro</ToggleGroup.Item>
-                <ToggleGroup.Item value="system" class="seg-item"><Monitor size={15} />Sistema</ToggleGroup.Item>
+                <ToggleGroup.Item value="system" class="seg-item"><Monitor size={15} />Automático</ToggleGroup.Item>
               </ToggleGroup.Root>
             </div>
           </section>
