@@ -39,6 +39,8 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
   da visão ou do lugar, sempre na mesma ordem e com os mesmos componentes: filtro da visão (`FilterGroup`: ícones no
   desktop, um menu no celular) → ordenar (`SortMenu`) → lista/grade (`LayoutToggle`). Lembretes: mostrar concluídos;
   Lixeira: "Esvaziar lixeira" (com confirmação, só quando há notas). Nada de controles soltos no meio do conteúdo.
+- Contorno: tudo o que é card ou miniatura (cards, listas de lembretes/arquivos, miniaturas, moodboard, fotos no
+  editor, blocos das configurações) usa o mesmo `--card-edge` translúcido; `--line` fica para controles e separadores.
 - Menus de contexto: `ContextMenu.svelte` (clique direito, Shift+F10, toque longo) + itens em `src/lib/menus.ts`.
   O menu do navegador é bloqueado fora de campos de texto (`main.ts`). Ações com "Desfazer" no toast.
 - Prévia dos cards: a projeção entrega `preview` (blocos na ordem do documento) e `label`; a UI não parseia o corpo.
