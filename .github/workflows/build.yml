@@ -48,7 +48,8 @@ jobs:
 
   bundle:
     name: Instalador (${{ matrix.name }})
-    needs: check
+    # Roda junto com a verificação, não depois: o instalador de cada commit sai mesmo se um teste falhar
+    # (a verificação continua vermelha e aparece no commit).
     strategy:
       fail-fast: false
       matrix:
