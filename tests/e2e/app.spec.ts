@@ -7,8 +7,13 @@ test.beforeEach(async ({ page }) => {
 })
 
 const cards = (page: Page) => page.locator('.card')
+/** Nota nova pelo "+": abre o leque e escolhe Nota. */
+const plusNote = async (page: Page) => {
+  await page.getByRole('button', { name: 'Criar' }).click()
+  await page.getByRole('menuitem', { name: 'Nota' }).click()
+}
 const newNote = async (page: Page) => {
-  await page.getByLabel('Nova nota').click()
+  await plusNote(page)
   await expect(page.locator('#corpo')).toBeFocused()
 }
 /** Configurações: pela barra lateral no desktop, pela gaveta no celular. */
@@ -28,7 +33,7 @@ const drawerItem = async (page: Page, name: string) => {
 
 test('nota nova abre com o cursor no corpo e, vazia, não é criada', async ({ page }) => {
   const before = await cards(page).count()
-  await page.getByLabel('Nova nota').click()
+  await plusNote(page)
   await expect(page.locator('#corpo')).toBeFocused()
   await back(page)
   await expect(cards(page)).toHaveCount(before)
@@ -76,7 +81,7 @@ test('filtro por tag e por categoria; o "+" herda o filtro', async ({ page }) =>
   await cards(page).filter({ hasText: 'direção visual' }).locator('.pill.tag', { hasText: '#embalagem' }).click()
   await expect(page.locator('.filter-row .chip.on', { hasText: '#embalagem' })).toHaveCount(1)
   await expect(page.locator('#busca')).toHaveAttribute('placeholder', 'Buscar notas em #embalagem')
-  await page.getByLabel('Nova nota').click()
+  await plusNote(page)
   await expect(page.locator('.ed-tags .pill.tag')).toHaveText('#embalagem')
   await back(page)
   await page.locator('.filter-row').getByRole('button', { name: 'Limpar' }).click()
@@ -114,7 +119,7 @@ test('fixar, cor, arquivar, lixeira e restaurar', async ({ page }) => {
   await page.getByRole('menuitem', { name: 'Mover para a lixeira' }).click()
   await drawerItem(page, 'Lixeira')
   await expect(page.locator('.banner')).toContainText('30 dias')
-  await expect(page.getByLabel('Nova nota')).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Criar' })).toHaveCount(0)
   await note().click()
   await page.getByLabel('Mais opções').click()
   await page.getByRole('menuitem', { name: 'Restaurar' }).click()
@@ -765,7 +770,7 @@ test.describe('mídia no editor', () => {
     await page.setViewportSize({ width: 1280, height: 900 })
     await newNote(page)
     // uma de cada vez: entram como fotos soltas, uma embaixo da outra
-    const photo = page.locator('input[type=file][accept="image/*"]')
+    const photo = page.locator('.editor input[type=file][accept="image/*"]')
     await photo.setInputFiles({ name: 'a.png', mimeType: 'image/png', buffer: png })
     await photo.setInputFiles({ name: 'b.png', mimeType: 'image/png', buffer: png })
     const imgs = page.locator('#corpo > img')
@@ -791,12 +796,12 @@ test.describe('mídia no editor', () => {
 
   test('importar várias fotos de uma vez: entram lado a lado; outros arquivos viram cartão', async ({ page }) => {
     await newNote(page)
-    await page.locator('input[type=file][accept="image/*"]').setInputFiles([
+    await page.locator('.editor input[type=file][accept="image/*"]').setInputFiles([
       { name: 'a.png', mimeType: 'image/png', buffer: png },
       { name: 'b.png', mimeType: 'image/png', buffer: png },
     ])
     await expect(page.locator('#corpo .img-row img')).toHaveCount(2)
-    await page.locator('input[type=file]:not([accept])').setInputFiles({ name: 'contrato.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4') })
+    await page.locator('.editor input[type=file]:not([accept])').setInputFiles({ name: 'contrato.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4') })
     await expect(page.locator('#corpo .nf-card')).toContainText('contrato.pdf')
     await back(page)
     await expect(page.locator('.card .pv-file', { hasText: 'contrato.pdf' })).toHaveCount(1)
@@ -826,4 +831,33 @@ test.describe('gravador de voz', () => {
     await expect(page.locator('#corpo .nf-card .player')).toHaveCount(1)
     await expect(page.locator('#corpo .nf-card')).toContainText('Gravação')
   })
+})
+
+test('"+" em leque: atalhos que já abrem a nota fazendo a coisa', async ({ page }) => {
+  await page.getByRole('button', { name: 'Criar' }).click()
+  const items = page.getByRole('menuitem')
+  await expect(items).toHaveText(['Nota', 'Gravar áudio', 'Foto', 'Câmera', 'Anexo'])
+  await page.keyboard.press('Escape')
+  await expect(items).toHaveCount(0)
+  // Foto: escolhe o arquivo e a nota nova já abre com ela
+  await page.getByRole('button', { name: 'Criar' }).click()
+  const chooser = page.waitForEvent('filechooser')
+  await page.getByRole('menuitem', { name: 'Foto' }).click()
+  await (await chooser).setFiles({
+    name: 'p.png', mimeType: 'image/png',
+    buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAQAAAACCAYAAAB/qH1jAAAAEklEQVR4nGM4URHwHxkzoAsAAFo1FHl3zjQAAAAAAElFTkSuQmCC', 'base64'),
+  })
+  await expect(page.locator('#corpo img')).toHaveCount(1)
+  await back(page)
+  // Gravar áudio: abre gravando
+  await page.getByRole('button', { name: 'Criar' }).click()
+  await page.getByRole('menuitem', { name: 'Gravar áudio' }).click()
+  await expect(page.locator('.rec-time')).toContainText('Gravando')
+})
+
+test('arquivos: áudio abre no visualizador com player', async ({ page }) => {
+  await tab(page, 'Arquivos')
+  await page.locator('.f-row', { hasText: 'Aula de conversação' }).click()
+  await page.getByRole('button', { name: /^Tocar Aula de conversação/ }).click()
+  await expect(page.getByRole('button', { name: /^Pausar Aula de conversação/ })).toBeVisible()
 })

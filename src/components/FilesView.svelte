@@ -29,7 +29,8 @@
   const saved = $derived(rows.current.reduce((s, r) => s + (r.origBytes ? r.origBytes - r.bytes : 0), 0))
 
   const icons: Partial<Record<AttachmentKind, typeof FileIcon>> = { pdf: FileText, sheet: FileSpreadsheet, audio: FileAudio, video: FileVideoCamera }
-  const open = (r: AttachmentRow) => (r.kind === 'image' ? (app.lightbox = r) : app.openNote(r.noteId))
+  // Foto, vídeo e áudio abrem no visualizador (com player); documentos abrem a nota de origem.
+  const open = (r: AttachmentRow) => (['image', 'video', 'audio'].includes(r.kind) ? (app.lightbox = r) : app.openNote(r.noteId))
 </script>
 
 <div class="stats">

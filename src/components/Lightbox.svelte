@@ -4,6 +4,8 @@
   import { api } from '../lib/api'
   import { app } from '../lib/app.svelte'
   import { fmtBytes } from '../lib/format'
+  import { KIND_ICONS, KIND_LABELS } from '../lib/file-kinds'
+  import AudioPlayer from './AudioPlayer.svelte'
 
   const img = $derived(app.lightbox)
 
@@ -26,7 +28,19 @@
           <Dialog.Close class="icon-btn on-dark" aria-label="Fechar"><X size={20} /></Dialog.Close>
           <Dialog.Title class="lb-title">{img.name}</Dialog.Title>
         </div>
-        <img class="lb-img" src={api.imageUrl(img.hash, 'full')} alt="" />
+        {#if img.kind === 'image'}
+          <img class="lb-img" src={api.imageUrl(img.hash, 'full')} alt="" />
+        {:else if img.kind === 'video' && api.mediaUrl(img.hash)}
+          <!-- svelte-ignore a11y_media_has_caption -->
+          <video class="lb-img" src={api.mediaUrl(img.hash)} controls autoplay playsinline></video>
+        {:else}
+          {@const Icon = KIND_ICONS[img.kind]}
+          <div class="lb-media">
+            <span class="lb-media-ico"><Icon size={40} /></span>
+            {#if img.kind === 'audio'}<div class="lb-audio"><AudioPlayer src={api.mediaUrl(img.hash)} label={img.name} /></div>{/if}
+            {#if img.kind === 'video'}<p>Vídeo de exemplo, sem conteúdo nesta prévia</p>{/if}
+          </div>
+        {/if}
         <div class="lb-sheet">
           {#if img.palette}
             <div class="lb-pal">
@@ -39,7 +53,9 @@
             </div>
           {/if}
           <p class="lb-opt">
-            {#if img.origBytes}
+            {#if img.kind !== 'image'}
+              <b>{KIND_LABELS[img.kind]} · {fmtBytes(img.bytes)}</b>
+            {:else if img.origBytes}
               <span>Original {fmtBytes(img.origBytes)}</span>
               <span class="arrow">→</span>
               <b>WebP {fmtBytes(img.bytes)}</b>
