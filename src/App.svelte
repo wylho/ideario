@@ -46,7 +46,6 @@
             <Menu size={20} />
           </button>
           <span class="brand">Ideario</span>
-          <span class="meta">Sincronizado · Drive</span>
         </div>
         <NavList />
       </div>

@@ -167,6 +167,9 @@ export interface Settings {
   cacheLimitGb: number
 }
 
+/** Estado da sincronização com o Drive. Só o que não é 'ok' aparece na interface. */
+export type SyncState = 'ok' | 'syncing' | 'offline' | 'error'
+
 export interface SyncStatus {
   connected: boolean
   lastSyncAt: Millis | null

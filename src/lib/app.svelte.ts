@@ -1,7 +1,7 @@
 // Estado da interface e dados compartilhados entre as telas.
 // Visão (como ver) e filtro (o que ver) são independentes: trocar um nunca desfaz o outro.
 import { api } from './api'
-import type { AttachmentRow, Box, Category, Filter, TagCount, View, ViewCounts } from './types'
+import type { AttachmentRow, Box, Category, Filter, SyncState, TagCount, View, ViewCounts } from './types'
 import { uuidv7 } from './uuid'
 
 export interface EditorTarget {
@@ -42,6 +42,9 @@ class AppState {
   /** Desktop: barra lateral aberta ou recolhida. Fica guardado no aparelho. */
   sidebarOpen = $state(readSidebar())
 
+  /** Sincronização: a interface só mostra algo quando não está 'ok'. */
+  sync = $state<SyncState>(typeof navigator !== 'undefined' && navigator.onLine === false ? 'offline' : 'ok')
+
   /** Sobe a cada mudança nos dados; as consultas da UI dependem dele. */
   revision = $state(0)
   categories = $state.raw<Category[]>([])
@@ -63,6 +66,9 @@ class AppState {
       void this.loadShared()
     })
     void this.loadShared()
+    api.subscribeSync((s) => (this.sync = navigator.onLine ? s : 'offline'))
+    addEventListener('offline', () => (this.sync = 'offline'))
+    addEventListener('online', () => (this.sync = 'ok'))
     // As contagens acompanham filtro, busca e dados.
     $effect.root(() => {
       $effect(() => {

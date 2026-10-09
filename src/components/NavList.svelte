@@ -16,7 +16,7 @@
 </script>
 
 <div class="drawer-scroll">
-  <div class="d-label"><span>Categorias</span><button class="link">Editar</button></div>
+  <div class="d-label"><span>Categorias</span></div>
   <button class="d-item" class:on={!app.filter.categoryId && app.box === 'active'} onclick={() => pickCategory(null)}>
     <LayoutGrid size={19} /><span class="grow">Tudo</span>
   </button>

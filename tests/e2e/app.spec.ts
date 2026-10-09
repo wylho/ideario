@@ -11,6 +11,14 @@ const newNote = async (page: Page) => {
   await page.getByLabel('Nova nota').click()
   await expect(page.locator('#corpo')).toBeFocused()
 }
+/** Configurações: pela barra lateral no desktop, pela gaveta no celular. */
+const openSettings = async (page: Page) => {
+  if (await page.locator('.sidebar').isVisible()) await page.locator('.sidebar').getByRole('button', { name: 'Configurações' }).click()
+  else {
+    await page.getByLabel('Abrir menu').click()
+    await page.locator('.drawer').getByRole('button', { name: 'Configurações' }).click()
+  }
+}
 const back = (page: Page) => page.getByLabel('Voltar e salvar').click()
 const tab = (page: Page, label: string) => page.locator('.tabbar button', { hasText: label }).click()
 const drawerItem = async (page: Page, name: string) => {
@@ -181,7 +189,7 @@ test('sem erros no console ao navegar pelas abas', async ({ page }) => {
   page.on('pageerror', (e) => errors.push(String(e)))
   page.on('console', (m) => m.type() === 'error' && errors.push(m.text()))
   for (const t of ['Lembretes', 'Arquivos', 'Moodboard', 'Notas']) await tab(page, t)
-  await page.getByLabel('Sincronização').click()
+  await openSettings(page)
   await expect(page.locator('.sheet-title')).toHaveText('Configurações')
   expect(errors).toEqual([])
 })
@@ -218,7 +226,7 @@ test.describe('responsivo', () => {
     expect(Math.abs(box.x + box.width / 2 - 640)).toBeLessThan(2)
     await back(page)
 
-    await page.getByLabel('Sincronização').click()
+    await openSettings(page)
     const sheet = (await page.locator('.sheet').boundingBox())!
     expect(sheet.y).toBeGreaterThan(0)
     expect(sheet.y + sheet.height).toBeLessThan(800)
@@ -236,14 +244,14 @@ test.describe('responsivo', () => {
 
 test('tema: escolher claro ou escuro nas configurações e manter ao recarregar', async ({ page }) => {
   await page.emulateMedia({ colorScheme: 'light' })
-  await page.getByLabel('Sincronização').click()
+  await openSettings(page)
   await page.getByRole('radio', { name: 'Escuro' }).click()
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
   const bg = await page.evaluate(() => getComputedStyle(document.body).backgroundColor)
   expect(bg).toBe('rgb(16, 21, 19)')
   await page.reload()
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
-  await page.getByLabel('Sincronização').click()
+  await openSettings(page)
   await page.getByRole('radio', { name: 'Sistema' }).click()
   await expect(page.locator('html')).not.toHaveAttribute('data-theme', /.+/)
 })
@@ -447,4 +455,19 @@ test('card grande para na altura máxima e esmaece o fim; os metadados continuam
   await expect(longo.locator('.card-meta')).toBeVisible()
   const curto = cards(page).filter({ hasText: 'Horários e estacionamento' })
   await expect(curto.locator('.preview')).not.toHaveAttribute('data-clipped', '')
+})
+
+test('nuvem do sync só aparece quando há algo a dizer', async ({ page }) => {
+  await expect(page.locator('.sync-ind')).toHaveCount(0)
+  await expect(page.getByText('Sincronizado · Drive')).toHaveCount(0)
+  await newNote(page)
+  await page.keyboard.type('Algo para sincronizar')
+  await back(page)
+  await expect(page.locator('.sync-ind.syncing')).toBeVisible({ timeout: 4000 })
+  await expect(page.locator('.sync-ind')).toHaveCount(0, { timeout: 4000 })
+  await page.context().setOffline(true)
+  await expect(page.locator('.sync-ind.offline')).toBeVisible()
+  await page.locator('.sync-ind').click()
+  await expect(page.locator('.sheet-title')).toHaveText('Configurações')
+  await page.context().setOffline(false)
 })
