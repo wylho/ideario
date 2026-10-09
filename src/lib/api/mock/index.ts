@@ -29,9 +29,10 @@ interface Projection {
 
 const TRASH_DAYS = 30
 // Limites da prévia do card. Ficam aqui em cima porque o seed já projeta as notas ao carregar o módulo.
-const MAX_BLOCKS = 8
-const MAX_TASKS = 4
-const MAX_CHARS = 360
+// A prévia vai além do que cabe no card; o card corta na altura máxima e esmaece o fim.
+const MAX_BLOCKS = 24
+const MAX_TASKS = 12
+const MAX_CHARS = 1200
 
 const notes = new Map<string, StoredNote>()
 const attachments = new Map<string, Attachment>()
@@ -123,7 +124,7 @@ function project(body: RichDoc): Projection {
   return p
 }
 
-/** Prévia do card: no máximo 8 blocos, 4 tarefas e ~360 caracteres, na ordem do documento. */
+/** Prévia do card, na ordem do documento, com limites folgados (o card corta pela altura). */
 function previewOf(blocks: PreviewBlock[]): PreviewBlock[] {
   const out: PreviewBlock[] = []
   let tasks = 0

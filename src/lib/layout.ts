@@ -11,15 +11,23 @@ export function estimateCard(n: NoteSummary, w: number): number {
   let h = 26 // padding do corpo
   if (n.cover) h += Math.min(260, (w * n.cover.height) / n.cover.width)
   if (n.title) h += lines(n.title, 9) * 20 + 6
+  let pv = 0
   for (const b of n.preview) {
-    if (b.kind === 'more') h += 20
-    else if (b.kind === 'heading') h += lines(b.text, 8, 2) * 20 + 2
-    else if (b.kind === 'text') h += lines(b.text, n.title ? 6.6 : 7.8, 4) * (n.title ? 19.6 : 23) + 3
-    else h += lines(b.text, 6.6, 2) * 19.6 + 3
+    if (b.kind === 'more') pv += 20
+    else if (b.kind === 'heading') pv += lines(b.text, 8) * 20 + 4
+    else if (b.kind === 'text') pv += lines(b.text, n.title ? 6.6 : 7.8) * (n.title ? 19.6 : 23) + 3
+    else pv += lines(b.text, 6.6) * 19.6 + 3
   }
-  if (n.preview.length) h += 6
+  // Mesma altura máxima da prévia que o CSS aplica (.preview).
+  if (pv) h += Math.min(pv, previewMax(!!n.cover, w)) + 6
   const pills =
     (n.reminderAt != null ? 120 : 0) + (n.categoryId ? 80 : 0) + (n.fileCount ? 40 : 0) + n.tags.reduce((s, t) => s + t.length * 6.5 + 24, 0)
   if (pills) h += Math.ceil(pills / inner) * 26 + 2
   return h
+}
+
+/** Altura máxima da prévia no card: menor com capa e em colunas estreitas. Espelha o CSS. */
+export function previewMax(hasCover: boolean, colWidth: number) {
+  if (colWidth < 200) return hasCover ? 150 : 220
+  return hasCover ? 190 : 300
 }

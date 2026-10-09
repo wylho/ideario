@@ -208,7 +208,13 @@ export function seedNotes(): SeedNote[] {
     {
       id: 'n16', title: 'Feedbacks do trimestre', categoryId: 'cat-gestao', tags: ['reunião', 'feedback'], color: 'none', pinned: false,
       reminderAt: at(5, 14), updatedAt: hoursAgo(60),
-      body: doc(h3('Pontos fortes do time'), ul('Entregas no prazo', 'Boa documentação', 'Apoio entre áreas'), h3('A melhorar'), ul('Estimativas', 'Reuniões longas demais')),
+      body: doc(
+        p('Resumo das conversas individuais de setembro. Levar para a reunião geral só o que for do time todo; o resto fica nos 1:1.'),
+        h3('Pontos fortes do time'), ul('Entregas no prazo', 'Boa documentação', 'Apoio entre áreas'),
+        h3('A melhorar'), ul('Estimativas', 'Reuniões longas demais', 'Passagem de bastão entre turnos'),
+        h3('Combinados'), check([['Pauta enviada 1 dia antes', true], ['Reunião de 30 min, no máximo', false], ['Ata no canal do time', false]]),
+        h3('Próximos passos'), p('Rever metas do Q4 com cada pessoa e marcar a retrospectiva no fim de novembro.'),
+      ),
     },
     {
       id: 'n17', title: 'Exames e consultas', categoryId: 'cat-hospital', tags: ['saúde'], color: 'rose', pinned: false,

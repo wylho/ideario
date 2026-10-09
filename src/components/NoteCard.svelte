@@ -4,6 +4,7 @@
   import { app } from '../lib/app.svelte'
   import { fmtReminder, isOverdue, withHashtags } from '../lib/format'
   import { noteMenu } from '../lib/menus'
+  import { watchClip } from '../lib/clip'
   import ContextMenu from './ContextMenu.svelte'
   import type { NoteSummary } from '../lib/types'
 
@@ -37,7 +38,11 @@
     {#if n.title}<h3>{n.title}</h3>{/if}
     {#if n.preview.length}
       <!-- Prévia na ordem e na estrutura do documento (vem pronta da projeção). -->
-      <div class="preview" class:big={!n.title && n.preview.length === 1 && n.preview[0].kind === 'text'}>
+      <div
+        class="preview"
+        class:big={!n.title && n.preview.length === 1 && n.preview[0].kind === 'text'}
+        {@attach (el) => (void n.preview, watchClip(el))}
+      >
         {#each n.preview as b, i (i)}
           {#if b.kind === 'more'}
             <p class="pv-more">+{b.count} {b.count === 1 ? 'item' : 'itens'}</p>
