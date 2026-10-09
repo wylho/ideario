@@ -12,7 +12,9 @@
   let { n }: { n: NoteSummary } = $props()
 
   const cat = $derived(app.category(n.categoryId))
-  const hasMeta = $derived(n.reminderAt != null || !!cat || n.tags.length > 0 || n.fileCount > 0)
+  // Nota que é só um anexo (um áudio, um PDF…): o card vira a miniatura quadrada do arquivo, como na visão Arquivos.
+  const solo = $derived(!n.cover.length && n.preview.length === 1 && n.preview[0].kind === 'file' ? n.preview[0] : null)
+  const hasMeta = $derived(n.reminderAt != null || !!cat || n.tags.length > 0 || (n.fileCount > 0 && !solo))
   const selected = $derived(app.selected.has(n.id))
   const selecting = $derived(app.selected.size > 0)
   // Com seleção ativa, tocar no card marca ou desmarca; Ctrl/⌘+clique e Shift+clique também selecionam, como numa pasta.
@@ -63,9 +65,15 @@
       {#if n.imageCount > n.cover.length}<span class="more">+{n.imageCount - n.cover.length}</span>{/if}
     </div>
   {/if}
+  {#if solo}
+    {@const Icon = KIND_ICONS[solo.fileKind]}
+    <div class="card-file t-{solo.fileKind}"><Icon size={34} strokeWidth={1.6} /></div>
+  {/if}
   <div class="card-body">
     {#if n.title}<h3>{n.title}</h3>{/if}
-    {#if n.preview.length}
+    {#if solo}
+      <p class="card-file-name">{solo.text}</p>
+    {:else if n.preview.length}
       <!-- Prévia na ordem e na estrutura do documento (vem pronta da projeção). -->
       <div
         class="preview"
@@ -102,7 +110,7 @@
             <i class="dot" style:background={cat.color}></i>{cat.name.split(' ')[0]}
           </button>
         {/if}
-        {#if n.fileCount}<span class="pill"><Paperclip size={11} />{n.fileCount}</span>{/if}
+        {#if n.fileCount && !solo}<span class="pill"><Paperclip size={11} />{n.fileCount}</span>{/if}
         {#each n.tags as t (t)}
           <button class="pill tag" onclick={(e) => { e.stopPropagation(); app.toggleTag(t) }}>#{t}</button>
         {/each}

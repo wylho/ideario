@@ -8,10 +8,18 @@ import type { NoteSummary } from './types'
 export function estimateCard(n: NoteSummary, w: number): number {
   const inner = Math.max(80, w - 26)
   const lines = (text: string, charPx: number, max = Infinity) => Math.min(max, Math.ceil(text.length / Math.max(8, inner / charPx)))
+  const pillsHeight = (files = n.fileCount > 0) => {
+    const px = (n.reminderAt != null ? 120 : 0) + (n.categoryId ? 80 : 0) + (files ? 40 : 0) + n.tags.reduce((s, t) => s + t.length * 6.5 + 24, 0)
+    return px ? Math.ceil(px / inner) * 26 + 2 : 0
+  }
   let h = 26 // padding do corpo
   // Capa: uma foto ou uma linha de fotos com a mesma altura (largura / soma das proporções).
   if (n.cover.length) h += Math.min(260, (w - 2 * (n.cover.length - 1)) / n.cover.reduce((s, c) => s + c.width / c.height, 0))
   if (n.title) h += lines(n.title, 9) * 20 + 6
+  // Só um anexo: miniatura quadrada (até 220 px) e o nome do arquivo numa linha.
+  if (!n.cover.length && n.preview.length === 1 && n.preview[0].kind === 'file') {
+    return h + Math.min(w, 220) + 20 + pillsHeight(false) // sem a pílula do clipe
+  }
   let pv = 0
   for (const b of n.preview) {
     if (b.kind === 'more') pv += 20
@@ -23,10 +31,7 @@ export function estimateCard(n: NoteSummary, w: number): number {
   }
   // Mesma altura máxima da prévia que o CSS aplica (.preview).
   if (pv) h += Math.min(pv, previewMax(n.cover.length > 0, w)) + 6
-  const pills =
-    (n.reminderAt != null ? 120 : 0) + (n.categoryId ? 80 : 0) + (n.fileCount ? 40 : 0) + n.tags.reduce((s, t) => s + t.length * 6.5 + 24, 0)
-  if (pills) h += Math.ceil(pills / inner) * 26 + 2
-  return h
+  return h + pillsHeight()
 }
 
 /** Altura máxima da prévia no card: menor com capa e em colunas estreitas. Espelha o CSS. */
