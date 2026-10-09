@@ -218,6 +218,18 @@ pub fn import_file(core: Core_, request: Request<'_>) -> Result<Attachment> {
     core.with(|s| attachments::import(s, &core.data, bytes, if name.is_empty() { "arquivo" } else { &name }, &mime))
 }
 
+/// Importa um arquivo do computador pelo caminho (arrastado para a janela): lido aqui, sem passar pela ponte.
+#[tauri::command]
+pub fn import_path(core: Core_, path: String) -> Result<Attachment> {
+    let path = PathBuf::from(path);
+    if path.is_dir() {
+        return Err("pastas não podem ser anexadas".into());
+    }
+    let bytes = std::fs::read(&path).map_err(|e| e.to_string())?;
+    let name = path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_else(|| "arquivo".into());
+    core.with(|s| attachments::import(s, &core.data, &bytes, &name, attachments::mime_of(&name)))
+}
+
 /// Salva uma cópia do anexo na pasta Downloads e devolve onde ficou.
 #[tauri::command]
 pub fn download_attachment(app: AppHandle, core: Core_, hash: String, name: String) -> Result<String> {

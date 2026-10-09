@@ -574,6 +574,10 @@ export const mockApi: Api = {
     return ''
   },
 
+  // No navegador os arquivos arrastados chegam como File (importFile); caminhos só existem no app.
+  async importPath() {
+    throw new Error('importPath só existe no app')
+  },
   async importFile(file, name) {
     const mime = file.type || 'application/octet-stream'
     const kind = kindOf(mime, name)

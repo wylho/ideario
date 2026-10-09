@@ -180,18 +180,22 @@ try {
     await s.waitFor(`return [...document.querySelectorAll('.card')].some((c) => c.getAttribute('aria-label') === 'Bolo da vó' && c.querySelector('.card-media img'))`, 'capa no card')
   })
 
-  await test('soltar um arquivo na janela (sem nota aberta) cria uma nota com ele', async () => {
+  await test('arrastar um arquivo do sistema (sem nota aberta) cria uma nota com ele', async () => {
+    // O mesmo evento que o Tauri emite quando o sistema solta arquivos na janela (com o caminho de cada um).
+    const file = join(DATA, 'takeout.zip')
+    writeFileSync(file, 'PK')
     await s.exec(`
-      const dt = new DataTransfer()
-      dt.items.add(new File(['PK'], 'takeout.zip', { type: 'application/zip' }))
-      const el = document.querySelector('.content')
-      el.dispatchEvent(new DragEvent('dragover', { bubbles: true, cancelable: true, dataTransfer: dt }))
-      el.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: dt }))
-      return true`)
+      window.__TAURI_INTERNALS__.invoke('plugin:event|emit', { event: 'tauri://drag-drop', payload: { paths: [arguments[0]], position: { x: 400, y: 400 } } })
+      return true`, file)
     await s.waitFor(`return document.querySelector('#corpo .nf-card')?.textContent.includes('takeout.zip')`, 'anexo na nota nova')
     await sleep(700)
     await s.exec(`document.querySelector('[aria-label="Voltar e salvar"]').click(); return true`)
     await s.waitFor(`return [...document.querySelectorAll('.card .pv-file')].some((f) => f.textContent.includes('takeout.zip'))`, 'card com o zip')
+  })
+
+  await test('microfone liberado na WebKitGTK: o gravador aparece no +', async () => {
+    const ok = await s.exec(`return typeof MediaRecorder !== 'undefined' && !!navigator.mediaDevices?.getUserMedia`)
+    if (!ok) throw new Error('getUserMedia indisponível')
   })
 
   await test('fechar e reabrir: tudo continua lá, na hora', async () => {

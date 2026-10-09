@@ -24,13 +24,16 @@ export interface ConfirmAsk {
 }
 export type AppDialog = NameDialog | ConfirmAsk
 
+/** Arquivo solto na janela: File no navegador; caminho no app (o núcleo lê do disco). */
+export type DroppedFile = File | { path: string }
+
 export interface EditorTarget {
   id: string
   isNew: boolean
   /** Categoria e tags herdadas do filtro ativo ao criar pelo "+". */
   defaults?: { categoryId: string | null; tags: string[] }
   /** Atalho do "+": a nota nova já abre gravando, com a câmera ou com os arquivos escolhidos. */
-  start?: { record: true } | { camera: true } | { files: File[] }
+  start?: { record: true } | { camera: true } | { files: DroppedFile[] }
 }
 
 /** Largura a partir da qual o layout é de desktop. Igual ao breakpoint em app.css. */
@@ -81,8 +84,9 @@ class AppState {
   drawerOpen = $state(false)
   settingsOpen = $state(false)
   editor = $state<EditorTarget | null>(null)
-  /** Recebe arquivos soltos na janela enquanto o editor está aberto (o editor registra ao montar). */
-  dropIntoEditor: ((files: File[]) => void) | null = null
+  /** Recebe arquivos soltos na janela enquanto o editor está aberto (o editor registra ao montar).
+   *  `at`: ponto da tela onde caíram; dentro do texto entram ali, fora vão para o fim. */
+  dropIntoEditor: ((files: DroppedFile[], at?: { x: number; y: number }) => void) | null = null
   lightbox = $state<AttachmentRow | null>(null)
   toast = $state<string | null>(null)
   /** Ação do toast (ex.: Desfazer). */

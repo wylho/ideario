@@ -59,6 +59,8 @@ export interface Api {
   mediaUrl(hash: string): string
   /** Importa um arquivo do computador (ou uma gravação) e devolve o anexo pronto para entrar na nota. */
   importFile(file: Blob, name: string): Promise<Attachment>
+  /** Só no app: importa pelo caminho um arquivo arrastado do sistema (lido no núcleo). */
+  importPath(path: string): Promise<Attachment>
   /** Salva uma cópia do anexo (no app: na pasta Downloads, e devolve o caminho; no navegador: download, e devolve null). */
   downloadAttachment(a: Pick<AttachmentRow, 'hash' | 'name' | 'mime'>): Promise<string | null>
 

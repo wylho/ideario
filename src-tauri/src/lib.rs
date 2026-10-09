@@ -48,13 +48,13 @@ pub fn run() {
                 .expect("janela main ausente no tauri.conf.json");
             WebviewWindowBuilder::from_config(app.handle(), &config)?
                 .initialization_script(format!("{}\n{}", system_fonts::init_script(), system_theme::init_script()))
-                // Arquivos arrastados para a janela chegam à página (drop do HTML), não ao Tauri: a UI decide
-                // se vão para a nota aberta ou viram nota nova.
-                .disable_drag_drop_handler()
                 .build()?;
+            #[cfg(target_os = "linux")]
+            linux_media(app)?;
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            commands::import_path,
             app_version,
             background::set_background,
             commands::list_notes,
@@ -102,4 +102,28 @@ pub fn run() {
 #[tauri::command]
 fn app_version() -> &'static str {
     env!("CARGO_PKG_VERSION")
+}
+
+/// Linux: a WebKitGTK vem com a captura de mídia desligada e nega o pedido de microfone/câmera se ninguém responder.
+/// Liga a captura e aceita só áudio e vídeo (o gravador e a câmera da nota); compartilhar a tela continua negado.
+#[cfg(target_os = "linux")]
+fn linux_media(app: &tauri::App) -> tauri::Result<()> {
+    use webkit2gtk::{glib::prelude::*, PermissionRequestExt, SettingsExt, UserMediaPermissionRequest, UserMediaPermissionRequestExt, WebViewExt};
+    let Some(window) = app.get_webview_window("main") else { return Ok(()) };
+    window.with_webview(|wv| {
+        let view = wv.inner();
+        if let Some(settings) = view.settings() {
+            settings.set_enable_media_stream(true);
+            settings.set_enable_mediasource(true);
+        }
+        view.connect_permission_request(|_, request| {
+            let Some(media) = request.downcast_ref::<UserMediaPermissionRequest>() else { return false };
+            if media.is_for_audio_device() || media.is_for_video_device() {
+                request.allow();
+            } else {
+                request.deny();
+            }
+            true
+        });
+    })
 }
