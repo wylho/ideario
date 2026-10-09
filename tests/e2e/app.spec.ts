@@ -319,8 +319,8 @@ test.describe('visão × filtro', () => {
     await page.setViewportSize({ width: 1280, height: 800 })
     await page.locator('.sidebar').getByRole('button', { name: 'Linvo 4' }).click()
     await expect(page.locator('.filter-title')).toContainText('Linvo')
-    await expect(page.locator('.view-dock .lens', { hasText: 'Lembretes' }).locator('.n')).toHaveText('2')
-    await page.locator('.view-dock .lens', { hasText: 'Arquivos' }).click()
+    await expect(page.locator('.view-switch .lens', { hasText: 'Lembretes' }).locator('.n')).toHaveText('2')
+    await page.locator('.view-switch .lens', { hasText: 'Arquivos' }).click()
     await expect(page.locator('.filter-title')).toContainText('Linvo')
     await page.getByRole('button', { name: 'Limpar filtro' }).click()
     await expect(page.locator('.filter-title')).toHaveCount(0)
@@ -518,8 +518,8 @@ test.describe('ordenar e arrastar', () => {
     await expect(page.getByRole('button', { name: 'Ordenar: Personalizada' })).toBeVisible()
     await expect.poll(async () => (await titles(page, 0))[0]).toBe(last)
     // A ordem fica: trocar de visão e voltar mantém.
-    await page.locator('.view-dock .lens', { hasText: 'Lembretes' }).click()
-    await page.locator('.view-dock .lens', { hasText: 'Notas' }).click()
+    await page.locator('.view-switch .lens', { hasText: 'Lembretes' }).click()
+    await page.locator('.view-switch .lens', { hasText: 'Notas' }).click()
     expect((await titles(page, 0))[0]).toBe(last)
   })
 

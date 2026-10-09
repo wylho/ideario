@@ -2,6 +2,7 @@
   import { LayoutGrid, Menu, Rows3, Search, X } from '@lucide/svelte'
   import SyncIndicator from './SyncIndicator.svelte'
   import SortMenu from './SortMenu.svelte'
+  import ViewSwitch from './ViewSwitch.svelte'
   import { app } from '../lib/app.svelte'
   import { viewInfo } from '../lib/views'
 
@@ -42,6 +43,7 @@
       <button class="icon-btn sm" aria-label="Limpar busca" onclick={() => (app.query = '')}><X size={14} /></button>
     {/if}
   </label>
+  {#if app.wide}<ViewSwitch />{/if}
   <div class="top-actions">
     {#if app.view === 'notes'}
       <SortMenu />

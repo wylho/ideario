@@ -6,7 +6,6 @@
   import Drawer from './components/Drawer.svelte'
   import NavList from './components/NavList.svelte'
   import FilterBar from './components/FilterBar.svelte'
-  import ViewDock from './components/ViewDock.svelte'
   import NotesView from './components/NotesView.svelte'
   import RemindersView from './components/RemindersView.svelte'
   import FilesView from './components/FilesView.svelte'
@@ -67,7 +66,7 @@
       <button class="fab" onclick={() => app.openNew()} aria-label="Nova nota" title="Nova nota (Ctrl+N)"><Plus size={26} strokeWidth={2.2} /></button>
     {/if}
 
-    {#if app.wide}<ViewDock />{:else}<TabBar />{/if}
+    {#if !app.wide}<TabBar />{/if}
 
     <div class="toast" class:show={!!app.toast} class:has-action={!!app.toastAction} role="status" aria-live="polite">
       <span>{app.toast}</span>
