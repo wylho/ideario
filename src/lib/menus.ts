@@ -1,7 +1,7 @@
 // Menus de contexto de cada tipo de elemento. Um lugar só, para o mesmo item se comportar igual em todo o app.
 import {
   Archive, ArchiveRestore, Bell, BellOff, Check, Copy, Download, ExternalLink, Files, Filter, FilterX, Image, Palette, Pin, PinOff,
-  Plus, RotateCcw, Tag, Trash2, AlarmClock,
+  Play, Plus, RotateCcw, Tag, Trash2, AlarmClock,
 } from '@lucide/svelte'
 import { api } from './api'
 import { app } from './app.svelte'
@@ -115,6 +115,7 @@ export function reminderMenu(n: NoteSummary): MenuEntry[] {
 export function attachmentMenu(r: AttachmentRow): MenuEntry[] {
   return [
     ...(r.kind === 'image' ? [{ label: 'Ver imagem', icon: Image, onSelect: () => (app.lightbox = r) }] : []),
+    ...(r.kind === 'video' || r.kind === 'audio' ? [{ label: 'Tocar', icon: Play, onSelect: () => (app.lightbox = r) }] : []),
     { label: 'Abrir nota de origem', icon: ExternalLink, onSelect: () => app.openNote(r.noteId) },
     { label: 'Baixar', icon: Download, onSelect: () => void api.downloadAttachment(r) },
     SEP,

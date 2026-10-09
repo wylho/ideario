@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { Plus } from '@lucide/svelte'
   import { app } from './lib/app.svelte'
   import TopBar from './components/TopBar.svelte'
   import TabBar from './components/TabBar.svelte'
@@ -11,6 +10,7 @@
   import FilesView from './components/FilesView.svelte'
   import MoodboardView from './components/MoodboardView.svelte'
   import Lightbox from './components/Lightbox.svelte'
+  import FabMenu from './components/FabMenu.svelte'
   import SettingsSheet from './components/SettingsSheet.svelte'
 
   // O editor (TipTap) fica fora do pacote inicial: carrega em paralelo,
@@ -64,7 +64,7 @@
     </main>
 
     {#if app.box !== 'trash'}
-      <button class="fab" onclick={() => app.openNew()} aria-label="Nova nota" title="Nova nota (Ctrl+N)"><Plus size={26} strokeWidth={2.2} /></button>
+      <FabMenu />
     {/if}
 
     {#if !app.wide}<TabBar />{/if}
