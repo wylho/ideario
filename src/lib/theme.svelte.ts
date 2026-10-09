@@ -2,7 +2,7 @@
 // Ficam no aparelho (cada computador ou celular tem o seu) e são aplicados antes da primeira pintura.
 // Aplicar é só gravar ~25 variáveis CSS no <html>: nenhum componente muda, nada roda em segundo plano.
 import { isTauri } from '@tauri-apps/api/core'
-import { cssVars, DESKTOPS, fitAccent, PALETTES, type Colors, type DesktopId, type Mode, type PaletteId } from './palettes'
+import { cssVars, DESKTOPS, fitAccent, mix, PALETTES, type Colors, type DesktopId, type Mode, type PaletteId } from './palettes'
 
 /** Aparência: claro, escuro ou acompanhar o sistema. */
 export type ThemePref = 'system' | 'light' | 'dark'
@@ -64,7 +64,16 @@ const darkQuery = typeof matchMedia === 'function' ? matchMedia('(prefers-color-
 export function systemColors(sys: SystemTheme, mode: Mode): Colors {
   const d = DESKTOPS[sys.desktop ?? 'gnome']
   const base = { ...d[mode] }
-  if (sys.scheme?.mode === mode) Object.assign(base, sys.scheme.colors)
+  if (sys.scheme?.mode === mode) {
+    // Esquema do KDE: fundo, cards e texto vêm dele; o resto deriva para combinar.
+    const s = sys.scheme.colors
+    Object.assign(base, s)
+    if (s.surface && s.fg) {
+      base.raised = mix(s.fg, s.surface, mode === 'dark' ? 0.06 : 0.03)
+      base.line = mix(s.fg, s.surface, mode === 'dark' ? 0.14 : 0.13)
+    }
+    if (s.bg) base.stage = mix('#000000', s.bg, mode === 'dark' ? 0.25 : 0.05)
+  }
   const accent = sys.accent ?? (mode === 'light' ? d.light.accent : d.dark.accent)
   base.accent = fitAccent(accent, mode, base.surface)
   delete base.accentSoft

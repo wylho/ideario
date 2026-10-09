@@ -143,7 +143,9 @@ button { cursor: pointer; }
 /* Sem isso, as fileiras com rolagem horizontal encolhem e cortam (bug herdado do protótipo). */
 .content > * { flex-shrink: 0; width: 100%; max-width: var(--content-max); margin-inline: auto; }
 @media (min-width: 640px) { .content { padding-inline: 16px; } }
-.shell.wide .content { padding: 4px 24px 40px; gap: 12px; }
+/* desktop: os cards começam a 24px da barra superior, o mesmo respiro da lateral; com a barra de filtro, ela ocupa esse respiro */
+.shell.wide .content { padding: 24px 24px 40px; gap: 12px; }
+.shell.wide :is(.filter-bar, .filter-row) + .content { padding-top: 6px; }
 
 .section-label {
   display: flex; align-items: center; gap: 8px; margin-top: 8px; padding-inline: 4px; font-size: 11px; font-weight: 700;
@@ -540,7 +542,7 @@ button { cursor: pointer; }
 /* filtro (o que ver): proposta A */
 .filter-bar, .filter-row { display: flex; align-items: center; gap: 6px; flex: none; width: 100%; max-width: calc(var(--content-max) + 32px); margin-inline: auto; padding: 0 16px 8px; }
 .filter-bar { flex-wrap: wrap; }
-.shell.wide .filter-bar { padding: 2px 24px 10px; max-width: calc(var(--content-max) + 48px); gap: 8px; }
+.shell.wide .filter-bar { padding: 18px 24px 10px; max-width: calc(var(--content-max) + 48px); gap: 8px; }
 .filter-row { overflow-x: auto; scrollbar-width: none; }
 .filter-row .chip, .filter-bar .chip { flex: none; white-space: nowrap; }
 .chip svg { flex: none; }
