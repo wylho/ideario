@@ -1,7 +1,7 @@
 // Estado da interface e dados compartilhados entre as telas.
 // Visão (como ver) e filtro (o que ver) são independentes: trocar um nunca desfaz o outro.
 import { api } from './api'
-import type { AttachmentRow, Box, Category, Filter, SyncState, TagCount, View, ViewCounts } from './types'
+import type { AttachmentRow, Box, Category, Filter, NoteSort, SyncState, TagCount, View, ViewCounts } from './types'
 import { uuidv7 } from './uuid'
 
 export interface EditorTarget {
@@ -13,6 +13,17 @@ export interface EditorTarget {
 
 /** Largura a partir da qual o layout é de desktop. Igual ao breakpoint em app.css. */
 export const WIDE_MIN = 960
+
+const SORT_KEY = 'ideario.sort'
+const SORTS: NoteSort[] = ['custom', 'updated', 'created', 'category', 'title']
+function readSort(): NoteSort {
+  try {
+    const v = localStorage.getItem(SORT_KEY) as NoteSort | null
+    return v && SORTS.includes(v) ? v : 'updated'
+  } catch {
+    return 'updated'
+  }
+}
 
 const SIDEBAR_KEY = 'ideario.sidebar'
 function readSidebar() {
@@ -30,6 +41,10 @@ class AppState {
   box = $state<Box>('active')
   query = $state('')
   layout = $state<'grid' | 'list'>('grid')
+  /** Ordem das notas; guardada no aparelho. */
+  sort = $state<NoteSort>(readSort())
+  /** Card sendo arrastado (para o resto da UI reagir). */
+  dragId = $state<string | null>(null)
   drawerOpen = $state(false)
   settingsOpen = $state(false)
   editor = $state<EditorTarget | null>(null)
@@ -118,6 +133,15 @@ class AppState {
 
   clearFilter() {
     this.filter = { categoryId: null, tags: [] }
+  }
+
+  setSort(sort: NoteSort) {
+    this.sort = sort
+    try {
+      localStorage.setItem(SORT_KEY, sort)
+    } catch {
+      // sem armazenamento: vale só nesta sessão
+    }
   }
 
   toggleSidebar() {

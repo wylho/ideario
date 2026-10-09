@@ -604,3 +604,20 @@ button { cursor: pointer; }
 .sync-ind.syncing svg { animation: sync-pulse 1.2s ease-in-out infinite; }
 .sync-ind.error { color: var(--late); background: var(--late-soft); }
 @keyframes sync-pulse { 50% { opacity: .35; } }
+
+/* arrastar cards */
+.drag-section .card { cursor: default; }
+.dragging-card, .dragging-card * { cursor: grabbing !important; }
+.card.drag-source { opacity: .28; transform: scale(.98); box-shadow: none; }
+.drag-ghost {
+  position: fixed; left: 0; top: 0; z-index: 60; margin: 0; pointer-events: none;
+  box-shadow: 0 18px 48px rgb(0 0 0 / .22), 0 2px 6px rgb(0 0 0 / .08); transition: none; will-change: transform;
+}
+.m-item { min-width: 0; }
+.stack { display: flex; flex-direction: column; gap: 10px; }
+.menu-heading { padding: 8px 12px 4px; font-size: 11px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); }
+.menu-check.hidden { visibility: hidden; }
+.d-toggle { display: inline-flex; align-items: center; gap: 4px; color: inherit; font: inherit; border-radius: 6px; padding: 2px 4px; margin-left: -4px; }
+.d-toggle:hover { color: var(--fg); }
+.d-toggle svg { transition: transform .18s ease; }
+.d-toggle[aria-expanded="false"] svg { transform: rotate(-90deg); }

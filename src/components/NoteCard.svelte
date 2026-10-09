@@ -22,6 +22,8 @@
 <div
   {...trigger}
   class="card c-{n.color}"
+  class:drag-source={app.dragId === n.id}
+  data-note-id={n.id}
   onclick={open}
   onkeydown={(e) => e.key === 'Enter' && e.target === e.currentTarget && open()}
   tabindex="0"

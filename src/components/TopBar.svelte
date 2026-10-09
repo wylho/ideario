@@ -1,6 +1,7 @@
 <script lang="ts">
   import { LayoutGrid, Menu, Rows3, Search, X } from '@lucide/svelte'
   import SyncIndicator from './SyncIndicator.svelte'
+  import SortMenu from './SortMenu.svelte'
   import { app } from '../lib/app.svelte'
   import { viewInfo } from '../lib/views'
 
@@ -43,6 +44,7 @@
   </label>
   <div class="top-actions">
     {#if app.view === 'notes'}
+      <SortMenu />
       <button
         class="icon-btn"
         aria-label={app.layout === 'grid' ? 'Ver em lista' : 'Ver em grade'}

@@ -1,11 +1,28 @@
 <script lang="ts">
-  import { Archive, Hash, LayoutGrid, Settings, Trash2 } from '@lucide/svelte'
+  import { Archive, ChevronDown, Hash, LayoutGrid, Settings, Trash2 } from '@lucide/svelte'
   import { app } from '../lib/app.svelte'
   import { categoryMenu, tagMenu } from '../lib/menus'
   import ContextMenu from './ContextMenu.svelte'
 
   // Só filtra (o que ver). A visão (como ver) fica na barra de baixo.
   // Na gaveta, escolher categoria fecha; tags podem ser várias, então a gaveta fica aberta.
+  // Tags recolhíveis; a escolha fica no aparelho.
+  let tagsOpen = $state(readTagsOpen())
+  function readTagsOpen() {
+    try {
+      return localStorage.getItem('ideario.tagsOpen') !== '0'
+    } catch {
+      return true
+    }
+  }
+  function toggleTags() {
+    tagsOpen = !tagsOpen
+    try {
+      localStorage.setItem('ideario.tagsOpen', tagsOpen ? '1' : '0')
+    } catch {
+      // sem armazenamento: vale só nesta sessão
+    }
+  }
   const total = $derived(app.categories.reduce((s, c) => s + c.noteCount, 0))
   const pickCategory = (id: string | null) => {
     if (id === null) app.filter.categoryId = null
@@ -44,8 +61,14 @@
   <button class="d-item rail-only" class:on={app.filter.tags.length > 0} title="Tags" aria-label="Tags" onclick={() => app.toggleSidebar()}>
     <Hash size={19} />
   </button>
-  <div class="d-label"><span>Tags</span>{#if app.filter.tags.length}<button class="link" onclick={() => (app.filter.tags = [])}>Limpar</button>{/if}</div>
-  <div class="tag-cloud">
+  <div class="d-label">
+    <button class="d-toggle" aria-expanded={tagsOpen} aria-controls="nav-tags" onclick={toggleTags}>
+      Tags<ChevronDown size={15} />
+    </button>
+    {#if app.filter.tags.length}<button class="link" onclick={() => (app.filter.tags = [])}>Limpar</button>{/if}
+  </div>
+  {#if tagsOpen}
+  <div class="tag-cloud" id="nav-tags">
     {#each app.tags as t (t.name)}
       <ContextMenu items={() => tagMenu(t.name)}>
         {#snippet children(trigger)}
@@ -56,6 +79,7 @@
       </ContextMenu>
     {/each}
   </div>
+  {/if}
 
   <div class="d-sep"></div>
   <button class="d-item" class:on={app.box === 'archive'} title="Arquivo" onclick={() => app.openBox('archive')}><Archive size={19} /><span class="grow">Arquivo</span></button>
