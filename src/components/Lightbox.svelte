@@ -30,6 +30,8 @@
         </div>
         {#if img.kind === 'image'}
           <img class="lb-img" src={api.imageUrl(img.hash, 'full')} alt="" />
+        {:else if img.kind === 'pdf' && api.mediaUrl(img.hash)}
+          <iframe class="lb-img lb-doc" src={api.mediaUrl(img.hash)} title={img.name}></iframe>
         {:else if img.kind === 'video' && api.mediaUrl(img.hash)}
           <!-- svelte-ignore a11y_media_has_caption -->
           <video class="lb-img" src={api.mediaUrl(img.hash)} controls autoplay playsinline></video>
@@ -39,6 +41,9 @@
             <span class="lb-media-ico"><Icon size={40} /></span>
             {#if img.kind === 'audio'}<div class="lb-audio"><AudioPlayer src={api.mediaUrl(img.hash)} label={img.name} /></div>{/if}
             {#if img.kind === 'video'}<p>Vídeo de exemplo, sem conteúdo nesta prévia</p>{/if}
+            {#if img.kind !== 'audio' && img.kind !== 'video'}
+              <p>{api.mediaUrl(img.hash) ? 'Sem visualização para este tipo: baixe para abrir no aplicativo do sistema.' : 'Arquivo de exemplo, sem conteúdo nesta prévia.'}</p>
+            {/if}
           </div>
         {/if}
         <div class="lb-sheet">
@@ -66,7 +71,9 @@
           </p>
           <div class="lb-actions">
             <button class="btn ghost" onclick={() => void api.downloadAttachment(img)}><Download size={16} />Baixar</button>
-            <button class="btn primary" onclick={() => app.openNote(img.noteId)}>Abrir nota</button>
+            {#if app.editor?.id !== img.noteId}
+              <button class="btn primary" onclick={() => app.openNote(img.noteId)}>Abrir nota</button>
+            {/if}
           </div>
         </div>
       {/if}
