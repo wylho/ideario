@@ -1,4 +1,4 @@
-# Ideário — app de notas local-first (Tauri 2 + Rust)
+# Ideario — app de notas local-first (Tauri 2 + Rust)
 
 App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sync pelo Google Drive.
 **Especificação completa: `docs/SPEC.md`. Leia antes de qualquer tarefa.** O protótipo de design está em `prototype/`.
@@ -9,7 +9,7 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
 - Cada nota é um **Y.Doc** (Yjs/yrs). As colunas SQL são uma projeção derivada dele.
 - Nunca sincronizar o arquivo SQLite. No Drive, um arquivo por nota e anexos endereçados por hash.
 - Fotos sempre passam pelo pipeline: orientação EXIF, remoção de metadados, resize, WebP, miniatura, paleta e tom.
-- Fidelidade visual ao protótipo (`prototype/index.css` tem os tokens). Fontes empacotadas, sem CDN.
+- Fidelidade visual ao protótipo (`prototype/index.css` tem os tokens), exceto a tipografia: fonte do sistema, nunca CDN.
 - UI em **português do Brasil**. Código e identificadores em inglês.
 - Trabalhar por fases (SPEC §10). Antes de começar uma fase, conferir as decisões pendentes (SPEC §11) e perguntar o que estiver em aberto.
 - Ao fim de cada fase: compilar, rodar e verificar o critério "Pronto quando".
@@ -17,7 +17,10 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
 ## Decisões tomadas
 - **D1:** frontend em **Svelte 5 + Bits UI** (ícones `@lucide/svelte`, editor TipTap v3).
 - **D2:** desktop primeiro (Windows, macOS, Linux); Android depois.
-- D3, D4 e D5 continuam em aberto (SPEC §11).
+- **D4:** nome **Ideario** (sem acento).
+- **Tipografia:** fonte do sistema em toda a UI, para parecer nativo (substitui Bricolage/Figtree/JetBrains Mono do protótipo).
+  No Linux o núcleo lê a fonte do GNOME/KDE (`src-tauri/src/system_fonts.rs`); nos demais, `system-ui`.
+- D3 e D5 continuam em aberto (SPEC §11).
 
 ## Estado atual
 - **Fase 0 concluída.** Tauri 2 + Svelte 5 com porte visual do protótipo e dados de exemplo em memória.

@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Ideário",
+  "productName": "Ideario",
   "mainBinaryName": "ideario",
   "version": "0.1.0",
   "identifier": "app.ideario.desktop",
@@ -14,13 +14,14 @@
     "windows": [
       {
         "label": "main",
-        "title": "Ideário",
+        "title": "Ideario",
         "width": 1180,
         "height": 760,
         "minWidth": 360,
         "minHeight": 520,
         "center": true,
-        "backgroundColor": "#eef1ef"
+        "backgroundColor": "#eef1ef",
+        "create": false
       }
     ],
     "security": {

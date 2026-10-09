@@ -37,7 +37,7 @@
   {#if app.wide}
     <aside class="sidebar" aria-label="Navegação">
       <div class="drawer-head">
-        <span class="brand">Ideário</span>
+        <span class="brand">Ideario</span>
         <span class="meta">Sincronizado · Drive</span>
       </div>
       <NavList />
