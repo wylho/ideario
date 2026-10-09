@@ -28,8 +28,9 @@
   })
 
   async function toggle(n: NoteSummary) {
-    await api.setReminderDone(n.id, !n.reminderDone)
-    app.say(n.reminderDone ? 'Lembrete reaberto' : 'Lembrete concluído')
+    const was = n.reminderDone
+    await api.setReminderDone(n.id, !was)
+    app.say(was ? 'Lembrete reaberto' : 'Lembrete concluído', { label: 'Desfazer', run: () => void api.setReminderDone(n.id, was) })
   }
 </script>
 
