@@ -9,7 +9,7 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
 - Cada nota é um **Y.Doc** (Yjs/yrs). As colunas SQL são uma projeção derivada dele.
 - Nunca sincronizar o arquivo SQLite. No Drive, um arquivo por nota e anexos endereçados por hash.
 - Fotos sempre passam pelo pipeline: orientação EXIF, remoção de metadados, resize, WebP, miniatura, paleta e tom.
-  Exceção: qualidade **Original** (escolha do usuário) não redimensiona nem recomprime (SPEC §7). Só fotos são comprimidas.
+  Exceção: qualidade **Original** (escolha do usuário) fica intacta, inclusive com GPS e demais metadados (SPEC §7). Só fotos são comprimidas.
 - Fidelidade visual ao protótipo (`prototype/index.css` tem os tokens), exceto a tipografia: fonte do sistema, nunca CDN.
 - UI em **português do Brasil**. Código e identificadores em inglês.
 - Trabalhar por fases (SPEC §10). Antes de começar uma fase, conferir as decisões pendentes (SPEC §11) e perguntar o que estiver em aberto.
@@ -56,6 +56,8 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
   em foto/anexo abre o mesmo menu. Copiar/colar entre notas leva fotos e anexos. Anexos são sempre blocos do texto.
 - Seleção múltipla (Notas): check no canto (hover), Ctrl/Shift+clique, retângulo com o mouse (`marquee.ts`), Ctrl+A, Esc;
   a barra superior vira `SelectionBar` com ações em lote e Desfazer.
+- Segundo plano (opção do aparelho, `background.svelte.ts` + `src-tauri/src/background.rs`): ao fechar a janela, fica com
+  ícone na bandeja (barra de menus no Mac; no GNOME precisa do AppIndicator). Desligado por padrão. Sem atalho global por ora.
 - CI (`.github/workflows/build.yml`): verificação + instaladores de macOS (universal), Windows e Linux nos Artifacts.
 - Menus de contexto: `ContextMenu.svelte` (clique direito, Shift+F10, toque longo) + itens em `src/lib/menus.ts`.
   O menu do navegador é bloqueado fora de campos de texto (`main.ts`). Ações com "Desfazer" no toast.

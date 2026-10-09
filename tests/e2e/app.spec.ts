@@ -1022,3 +1022,33 @@ test.describe('blocos no editor', () => {
     await expect(page.locator('.card').filter({ has: page.locator('.card-media.row') })).not.toHaveCount(0)
   })
 })
+
+test('configurações: continuar aberto ao fechar a janela, com o nome do lugar de cada sistema', async ({ page }) => {
+  await openSettings(page)
+  const sw = page.locator('#segundo-plano')
+  await expect(sw).toHaveAttribute('aria-checked', 'false')
+  await sw.click()
+  await expect(sw).toHaveAttribute('aria-checked', 'true')
+  await page.reload()
+  await openSettings(page)
+  await expect(page.locator('#segundo-plano')).toHaveAttribute('aria-checked', 'true')
+  // o texto acompanha o sistema imitado na prévia
+  await page.getByRole('radio', { name: /^Sistema/ }).click()
+  await page.locator('#sistema').click()
+  await page.getByRole('option', { name: 'macOS' }).click()
+  await expect(page.locator('.set-row', { has: page.locator('#segundo-plano') })).toContainText('barra de menus')
+})
+
+test('texto da interface não se seleciona; no editor, sim', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 })
+  const selected = () => page.evaluate(() => window.getSelection()?.toString() ?? '')
+  await page.locator('.brand').dblclick()
+  await page.locator('.card h3').first().click({ clickCount: 3, modifiers: ['Shift'] }).catch(() => {})
+  await page.keyboard.press('Escape')
+  await page.locator('.section-label').first().dblclick()
+  expect(await selected()).toBe('')
+  await newNote(page)
+  await page.keyboard.type('palavra')
+  await page.locator('#corpo p').dblclick({ position: { x: 12, y: 8 } })
+  expect(await selected()).toBe('palavra')
+})

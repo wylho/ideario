@@ -447,6 +447,7 @@
                 ondragstart={(e) => dragFromHandle(e, b.pos, b.dom)}
                 ondragend={() => ((handleDragging = false), (hover = null))}
                 onclick={(e) => openNodeMenu(b.pos, e.clientX, e.clientY)}
+                onpointerenter={() => hover?.item && (hover = { ...hover, item: null })}
               ><GripVertical size={16} /></button>
               {#if hover.item}
                 {@const it = hover.item}

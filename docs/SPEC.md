@@ -243,7 +243,7 @@ Na importação de uma imagem (Rust, fora da thread de UI):
 6. Calcular o hash e gravar em `attachments`. Não há cópia extra do original: quem quer a foto intacta escolhe a qualidade Original.
 7. HEIC (iPhone) precisa de decodificador próprio. Tratar na fase mobile.
 
-Na qualidade **Original** os passos 2 e 3 não acontecem: o arquivo fica com os bytes de imagem como vieram. Os metadados (GPS etc.) saem sem recodificar, mantendo só a orientação. Miniatura, paleta e tom são gerados normalmente.
+Na qualidade **Original** os passos 1 a 3 não acontecem: o arquivo fica exatamente como veio, inclusive com os metadados (localização/GPS, data, câmera), por escolha do usuário. Miniatura, paleta e tom são gerados normalmente.
 
 **Cache**: texto e miniaturas ficam sempre locais. Arquivos grandes e fotos em tamanho cheio obedecem ao limite configurado com despejo **LRU** (`last_access`). Arquivos despejados viram `thumb_only` e são baixados de novo ao abrir.
 

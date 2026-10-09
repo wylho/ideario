@@ -1,6 +1,7 @@
 //! Núcleo do Ideario (SPEC §4). Na Fase 0 só abre a janela; a UI usa dados de exemplo.
 //! Próximos módulos: `db` (SQLite + FTS5), `notes` (Y.Doc via yrs), `media`, `sync`, `reminders`, `import`.
 
+mod background;
 mod system_fonts;
 mod system_theme;
 
@@ -9,6 +10,8 @@ use tauri::WebviewWindowBuilder;
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .manage(background::Background::default())
+        .on_window_event(background::on_window_event)
         .setup(|app| {
             // A janela é criada aqui (e não pelo tauri.conf.json) para receber as fontes e as cores do
             // sistema antes de a página carregar, sem troca visível de fonte ou de cor.
@@ -25,9 +28,16 @@ pub fn run() {
                 .build()?;
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![app_version])
-        .run(tauri::generate_context!())
-        .expect("erro ao iniciar o Ideario");
+        .invoke_handler(tauri::generate_handler![app_version, background::set_background])
+        .build(tauri::generate_context!())
+        .expect("erro ao iniciar o Ideario")
+        .run(|_app, _event| {
+            // macOS: clicar no ícone do Dock com a janela escondida traz a janela de volta.
+            #[cfg(target_os = "macos")]
+            if let tauri::RunEvent::Reopen { .. } = _event {
+                background::show(_app);
+            }
+        });
 }
 
 /// Versão do núcleo, para a UI confirmar que o IPC está de pé.
