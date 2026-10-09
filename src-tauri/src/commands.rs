@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use std::sync::Mutex;
 
 use serde_json::{json, Map, Value};
-use tauri::ipc::{InvokeBody, Request};
+use tauri::ipc::{InvokeBody, Request, Response};
 use tauri::{AppHandle, Manager, State};
 
 use crate::attachments;
@@ -138,9 +138,25 @@ pub fn get_note(core: Core_, id: String) -> Result<Option<NoteDetail>> {
     core.with(|s| s.get_note(&id))
 }
 
+/// Grava uma nota inteira (o estado Yjs nasce ou é atualizado a partir dela). A UI usa o Y.Doc; isto serve para
+/// carregar notas prontas (testes de desempenho, importação).
 #[tauri::command]
 pub fn save_note(core: Core_, input: NoteInput) -> Result<NoteSummary> {
     core.with(|s| s.save_note(&input))
+}
+
+/// Estado Yjs da nota, em binário (vazio se a nota não existe): o editor abre o Y.Doc com ele.
+#[tauri::command]
+pub fn get_note_state(core: Core_, id: String) -> Result<Response> {
+    core.with(|s| s.ydoc(&id)).map(|state| Response::new(state.unwrap_or_default()))
+}
+
+/// Atualização Yjs do editor (binária, id no cabeçalho `x-id`). Cria a nota se ela ainda não existe.
+#[tauri::command]
+pub fn apply_note_update(core: Core_, request: Request<'_>) -> Result<()> {
+    let InvokeBody::Raw(update) = request.body() else { return Err("atualização ausente".into()) };
+    let id = request.headers().get("x-id").and_then(|v| v.to_str().ok()).ok_or("nota ausente")?;
+    core.with(|s| s.apply_update(id, update))
 }
 
 #[tauri::command]

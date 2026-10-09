@@ -13,6 +13,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::value::RawValue;
 use serde_json::{Map, Value};
 
+use crate::ydoc;
 use crate::projection::{self, Projection};
 use crate::text::{fold, normalize_tag};
 
@@ -250,6 +251,11 @@ const MIGRATIONS: &[&str] = &[
       tokenize = 'unicode61 remove_diacritics 2'
     );
     "#,
+    // 2 — Fase 2: cada nota é um Y.Doc; o estado binário é a fonte da verdade e body_json passa a ser derivado dele.
+    // As notas da Fase 1 ganham o estado logo depois (Store::backfill_ydocs).
+    r#"
+    ALTER TABLE notes ADD COLUMN ydoc BLOB;
+    "#,
 ];
 
 pub struct Store {
@@ -259,6 +265,14 @@ pub struct Store {
 impl Store {
     pub fn open(path: &Path) -> Result<Store> {
         let conn = Connection::open(path).map_err(err)?;
+        // Antes de migrar um banco que já tem notas, guarda uma cópia ao lado (ideario.db.v1.bak, …).
+        let version: usize = conn.query_row("PRAGMA user_version", [], |r| r.get(0)).map_err(err)?;
+        if version > 0 && version < MIGRATIONS.len() {
+            let backup = path.with_extension(format!("db.v{version}.bak"));
+            if !backup.exists() {
+                conn.execute("VACUUM INTO ?1", [backup.to_string_lossy()]).map_err(err)?;
+            }
+        }
         Store::setup(conn)
     }
 
@@ -274,8 +288,24 @@ impl Store {
             conn.execute_batch(&format!("BEGIN; {sql}; PRAGMA user_version = {}; COMMIT;", i + 1)).map_err(err)?;
         }
         let store = Store { conn };
+        store.backfill_ydocs()?;
         store.purge_trash()?;
         Ok(store)
+    }
+
+    /// Notas sem estado Yjs (vindas da Fase 1): o estado nasce do JSON e dos metadados atuais, sem mudar a data.
+    fn backfill_ydocs(&self) -> Result<()> {
+        let ids = self.ids("SELECT id FROM notes WHERE ydoc IS NULL", [])?;
+        if ids.is_empty() {
+            return Ok(());
+        }
+        let tx = self.conn.unchecked_transaction().map_err(err)?;
+        for id in &ids {
+            if let Some(n) = self.note_input(id)? {
+                tx.execute("UPDATE notes SET ydoc = ?2 WHERE id = ?1", params![id, ydoc::from_note(&n)]).map_err(err)?;
+            }
+        }
+        tx.commit().map_err(err)
     }
 
     /// Notas na lixeira há mais de 30 dias saem de vez (ao abrir o app).
@@ -545,7 +575,8 @@ impl Store {
                 .collect::<Vec<_>>();
             input.tags.dedup();
             rewrite_hashtag(&mut input.body, from, to.as_deref());
-            self.write_note(&input, false)?;
+            let state = ydoc::update(&self.ydoc(id)?.unwrap_or_default(), &input, true)?;
+            self.write_note(&input, false, &state)?;
         }
         Ok(ids.len())
     }
@@ -621,17 +652,38 @@ impl Store {
         let mut input = input.clone();
         let mut seen = HashSet::new();
         input.tags.retain(|t| seen.insert(t.clone()));
-        if let Some(prev) = self.note_input(&input.id)? {
-            if same_content(&prev, &input) {
-                return self.summary(&input.id);
-            }
-        }
-        self.write_note(&input, true)?;
+        let state = match (self.note_input(&input.id)?, self.ydoc(&input.id)?) {
+            (Some(prev), _) if same_content(&prev, &input) => return self.summary(&input.id),
+            (Some(_), Some(state)) => ydoc::update(&state, &input, true)?,
+            _ => ydoc::from_note(&input),
+        };
+        self.write_note(&input, true, &state)?;
         self.summary(&input.id)
     }
 
+    /// Estado Yjs da nota (para o editor abrir e, na Fase 5, para o Drive).
+    pub fn ydoc(&self, id: &str) -> Result<Option<Vec<u8>>> {
+        self.conn
+            .query_row("SELECT ydoc FROM notes WHERE id = ?1", [id], |r| r.get::<_, Option<Vec<u8>>>(0))
+            .optional()
+            .map(Option::flatten)
+            .map_err(err)
+    }
+
+    /// Junta uma atualização Yjs (do editor; na Fase 5, de outro aparelho) e reprojeta a nota. Cria a nota se ela
+    /// ainda não existe. A data de edição só muda se algo visível mudou.
+    pub fn apply_update(&self, id: &str, update: &[u8]) -> Result<()> {
+        let prev = self.note_input(id)?;
+        let state = ydoc::apply(&self.ydoc(id)?.unwrap_or_default(), update)?;
+        let mut n = ydoc::to_note(id, &state)?;
+        let mut seen = HashSet::new();
+        n.tags.retain(|t| seen.insert(t.clone()));
+        let touch = !prev.as_ref().is_some_and(|p| same_content(p, &n));
+        self.write_note(&n, touch, &state)
+    }
+
     /// Grava a nota e recalcula a projeção, as tags, os anexos e a busca.
-    fn write_note(&self, n: &NoteInput, touch: bool) -> Result<()> {
+    fn write_note(&self, n: &NoteInput, touch: bool, state: &[u8]) -> Result<()> {
         let p = self.project(&n.body)?;
         let label = projection::label(&n.title, &p);
         let t = now();
@@ -648,9 +700,9 @@ impl Store {
         let tx = self.conn.unchecked_transaction().map_err(err)?;
         tx.execute(
             "INSERT INTO notes (id, body_json, title, label, label_fold, body_text, preview_json, cover_json, image_count, file_count, \
-             category_id, color, pinned, archived, trashed_at, reminder_at, reminder_done, position, created_at, updated_at, dirty) \
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, 1) \
-             ON CONFLICT(id) DO UPDATE SET body_json = excluded.body_json, title = excluded.title, label = excluded.label, \
+             category_id, color, pinned, archived, trashed_at, reminder_at, reminder_done, position, created_at, updated_at, ydoc, dirty) \
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, 1) \
+             ON CONFLICT(id) DO UPDATE SET ydoc = excluded.ydoc, body_json = excluded.body_json, title = excluded.title, label = excluded.label, \
              label_fold = excluded.label_fold, body_text = excluded.body_text, preview_json = excluded.preview_json, \
              cover_json = excluded.cover_json, image_count = excluded.image_count, file_count = excluded.file_count, \
              category_id = excluded.category_id, color = excluded.color, pinned = excluded.pinned, archived = excluded.archived, \
@@ -677,6 +729,7 @@ impl Store {
                 position,
                 created,
                 updated,
+                state,
             ],
         )
         .map_err(err)?;
@@ -715,15 +768,18 @@ impl Store {
     }
 
     pub fn set_reminder_done(&self, id: &str, done: bool) -> Result<bool> {
-        let n = self
-            .conn
-            .execute("UPDATE notes SET reminder_done = ?2, dirty = 1 WHERE id = ?1 AND reminder_done != ?2", params![id, done])
-            .map_err(err)?;
-        Ok(n > 0)
+        let mut patch = Map::new();
+        patch.insert("reminderDone".into(), Value::Bool(done));
+        // Concluir o lembrete não é editar a nota: a data fica.
+        self.patch_note(id, &patch, false)
     }
 
     /// Muda metadados sem abrir o editor (menus de contexto). Só as chaves presentes mudam; `null` limpa.
     pub fn update_note(&self, id: &str, patch: &Map<String, Value>) -> Result<bool> {
+        self.patch_note(id, patch, true)
+    }
+
+    fn patch_note(&self, id: &str, patch: &Map<String, Value>, touch: bool) -> Result<bool> {
         let Some(mut n) = self.note_input(id)? else { return Ok(false) };
         let before = n.clone();
         for (k, v) in patch {
@@ -741,13 +797,8 @@ impl Store {
         if same_content(&before, &n) {
             return Ok(false);
         }
-        self.conn
-            .execute(
-                "UPDATE notes SET pinned = ?2, color = ?3, category_id = ?4, archived = ?5, trashed_at = ?6, reminder_at = ?7, \
-                 reminder_done = ?8, updated_at = ?9, dirty = 1 WHERE id = ?1",
-                params![id, n.pinned, n.color, n.category_id, n.archived, n.trashed_at, n.reminder_at, n.reminder_done, now()],
-            )
-            .map_err(err)?;
+        let state = ydoc::update(&self.ydoc(id)?.unwrap_or_default(), &n, false)?;
+        self.write_note(&n, touch, &state)?;
         Ok(true)
     }
 
@@ -809,7 +860,7 @@ impl Store {
         n.pinned = false;
         n.reminder_at = None;
         n.reminder_done = false;
-        self.write_note(&n, true)?;
+        self.write_note(&n, true, &ydoc::from_note(&n))?;
         self.conn.execute("UPDATE notes SET position = ?2 WHERE id = ?1", params![n.id, pos - 1.0]).map_err(err)?;
         Ok(n.id)
     }
@@ -1221,6 +1272,53 @@ mod tests {
         assert_eq!(s.list_images(&Filter::default(), "", None).unwrap().len(), 1);
         assert_eq!(s.get_note("a").unwrap().unwrap().media.len(), 2);
         assert_eq!(s.view_counts(&Filter::default(), "").unwrap().files, 2);
+    }
+
+    #[test]
+    fn yjs_updates_create_edit_and_project() {
+        let s = Store::memory();
+        // O editor manda o estado inteiro de uma nota nova; depois, só o que mudou.
+        let first = ydoc::from_note(&note("y1", "Ideias", "texto com #tag"));
+        s.apply_update("y1", &first).unwrap();
+        let n = &s.list_notes(&Filter::default(), "active", "", "custom").unwrap()[0];
+        assert_eq!(n.title, "Ideias");
+        assert!(n.tags.contains(&"tag".to_string()));
+        let before = s.ydoc("y1").unwrap().unwrap();
+        let mut edited = ydoc::to_note("y1", &before).unwrap();
+        edited.pinned = true;
+        let after = ydoc::update(&before, &edited, false).unwrap();
+        s.apply_update("y1", &after).unwrap();
+        assert!(s.get_note("y1").unwrap().unwrap().pinned);
+        // Menus que mudam metadados também passam pelo Y.Doc.
+        let mut patch = Map::new();
+        patch.insert("color".into(), json!("sky"));
+        s.update_note("y1", &patch).unwrap();
+        assert_eq!(ydoc::to_note("y1", &s.ydoc("y1").unwrap().unwrap()).unwrap().color, "sky");
+        // Atualização que não muda nada visível não muda a data.
+        let t = s.get_note("y1").unwrap().unwrap().updated_at;
+        std::thread::sleep(std::time::Duration::from_millis(5));
+        s.apply_update("y1", &after).unwrap();
+        assert_eq!(s.get_note("y1").unwrap().unwrap().updated_at, t);
+    }
+
+    #[test]
+    fn phase_1_notes_get_a_ydoc_on_open() {
+        let path = std::env::temp_dir().join(format!("ideario-mig-{}.db", uuid::Uuid::now_v7()));
+        {
+            let s = Store::open(&path).unwrap();
+            s.save_note(&note("m1", "Antiga", "corpo da fase 1")).unwrap();
+            // Como era na Fase 1: sem a coluna do estado Yjs, esquema na versão 1.
+            s.conn.execute_batch("ALTER TABLE notes DROP COLUMN ydoc; PRAGMA user_version = 1").unwrap();
+        }
+        let s = Store::open(&path).unwrap();
+        let backup = path.with_extension("db.v1.bak");
+        assert!(backup.exists(), "cópia de segurança antes de migrar");
+        let state = s.ydoc("m1").unwrap().expect("estado criado na abertura");
+        let n = ydoc::to_note("m1", &state).unwrap();
+        assert_eq!(n.title, "Antiga");
+        assert_eq!(n.body, note("m1", "", "corpo da fase 1").body);
+        let _ = std::fs::remove_file(&path);
+        let _ = std::fs::remove_file(&backup);
     }
 }
 

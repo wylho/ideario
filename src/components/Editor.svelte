@@ -20,7 +20,9 @@
   import { api } from '../lib/api'
   import { download, newCategory } from '../lib/menus'
   import { app, type DroppedFile, type EditorTarget } from '../lib/app.svelte'
+  import * as Y from 'yjs'
   import { noteExtensions } from '../lib/editor/extensions'
+  import { readMeta, writeMeta, type NoteMeta } from '../lib/ydoc'
   import { ago, fmtBytes, hashTags, normalizeTag } from '../lib/format'
   import ReminderPopover from './ReminderPopover.svelte'
   import type { Attachment, NoteColor, NoteInput, RichDoc, RichNode } from '../lib/types'
@@ -33,7 +35,7 @@
   ]
   const SAVE_DELAY = 400
 
-  type Meta = Omit<NoteInput, 'id' | 'body'>
+  type Meta = NoteMeta
 
   // svelte-ignore state_referenced_locally
   const { id, isNew, defaults, start } = target
@@ -54,10 +56,19 @@
   let photoInput: HTMLInputElement | undefined = $state()
   let fileInput: HTMLInputElement | undefined = $state()
 
-  let initialBody: RichDoc = { type: 'doc', content: [{ type: 'paragraph' }] }
+  // A nota é um Y.Doc (Fase 2): o TipTap edita o `body` dele e os metadados ficam no `meta`. Cada mudança vira uma
+  // atualização Yjs pequena, juntada e enviada ao núcleo pelo salvamento contínuo.
+  const doc = new Y.Doc()
+  const LOADED = Symbol('carregado')
+  let pending: Uint8Array[] = []
   let persisted = !isNew
   let closed = false
   let timer: ReturnType<typeof setTimeout> | undefined
+  doc.on('update', (u: Uint8Array, origin: unknown) => {
+    if (origin === LOADED) return
+    pending.push(u)
+    schedule()
+  })
 
   if (isNew) {
     meta = {
@@ -65,17 +76,14 @@
       trashedAt: null, reminderAt: null, reminderDone: false, tags: defaults?.tags ?? [],
     }
   } else {
-    api.getNote(id).then((n) => {
-      if (!n) return void (app.editor = null)
-      initialBody = n.body
+    Promise.all([api.getNoteState(id), api.getNote(id)]).then(([state, n]) => {
+      if (!n || !state.length) return void (app.editor = null)
+      Y.applyUpdate(doc, state, LOADED)
       files = n.files
       for (const a of n.media) media.set(a.hash, a)
       editedAt = n.updatedAt
       wasTrashed = n.trashedAt != null
-      meta = {
-        title: n.title, categoryId: n.categoryId, color: n.color, pinned: n.pinned, archived: n.archived,
-        trashedAt: n.trashedAt, reminderAt: n.reminderAt, reminderDone: n.reminderDone, tags: n.tags,
-      }
+      meta = readMeta(doc)
     })
   }
 
@@ -107,9 +115,11 @@
     timer = undefined
     if (!editor || !meta) return
     if (!persisted && isEmpty()) return // nota nova vazia não é criada
-    const input: NoteInput = { id, ...$state.snapshot(meta), body: editor.getJSON() as RichDoc }
+    // Nota nova: vai o estado inteiro; depois, só o que mudou desde o último envio.
+    const update = persisted ? (pending.length ? Y.mergeUpdates(pending) : null) : Y.encodeStateAsUpdate(doc)
+    pending = []
     persisted = true
-    return api.saveNote(input)
+    if (update) return api.applyNoteUpdate(id, update)
   }
   const schedule = () => {
     // Fechada, a nota já foi salva: um salvamento atrasado desfaria o "Desfazer" do aviso (ex.: arquivaria de novo).
@@ -118,11 +128,11 @@
     timer = setTimeout(save, SAVE_DELAY)
   }
 
-  let metaRuns = 0
+  // Metadados editados na tela vão para o `meta` do Y.Doc (só as chaves que mudaram).
   $effect(() => {
     if (!meta) return
-    JSON.stringify(meta)
-    if (metaRuns++ > 0) untrack(schedule)
+    const snap = $state.snapshot(meta)
+    untrack(() => writeMeta(doc, snap))
   })
 
   async function close(patch?: Partial<Meta>, msg?: string) {
@@ -131,6 +141,7 @@
     // O que muda ao sair (arquivar, lixeira, restaurar) pode ser desfeito pelo aviso.
     const before = meta && patch ? (Object.fromEntries(Object.keys(patch).map((k) => [k, meta![k as keyof Meta]])) as Partial<Meta>) : null
     if (meta && patch) Object.assign(meta, patch)
+    if (meta) writeMeta(doc, $state.snapshot(meta))
     if (isNew && isEmpty()) {
       clearTimeout(timer)
       if (persisted) await api.deleteNote(id)
@@ -176,16 +187,14 @@
           onFiles: (list, pos) => void addFiles(list, pos),
           onMenu: (pos, e) => openNodeMenu(pos, e.clientX, e.clientY, e.target as Element),
           placeholder: 'Escreva… use #tag para marcar',
+          ydoc: doc,
         }),
-        content: initialBody,
         editorProps: {
           attributes: { id: 'corpo', role: 'textbox', 'aria-multiline': 'true', 'aria-label': 'Texto da nota', spellcheck: 'true' },
         },
         onTransaction: () => tick++,
-        onUpdate: ({ editor }) => {
-          bodyTags = hashTags(editor.getText())
-          schedule()
-        },
+        // O salvamento segue as atualizações do Y.Doc (doc.on('update')).
+        onUpdate: ({ editor }) => (bodyTags = hashTags(editor.getText())),
       })
       bodyTags = hashTags(ed.getText())
       editor = ed

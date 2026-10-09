@@ -23,6 +23,7 @@ uuid = { version = "1", features = ["v7"] }
 sha2 = "0.10"
 imagesize = "0.13"
 unicode-normalization = "0.1"
+yrs = "0.28"
 
 [profile.release]
 codegen-units = 1
@@ -43,3 +44,6 @@ winreg = "0.56"
 # macOS: cor de destaque do sistema (NSColor.controlAccentColor), para o tema Sistema.
 [target.'cfg(target_os = "macos")'.dependencies]
 objc2-app-kit = { version = "0.3", default-features = false, features = ["std", "NSColor", "NSColorSpace", "objc2-core-foundation"] }
+
+[dev-dependencies]
+proptest = "1"

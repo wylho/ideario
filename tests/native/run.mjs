@@ -198,6 +198,20 @@ try {
     if (!ok) throw new Error('getUserMedia indisponível')
   })
 
+  await test('Y.Doc: a nota feita no núcleo abre no editor; marcar item e negrito persistem', async () => {
+    await s.clickText('.card', 'Bem-vindo ao Ideario')
+    await s.waitFor(`return document.querySelectorAll('#corpo ul[data-type="taskList"] > li').length === 4`, 'checklist do núcleo no editor')
+    await s.exec(`document.querySelector('#corpo ul[data-type="taskList"] > li input[type=checkbox]').click(); return true`)
+    await s.waitFor(`return document.querySelector('#corpo ul[data-type="taskList"] > li').dataset.checked === 'true'`, 'item marcado')
+    // negrito no fim do primeiro parágrafo
+    await s.exec(`const p = document.querySelector('#corpo p'); const r = document.createRange(); r.selectNodeContents(p); r.collapse(false); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); return true`)
+    await s.exec(`document.querySelector('[aria-label="Negrito"]')?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true })); document.querySelector('[aria-label="Negrito"]')?.click(); return true`)
+    await s.keys(' forte')
+    await sleep(700)
+    await s.exec(`document.querySelector('[aria-label="Voltar e salvar"]').click(); return true`)
+    await s.waitFor(`return [...document.querySelectorAll('.card')].some((c) => c.getAttribute('aria-label') === 'Bem-vindo ao Ideario' && c.querySelector('.pv-task.done'))`, 'card com o item feito')
+  })
+
   await test('fechar e reabrir: tudo continua lá, na hora', async () => {
     await s.end()
     s = await Session.start()
@@ -207,6 +221,15 @@ try {
     if (!t.includes('Bolo da vó') || !t.includes('Bem-vindo ao Ideario')) throw new Error(`cards: ${t}`)
     const cover = await s.exec(`const c = [...document.querySelectorAll('.card')].find((c) => c.getAttribute('aria-label') === 'Bolo da vó'); const i = c?.querySelector('.card-media img'); return i ? i.naturalWidth : 0`)
     if (!cover) throw new Error('capa sumiu')
+  })
+
+  await test('Y.Doc: depois de reabrir, o item marcado e o negrito continuam', async () => {
+    await s.clickText('.card', 'Bem-vindo ao Ideario')
+    await s.waitFor(`return document.querySelector('#corpo ul[data-type="taskList"] > li')?.dataset.checked === 'true'`, 'item marcado')
+    const bold = await s.exec(`return [...document.querySelectorAll('#corpo strong')].map((b) => b.textContent).join('|')`)
+    if (!bold.includes('forte')) throw new Error(`negrito: ${bold}`)
+    await s.exec(`document.querySelector('[aria-label="Voltar e salvar"]').click(); return true`)
+    await s.waitFor(`return !document.querySelector('.editor')`, 'editor fechado')
   })
 
   await test('criar categoria, pôr a nota nela e filtrar', async () => {

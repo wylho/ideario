@@ -202,7 +202,7 @@ CREATE VIRTUAL TABLE notes_fts USING fts5(
 );
 ```
 
-**Fase 1 (implementado):** enquanto não há Y.Doc, o corpo fica em `notes.body_json` (JSON do TipTap) e as tags numa tabela `note_tags (note_id, tag, manual)` — manuais e `#tags` do texto. A busca usa `notes_fts (note_id UNINDEXED, title, body_text, tags)`. Na Fase 2, `body_json` vira o `ydoc`.
+**Fase 1 (implementado):** enquanto não há Y.Doc, o corpo fica em `notes.body_json` (JSON do TipTap) e as tags numa tabela `note_tags (note_id, tag, manual)` — manuais e `#tags` do texto. A busca usa `notes_fts (note_id UNINDEXED, title, body_text, tags)`. **Fase 2 (implementado):** `notes.ydoc` guarda o estado Yjs e é a fonte da verdade; `body_json` ficou como projeção (JSON do TipTap derivado do Y.Doc).
 
 **Nota como Y.Doc:** cada nota é um documento Yjs com `Y.Map("meta")` (título, cor, categoria, pinned, archived, trashed_at, reminder, tags) e `Y.XmlFragment("body")` (conteúdo do TipTap). Assim, metadados **e** corpo fazem merge sem conflito. As colunas SQL são uma projeção atualizada a cada mudança.
 
