@@ -584,3 +584,10 @@ button { cursor: pointer; }
 .toast.has-action { pointer-events: auto; }
 .toast button { color: var(--accent-soft); font-weight: 700; font-size: 13.5px; }
 .r-item[data-state="open"], .f-row[data-state="open"] { outline-offset: -2px; border-radius: 14px; background: var(--raised); }
+
+/* O foco vai para o contêiner do menu/popover ao abrir; o item destacado já mostra onde se está.
+   O anel azul fica só nos elementos (cards, botões, campos). */
+.menu:focus, .menu:focus-visible, .pop:focus, .pop:focus-visible,
+.sheet:focus-visible, .drawer:focus-visible, .editor:focus-visible, .lightbox:focus-visible { outline: none; }
+.menu-item:focus-visible { outline: none; }
+.menu-item[data-highlighted] { background: color-mix(in oklab, var(--fg) 8%, transparent); }
