@@ -1,6 +1,6 @@
 // Menus de contexto de cada tipo de elemento. Um lugar só, para o mesmo item se comportar igual em todo o app.
 import {
-  Archive, ArchiveRestore, Bell, BellOff, Check, Copy, ExternalLink, Files, Filter, FilterX, Image, Palette, Pin, PinOff,
+  Archive, ArchiveRestore, Bell, BellOff, Check, Copy, Download, ExternalLink, Files, Filter, FilterX, Image, Palette, Pin, PinOff,
   Plus, RotateCcw, Tag, Trash2, AlarmClock,
 } from '@lucide/svelte'
 import { api } from './api'
@@ -116,6 +116,7 @@ export function attachmentMenu(r: AttachmentRow): MenuEntry[] {
   return [
     ...(r.kind === 'image' ? [{ label: 'Ver imagem', icon: Image, onSelect: () => (app.lightbox = r) }] : []),
     { label: 'Abrir nota de origem', icon: ExternalLink, onSelect: () => app.openNote(r.noteId) },
+    { label: 'Baixar', icon: Download, onSelect: () => void api.downloadAttachment(r) },
     SEP,
     { label: 'Copiar nome do arquivo', icon: Copy, onSelect: () => copy(r.name, 'Nome') },
     ...(r.palette ? [{ label: 'Copiar cor', icon: Palette, sub: r.palette.map((hex) => ({ label: hex, swatch: hex, onSelect: () => copy(hex, hex) })) }] : []),

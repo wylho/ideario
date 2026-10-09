@@ -65,7 +65,6 @@ export function noteExtensions(opts: { resolveImage?: (hash: string) => string; 
       heading: { levels: [3] },
       blockquote: false,
       code: false,
-      codeBlock: false,
       horizontalRule: false,
       strike: false,
       underline: false,

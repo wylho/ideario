@@ -35,6 +35,8 @@ export type PreviewBlock =
   | { kind: 'bullet'; text: string; depth: number }
   | { kind: 'ordered'; text: string; n: number; depth: number }
   | { kind: 'task'; text: string; done: boolean; depth: number }
+  /** Bloco de código: as primeiras linhas, sem formatação. */
+  | { kind: 'code'; text: string }
   /** Tarefas que não couberam na prévia (máx. 4) ou texto cortado. */
   | { kind: 'more'; count: number }
 

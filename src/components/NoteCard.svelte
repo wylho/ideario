@@ -52,6 +52,8 @@
             <p class="pv-task" class:done={b.done} style:--depth={b.depth}>
               <span class="box">{#if b.done}<Check size={10} strokeWidth={3} />{/if}</span><span>{@render rich(b.text)}</span>
             </p>
+          {:else if b.kind === 'code'}
+            <pre class="pv-code">{b.text}</pre>
           {:else if b.kind === 'bullet' || b.kind === 'ordered'}
             <p class="pv-li" style:--depth={b.depth} data-mark={b.kind === 'ordered' ? `${b.n}.` : '•'}>{@render rich(b.text)}</p>
           {:else}

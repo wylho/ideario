@@ -15,6 +15,7 @@ export function estimateCard(n: NoteSummary, w: number): number {
   for (const b of n.preview) {
     if (b.kind === 'more') pv += 20
     else if (b.kind === 'heading') pv += lines(b.text, 8) * 20 + 4
+    else if (b.kind === 'code') pv += b.text.split('\n').length * 16.7 + 16
     else if (b.kind === 'text') pv += lines(b.text, n.title ? 6.6 : 7.8) * (n.title ? 19.6 : 23) + 3
     else pv += lines(b.text, 6.6) * 19.6 + 3
   }

@@ -609,6 +609,10 @@ test('desktop: visões no canto direito e ações ao lado, paradas; busca e nuve
     expect(a.x).toBeCloseTo(b.x, 0)
     expect(a.x + a.width).toBeCloseTo(b.x + b.width, 0)
   }
+  // mede depois que as contagens chegaram (o número de Lembretes muda a largura das visões)
+  await expect(page.locator('.view-switch .n')).toHaveText(/\d/)
+  // mede depois que as contagens chegaram (o número de Lembretes muda a largura das visões)
+  await expect(page.locator('.view-switch .n')).toHaveText(/\d/)
   const views = await box('.view-switch')
   expect(views.x + views.width).toBeCloseTo(1280 - 14, 0)
   const sort = await box('.top-actions [aria-label^="Ordenar"]')
@@ -705,4 +709,33 @@ test('configurações: qualidade Original; aviso de que só fotos são comprimid
   await page.locator('#qualidade').click()
   await page.getByRole('option', { name: 'Original · sem compressão' }).click()
   await expect(page.locator('.set-row', { hasText: 'Qualidade' })).toContainText('sem redimensionar nem comprimir')
+})
+
+test('arquivos: baixar pelo menu de contexto e pelo visualizador', async ({ page }) => {
+  await tab(page, 'Arquivos')
+  await page.locator('.f-row', { hasText: 'Manual de marca' }).click({ button: 'right' })
+  const pdf = page.waitForEvent('download')
+  await page.getByRole('menuitem', { name: 'Baixar' }).click()
+  expect((await pdf).suggestedFilename()).toBe('Manual de marca Linvo v3.pdf')
+  await tab(page, 'Moodboard')
+  await page.locator('.mood-tile').first().click()
+  const img = page.waitForEvent('download')
+  await page.getByRole('button', { name: 'Baixar' }).click()
+  await img
+})
+
+test('bloco de código: único lugar com fonte mono; aparece no card', async ({ page }) => {
+  await newNote(page)
+  await page.getByRole('button', { name: 'Bloco de código' }).click()
+  await page.keyboard.type('const x = 1')
+  await expect(page.locator('#corpo pre')).toHaveText('const x = 1')
+  await back(page)
+  const pre = page.locator('.card .pv-code')
+  await expect(pre).toHaveText('const x = 1')
+  const fonts = await page.evaluate(() => [
+    getComputedStyle(document.querySelector('.pv-code')!).fontFamily,
+    getComputedStyle(document.querySelector('.count, .tab-n')!).fontFamily,
+  ])
+  expect(fonts[0]).toMatch(/mono/i)
+  expect(fonts[1]).not.toMatch(/mono/i)
 })
