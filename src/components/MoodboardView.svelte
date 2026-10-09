@@ -7,31 +7,16 @@
   import ViewEmpty from './ViewEmpty.svelte'
   import ContextMenu from './ContextMenu.svelte'
   import { attachmentMenu } from '../lib/menus'
-  import type { AttachmentRow, Tone } from '../lib/types'
+  import type { AttachmentRow } from '../lib/types'
 
-  const TONES: { id: Tone; label: string; sw: string }[] = [
-    { id: 'quente', label: 'Quentes', sw: '#D98E4A' },
-    { id: 'frio', label: 'Frios', sw: '#3D63D6' },
-    { id: 'verde', label: 'Verdes', sw: '#4F8A60' },
-    { id: 'rosa', label: 'Rosas', sw: '#E58FA6' },
-    { id: 'neutro', label: 'Neutros', sw: '#A39E92' },
-  ]
-
-  let tone = $state<Tone | null>(null)
+  // O tom é escolhido na barra superior (ViewActions).
+  const tone = $derived(app.moodTone)
   const items = live(() => api.listImages({ filter: $state.snapshot(app.filter), query: app.query, tone }), [] as AttachmentRow[])
 </script>
 
-<div class="tones" role="group" aria-label="Filtrar por cor">
-  {#each TONES as t (t.id)}
-    <button class="tone" class:on={tone === t.id} aria-pressed={tone === t.id} onclick={() => (tone = tone === t.id ? null : t.id)}>
-      <i style:background={t.sw}></i>{t.label}
-    </button>
-  {/each}
-</div>
-
 {#if items.ready && !items.current.length}
   {#if tone}
-    <Empty icon={Images} title="Nenhuma imagem neste tom" text="Escolha outro tom acima." />
+    <Empty icon={Images} title="Nenhuma imagem neste tom" text="Escolha outro tom no alto da tela." />
   {:else}
     <ViewEmpty view="moodboard" hint={app.filterLabel ? undefined : 'Imagens coladas nas notas aparecem aqui automaticamente.'} />
   {/if}

@@ -1,7 +1,7 @@
 // Estado da interface e dados compartilhados entre as telas.
 // Visão (como ver) e filtro (o que ver) são independentes: trocar um nunca desfaz o outro.
 import { api } from './api'
-import type { AttachmentRow, Box, Category, Filter, NoteSort, SyncState, TagCount, View, ViewCounts } from './types'
+import type { AttachmentKind, AttachmentRow, Box, Category, FileSort, Filter, NoteSort, SyncState, TagCount, Tone, View, ViewCounts } from './types'
 import { uuidv7 } from './uuid'
 
 export interface EditorTarget {
@@ -45,6 +45,15 @@ class AppState {
   layout = $state<'grid' | 'list'>('grid')
   /** Ordem das notas; guardada no aparelho. */
   sort = $state<NoteSort>(readSort())
+  /** Arquivos: ordem e lista/grade (as ações ficam na barra superior, como as das notas). */
+  filesSort = $state<FileSort>('recent')
+  filesLayout = $state<'grid' | 'list'>('list')
+  /** Arquivos: tipo mostrado (null = todos). */
+  filesKind = $state<AttachmentKind | null>(null)
+  /** Moodboard: tom mostrado (null = todos). */
+  moodTone = $state<Tone | null>(null)
+  /** Lembretes: mostrar os concluídos no fim da lista. */
+  showDone = $state(false)
   /** Card sendo arrastado (para o resto da UI reagir). */
   dragId = $state<string | null>(null)
   drawerOpen = $state(false)

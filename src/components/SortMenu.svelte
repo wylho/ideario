@@ -1,17 +1,15 @@
-<script lang="ts">
+<script lang="ts" generics="T extends string">
   import { DropdownMenu } from 'bits-ui'
   import { ArrowDownUp, Check } from '@lucide/svelte'
-  import { app } from '../lib/app.svelte'
-  import type { NoteSort } from '../lib/types'
 
-  const SORTS: { id: NoteSort; label: string; hint?: string }[] = [
-    { id: 'custom', label: 'Personalizada', hint: 'arraste os cards' },
-    { id: 'updated', label: 'Última edição' },
-    { id: 'created', label: 'Data de criação' },
-    { id: 'category', label: 'Categoria' },
-    { id: 'title', label: 'Título (A–Z)' },
-  ]
-  const current = $derived(SORTS.find((s) => s.id === app.sort)!)
+  // Mesmo botão de ordenar em todas as visões que ordenam; muda só a lista de opções.
+  let { heading, options, value, onchange }: {
+    heading: string
+    options: { id: T; label: string; hint?: string }[]
+    value: T
+    onchange: (v: T) => void
+  } = $props()
+  const current = $derived(options.find((s) => s.id === value) ?? options[0])
 </script>
 
 <DropdownMenu.Root>
@@ -20,9 +18,9 @@
   </DropdownMenu.Trigger>
   <DropdownMenu.Portal>
     <DropdownMenu.Content class="menu" align="end" sideOffset={6}>
-      <div class="menu-heading" aria-hidden="true">Ordenar notas</div>
-      <DropdownMenu.RadioGroup value={app.sort} onValueChange={(v) => app.setSort(v as NoteSort)}>
-        {#each SORTS as s (s.id)}
+      <div class="menu-heading" aria-hidden="true">{heading}</div>
+      <DropdownMenu.RadioGroup {value} onValueChange={(v) => onchange(v as T)}>
+        {#each options as s (s.id)}
           <DropdownMenu.RadioItem value={s.id} class="menu-item">
             {#snippet children({ checked })}
               <span class="grow">{s.label}</span>
