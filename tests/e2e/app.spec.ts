@@ -272,18 +272,30 @@ test.describe('responsivo', () => {
   })
 })
 
-test('tema: escolher claro ou escuro nas configurações e manter ao recarregar', async ({ page }) => {
+test('tema e aparência: escolher nas configurações e manter ao recarregar', async ({ page }) => {
   await page.emulateMedia({ colorScheme: 'light' })
+  const bg = () => page.evaluate(() => getComputedStyle(document.body).backgroundColor)
   await openSettings(page)
+  // padrão: Sistema (na prévia do navegador, imita o GNOME no Linux)
+  await expect(page.getByRole('radio', { name: /^Sistema/ })).toHaveAttribute('aria-checked', 'true')
+  await page.getByRole('radio', { name: /^Ideario/ }).click()
   await page.getByRole('radio', { name: 'Escuro' }).click()
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
-  const bg = await page.evaluate(() => getComputedStyle(document.body).backgroundColor)
-  expect(bg).toBe('rgb(16, 21, 19)')
+  expect(await bg()).toBe('rgb(16, 21, 19)')
+  await page.getByRole('radio', { name: /^Papel/ }).click()
+  expect(await bg()).toBe('rgb(27, 23, 20)')
   await page.reload()
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
+  expect(await bg()).toBe('rgb(27, 23, 20)')
   await openSettings(page)
-  await page.getByRole('radio', { name: 'Sistema' }).click()
+  await page.getByRole('radio', { name: 'Automático' }).click()
   await expect(page.locator('html')).not.toHaveAttribute('data-theme', /.+/)
+  expect(await bg()).toBe('rgb(244, 239, 230)')
+  // tema Sistema: a prévia troca a área de trabalho imitada
+  await page.getByRole('radio', { name: /^Sistema/ }).click()
+  await page.locator('#sistema').click()
+  await page.getByRole('option', { name: 'Windows' }).click()
+  expect(await bg()).toBe('rgb(243, 243, 243)')
 })
 
 test.describe('visão × filtro', () => {
