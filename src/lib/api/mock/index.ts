@@ -4,7 +4,7 @@
 import type { Api } from '..'
 import { fold, hashTags } from '../../format'
 import type {
-  Attachment, AttachmentRow, Box, Category, Filter, NoteInput, NotePatch, NoteSort, NoteSummary, PreviewBlock, RichDoc, RichNode, Settings, SyncState, TagCount,
+  Attachment, AttachmentKind, AttachmentRow, Box, Category, Filter, NoteInput, NotePatch, NoteSort, NoteSummary, PreviewBlock, RichDoc, RichNode, Settings, SyncState, TagCount,
 } from '../../types'
 import { uuidv7 } from '../../uuid'
 import { fakeImageSrc } from './fake-images'
@@ -23,6 +23,10 @@ interface StoredNote extends NoteInput {
 interface Projection {
   text: string
   images: string[]
+  /** Capa: a primeira foto, ou a primeira linha de fotos lado a lado. */
+  cover: string[]
+  /** Anexos inline que não são foto (vídeo, áudio, documentos). */
+  files: string[]
   /** Todos os blocos de texto, na ordem. */
   blocks: PreviewBlock[]
   preview: PreviewBlock[]
@@ -42,6 +46,8 @@ const MAX_CODE_LINES = 8
 const notes = new Map<string, StoredNote>()
 const attachments = new Map<string, Attachment>()
 const imageSrc = new Map<string, string>()
+/** Conteúdo dos anexos importados nesta sessão (vídeo, áudio, documentos). */
+const blobSrc = new Map<string, string>()
 const listeners = new Set<() => void>()
 const projections = new WeakMap<RichDoc, Projection>()
 let settings: Settings = { wifiOnly: true, photoQuality: 'balanced', cacheLimitGb: 2 }
@@ -67,7 +73,7 @@ for (const s of seedNotes()) {
     archived: !!s.archived, trashedAt: s.trashedDaysAgo != null ? Date.now() - s.trashedDaysAgo * DAY : null,
     reminderAt: s.reminderAt, reminderDone: !!s.reminderDone, tags: s.tags,
     createdAt: s.updatedAt - 2 * DAY, updatedAt: s.updatedAt,
-    files: SEED_FILES.filter((f) => f.noteId === s.id).map((f) => f.hash),
+    files: SEED_FILES.filter((f) => f.noteId === s.id && !f.inline).map((f) => f.hash),
     position: 0,
   })
   // Imagens herdam a data da nota em que entraram.
@@ -86,6 +92,8 @@ function project(body: RichDoc): Projection {
   const cached = projections.get(body)
   if (cached) return cached
   const images: string[] = []
+  const files: string[] = []
+  let cover: string[] = []
   const blocks: PreviewBlock[] = []
   const inline = (n: RichNode): string =>
     n.type === 'text' ? (n.text ?? '') : n.type === 'hardBreak' ? '\n' : (n.content ?? []).map(inline).join('')
@@ -123,8 +131,25 @@ function project(body: RichDoc): Projection {
         return
       }
       case 'noteImage':
-        if (typeof n.attrs?.hash === 'string') images.push(n.attrs.hash)
+        if (typeof n.attrs?.hash === 'string') {
+          images.push(n.attrs.hash)
+          if (!cover.length) cover = [n.attrs.hash]
+        }
         return
+      case 'imageRow': {
+        const row = (n.content ?? []).map((c) => c.attrs?.hash).filter((h): h is string => typeof h === 'string')
+        images.push(...row)
+        if (!cover.length) cover = row.slice(0, 4)
+        return
+      }
+      case 'noteFile': {
+        const a = typeof n.attrs?.hash === 'string' ? attachments.get(n.attrs.hash) : undefined
+        if (a) {
+          files.push(a.hash)
+          blocks.push({ kind: 'file', text: a.name, fileKind: a.kind })
+        }
+        return
+      }
       default:
         n.content?.forEach((c) => block(c, depth))
     }
@@ -132,7 +157,7 @@ function project(body: RichDoc): Projection {
   body.content?.forEach((c) => block(c))
 
   const text = blocks.map((b) => ('text' in b ? b.text : '')).join(' ').replace(/\s+/g, ' ').trim()
-  const p: Projection = { text, images, blocks, preview: previewOf(blocks), hashTags: hashTags(text) }
+  const p: Projection = { text, images, cover, files, blocks, preview: previewOf(blocks), hashTags: hashTags(text) }
   projections.set(body, p)
   return p
 }
@@ -163,7 +188,7 @@ function previewOf(blocks: PreviewBlock[]): PreviewBlock[] {
 
 const labelOf = (n: StoredNote) => {
   if (n.title.trim()) return n.title
-  const first = project(n.body).blocks.find((b) => b.kind !== 'code' && 'text' in b && b.text)
+  const first = project(n.body).blocks.find((b) => b.kind !== 'code' && b.kind !== 'file' && 'text' in b && b.text)
   return first && 'text' in first ? first.text.split('\n')[0].slice(0, 90) : 'Sem título'
 }
 
@@ -171,14 +196,47 @@ const tagsOf = (n: StoredNote) => [...new Set([...n.tags, ...project(n.body).has
 
 function summarize(n: StoredNote): NoteSummary {
   const p = project(n.body)
-  const first = p.images[0] ? attachments.get(p.images[0]) : undefined
+  const cover = p.cover.flatMap((h) => {
+    const a = attachments.get(h)
+    return a ? [{ hash: h, width: a.width ?? 4, height: a.height ?? 3 }] : []
+  })
   return {
     id: n.id, title: n.title, label: labelOf(n), excerpt: p.text.slice(0, 280), preview: p.preview,
-    cover: first ? { hash: first.hash, width: first.width ?? 4, height: first.height ?? 3 } : null, imageCount: p.images.length, fileCount: n.files.length,
+    cover, imageCount: p.images.length, fileCount: n.files.length + p.files.length,
     categoryId: n.categoryId, color: n.color, pinned: n.pinned, archived: n.archived, trashedAt: n.trashedAt,
     reminderAt: n.reminderAt, reminderDone: n.reminderDone, tags: tagsOf(n), createdAt: n.createdAt, updatedAt: n.updatedAt,
     position: n.position,
   }
+}
+
+// ---------- anexos importados ----------
+function kindOf(mime: string, name: string): AttachmentKind {
+  const ext = name.split('.').pop()?.toLowerCase() ?? ''
+  if (mime.startsWith('image/')) return 'image'
+  if (mime.startsWith('video/')) return 'video'
+  if (mime.startsWith('audio/')) return 'audio'
+  if (mime === 'application/pdf' || ext === 'pdf') return 'pdf'
+  if (/sheet|excel|csv/.test(mime) || ['xls', 'xlsx', 'ods', 'csv'].includes(ext)) return 'sheet'
+  if (/word|document|text|rtf/.test(mime) || ['doc', 'docx', 'odt', 'txt', 'md', 'rtf'].includes(ext)) return 'doc'
+  return 'other'
+}
+
+/** WAV de 2 s (uma nota suave), para os áudios de exemplo tocarem na prévia. */
+function sampleTone(): Blob {
+  const rate = 16000
+  const n = rate * 2
+  const buf = new DataView(new ArrayBuffer(44 + n * 2))
+  const str = (o: number, s: string) => [...s].forEach((c, i) => buf.setUint8(o + i, c.charCodeAt(0)))
+  str(0, 'RIFF'); buf.setUint32(4, 36 + n * 2, true); str(8, 'WAVEfmt ')
+  buf.setUint32(16, 16, true); buf.setUint16(20, 1, true); buf.setUint16(22, 1, true)
+  buf.setUint32(24, rate, true); buf.setUint32(28, rate * 2, true); buf.setUint16(32, 2, true); buf.setUint16(34, 16, true)
+  str(36, 'data'); buf.setUint32(40, n * 2, true)
+  for (let i = 0; i < n; i++) {
+    const t = i / rate
+    const env = Math.min(1, t * 8) * Math.exp(-t * 1.6)
+    buf.setInt16(44 + i * 2, Math.sin(2 * Math.PI * 440 * t) * env * 9000, true)
+  }
+  return new Blob([buf], { type: 'audio/wav' })
 }
 
 // ---------- consultas ----------
@@ -308,7 +366,7 @@ export const mockApi: Api = {
   },
 
   listAttachments({ filter, query }) {
-    return done(activeIn(filter).flatMap((n) => rowsFor(n, [...project(n.body).images, ...n.files])).filter(fileMatches(query)))
+    return done(activeIn(filter).flatMap((n) => rowsFor(n, [...project(n.body).images, ...project(n.body).files, ...n.files])).filter(fileMatches(query)))
   },
 
   listImages({ filter, query, tone }) {
@@ -329,7 +387,7 @@ export const mockApi: Api = {
       notes: found.length,
       reminders: pending.length,
       overdue: pending.filter((n) => n.reminderAt! < now).length,
-      files: live.flatMap((n) => rowsFor(n, [...project(n.body).images, ...n.files])).filter(fileMatches(query)).length,
+      files: live.flatMap((n) => rowsFor(n, [...project(n.body).images, ...project(n.body).files, ...n.files])).filter(fileMatches(query)).length,
       moodboard: found.reduce((s, n) => s + project(n.body).images.length, 0),
     })
   },
@@ -349,7 +407,12 @@ export const mockApi: Api = {
     const n = notes.get(id)
     if (!n) return done(null)
     const { files, ...rest } = n
-    return done({ ...structuredClone(rest), files: files.flatMap((h) => attachments.get(h) ?? []) })
+    const p = project(n.body)
+    return done({
+      ...structuredClone(rest),
+      files: files.flatMap((h) => attachments.get(h) ?? []),
+      media: [...p.images, ...p.files].flatMap((h) => attachments.get(h) ?? []),
+    })
   },
 
   saveNote(input) {
@@ -431,17 +494,54 @@ export const mockApi: Api = {
     done({ connected: true, lastSyncAt: Date.now() - 2 * 60_000, noteCount: notes.size, cacheUsedBytes: 310 * 1024 * 1024 }),
 
   imageUrl: (hash) => imageSrc.get(hash) ?? '',
+  mediaUrl(hash) {
+    const known = imageSrc.get(hash) ?? blobSrc.get(hash)
+    if (known) return known
+    // Áudios de exemplo não têm conteúdo: um tom curto gerado aqui deixa o player funcionar na prévia.
+    if (attachments.get(hash)?.kind === 'audio') {
+      const url = URL.createObjectURL(sampleTone())
+      blobSrc.set(hash, url)
+      return url
+    }
+    return ''
+  },
+
+  async importFile(file, name) {
+    const mime = file.type || 'application/octet-stream'
+    const kind = kindOf(mime, name)
+    const url = URL.createObjectURL(file)
+    let width: number | null = null
+    let height: number | null = null
+    if (kind === 'image') {
+      // Na Fase 3 o núcleo passa a foto pelo pipeline (EXIF, WebP, miniatura, paleta); aqui só lemos o tamanho.
+      const img = await createImageBitmap(file).catch(() => null)
+      width = img?.width ?? 4
+      height = img?.height ?? 3
+      img?.close()
+    }
+    const a: Attachment = {
+      hash: `imp-${uuidv7()}`, kind, mime, name, bytes: file.size, origBytes: null,
+      width, height, palette: null, tone: null, addedAt: Date.now(),
+    }
+    attachments.set(a.hash, a)
+    blobSrc.set(a.hash, url)
+    if (kind === 'image') imageSrc.set(a.hash, url)
+    return a
+  },
+
   async downloadAttachment(a) {
     // Prévia: imagens baixam a própria figura; os demais anexos de exemplo não têm conteúdo, então vai um arquivo de texto.
+    const real = blobSrc.get(a.hash)
+    if (real) {
+      Object.assign(document.createElement('a'), { href: real, download: a.name }).click()
+      return
+    }
     const src = imageSrc.get(a.hash)
     const url = src || URL.createObjectURL(new Blob([`Arquivo de exemplo do Ideario: ${a.name}\n`], { type: 'text/plain' }))
     const link = Object.assign(document.createElement('a'), { href: url, download: src ? a.name.replace(/\.\w+$/, '') + '.svg' : a.name })
     link.click()
     if (!src) setTimeout(() => URL.revokeObjectURL(url), 1000)
   },
-  sampleImages: () =>
-    done([...attachments.values()].filter((a) => a.kind === 'image').map((a) => ({ ...a, noteId: '', noteTitle: '', categoryId: null }))),
-
   subscribe(fn) {
     listeners.add(fn)
     return () => listeners.delete(fn)

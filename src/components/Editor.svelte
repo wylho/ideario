@@ -1,16 +1,22 @@
 <script lang="ts">
-  import { untrack } from 'svelte'
+  import { mount, untrack, unmount } from 'svelte'
   import { Editor as TipTap } from '@tiptap/core'
+  import { NodeSelection } from '@tiptap/pm/state'
   import { Dialog, DropdownMenu, Popover, Select } from 'bits-ui'
   import {
-    Archive, ArchiveRestore, ArrowLeft, Bold, Check, ChevronDown, Heading, ImagePlus, Italic, List, ListChecks, MoreVertical, SquareCode, Palette, Paperclip, Pin, PinOff, Redo2, Tag, Trash2, Undo2, X,
+    Archive, ArchiveRestore, ArrowLeft, Bold, Camera, Check, ChevronDown, ChevronLeft, ChevronRight, Columns2, Heading, Image, Italic, List,
+    ListChecks, Mic, MoreVertical, SquareCode, Palette, Paperclip, Pin, PinOff, Plus, Redo2, Rows2, Square, Tag, Trash2, Undo2, X,
   } from '@lucide/svelte'
+  import { imageActions, leaveRow, placeBeside } from '../lib/editor/media'
+  import { canRecord, fmtSeconds, hasCamera, photoName, Recorder } from '../lib/capture.svelte'
+  import MediaBlock from './MediaBlock.svelte'
+  import CameraDialog from './CameraDialog.svelte'
   import { api } from '../lib/api'
   import { app, type EditorTarget } from '../lib/app.svelte'
   import { noteExtensions } from '../lib/editor/extensions'
   import { ago, fmtBytes, hashTags, normalizeTag } from '../lib/format'
   import ReminderPopover from './ReminderPopover.svelte'
-  import type { Attachment, AttachmentRow, NoteColor, NoteInput, RichDoc } from '../lib/types'
+  import type { Attachment, NoteColor, NoteInput, RichDoc, RichNode } from '../lib/types'
 
   let { target }: { target: EditorTarget } = $props()
 
@@ -23,7 +29,7 @@
   type Meta = Omit<NoteInput, 'id' | 'body'>
 
   // svelte-ignore state_referenced_locally
-  const { id, isNew, defaults } = target
+  const { id, isNew, defaults, start } = target
   let meta = $state<Meta | null>(null)
   let files = $state.raw<Attachment[]>([])
   let editedAt = $state<number | null>(null)
@@ -32,8 +38,14 @@
   let tick = $state(0)
   let bodyTags = $state<string[]>([])
   let tagDraft = $state('')
-  let samples = $state.raw<AttachmentRow[]>([])
-  let imagePickerOpen = $state(false)
+  /** Anexos usados no corpo, para desenhar fotos e players sem esperar. */
+  const media = new Map<string, Attachment>()
+  const recorder = new Recorder()
+  let cameraOpen = $state(false)
+  let cameraAvailable = $state(false)
+  hasCamera().then((v) => (cameraAvailable = v))
+  let photoInput: HTMLInputElement | undefined = $state()
+  let fileInput: HTMLInputElement | undefined = $state()
 
   let initialBody: RichDoc = { type: 'doc', content: [{ type: 'paragraph' }] }
   let persisted = !isNew
@@ -50,6 +62,7 @@
       if (!n) return void (app.editor = null)
       initialBody = n.body
       files = n.files
+      for (const a of n.media) media.set(a.hash, a)
       editedAt = n.updatedAt
       wasTrashed = n.trashedAt != null
       meta = {
@@ -58,7 +71,6 @@
       }
     })
   }
-  api.sampleImages().then((s) => (samples = s))
 
   const cat = $derived(app.category(meta?.categoryId))
   const extraTags = $derived(bodyTags.filter((t) => !meta?.tags.includes(t)))
@@ -126,7 +138,17 @@
     return untrack(() => {
       const ed = new TipTap({
         element: el,
-        extensions: noteExtensions({ resolveImage: (h) => api.imageUrl(h, 'full'), placeholder: 'Escreva… use #tag para marcar' }),
+        extensions: noteExtensions({
+          media: (h) => ({ src: api.imageUrl(h, 'full'), width: media.get(h)?.width, height: media.get(h)?.height }),
+          renderFile: (h, dom) => {
+            const a = media.get(h)
+            if (!a) return () => {}
+            const c = mount(MediaBlock, { target: dom, props: { a } })
+            return () => void unmount(c)
+          },
+          onFiles: (list, pos) => void addFiles(list, pos),
+          placeholder: 'Escreva… use #tag para marcar',
+        }),
         content: initialBody,
         editorProps: {
           attributes: { id: 'corpo', role: 'textbox', 'aria-multiline': 'true', 'aria-label': 'Texto da nota', spellcheck: 'true' },
@@ -141,6 +163,10 @@
       editor = ed
       // Nota nova: cursor no corpo já na montagem, para não perder as primeiras teclas.
       if (isNew) ed.commands.focus('end', { scrollIntoView: false })
+      // Atalhos do "+": já abre gravando, com a câmera ou com os arquivos escolhidos.
+      if (start && 'files' in start) void addFiles(start.files)
+      else if (start && 'record' in start) void recorder.start()
+      else if (start && 'camera' in start) cameraOpen = true
       return () => {
         if (!closed) save()
         ed.destroy()
@@ -150,9 +176,59 @@
 
   const run = (fn: (c: ReturnType<TipTap['chain']>) => ReturnType<TipTap['chain']>) => editor && fn(editor.chain().focus()).run()
 
-  function insertImage(hash: string) {
-    run((c) => c.insertContent([{ type: 'noteImage', attrs: { hash } }, { type: 'paragraph' }]))
-    imagePickerOpen = false
+  // ---------- mídia ----------
+  /** Importa arquivos (do computador, arrastados, colados, da câmera ou do gravador) e põe no texto. */
+  async function addFiles(list: (File | { blob: Blob; name: string })[], pos?: number) {
+    if (!editor || !list.length) return
+    const added: Attachment[] = []
+    for (const f of list) {
+      const a = f instanceof File ? await api.importFile(f, f.name) : await api.importFile(f.blob, f.name)
+      media.set(a.hash, a)
+      added.push(a)
+    }
+    // Várias fotos de uma vez entram lado a lado (até 4 por linha); o resto, um bloco cada.
+    const photos = added.filter((a) => a.kind === 'image')
+    const nodes: RichNode[] = []
+    for (let i = 0; i < photos.length; i += 4) {
+      const row = photos.slice(i, i + 4).map((a) => ({ type: 'noteImage', attrs: { hash: a.hash } }))
+      nodes.push(row.length > 1 ? { type: 'imageRow', content: row } : row[0])
+    }
+    for (const a of added) if (a.kind !== 'image') nodes.push({ type: 'noteFile', attrs: { hash: a.hash } })
+    nodes.push({ type: 'paragraph' })
+    const chain = editor.chain().focus()
+    ;(pos == null ? chain : chain.setTextSelection(pos)).insertContent(nodes).run()
+  }
+
+  function pick(input: HTMLInputElement | undefined) {
+    if (!input) return
+    input.value = ''
+    input.click()
+  }
+
+  async function stopRecording() {
+    const rec = await recorder.stop()
+    if (rec) await addFiles([rec])
+  }
+
+  // Foto selecionada: botões para pôr ao lado da de cima, mover na linha e separar (toque e teclado).
+  const selectedImage = $derived.by(() => {
+    void tick
+    const sel = editor?.state.selection
+    if (!editor || !(sel instanceof NodeSelection) || sel.node.type.name !== 'noteImage') return null
+    const dom = editor.view.nodeDOM(sel.from) as HTMLElement | null
+    const acts = imageActions(editor.state, sel.from)
+    if (!dom || !acts) return null
+    // Posição relativa ao editor (o diálogo é a referência dos botões), sem sair das bordas.
+    const box = dom.closest('.editor')?.getBoundingClientRect()
+    const r = dom.getBoundingClientRect()
+    if (!box) return null
+    const half = 110
+    const left = Math.min(Math.max(r.left + r.width / 2 - box.left, half + 8), box.width - half - 8)
+    return { pos: sel.from, ...acts, top: Math.max(r.top - box.top, 56), left }
+  })
+  function apply(tr: ReturnType<typeof placeBeside>) {
+    if (tr && editor) editor.view.dispatch(tr)
+    editor?.view.focus()
   }
 
   function addTag() {
@@ -194,7 +270,7 @@
           </DropdownMenu.Root>
         </div>
 
-        <div class="ed-scroll">
+        <div class="ed-scroll" onscroll={() => tick++}>
           <Dialog.Title>
             {#snippet child({ props })}
               <input
@@ -280,27 +356,60 @@
           </div>
         </div>
 
+        {#if selectedImage}
+          <div class="img-tools" role="toolbar" aria-label="Foto" style:top="{selectedImage.top}px" style:left="{selectedImage.left}px">
+            {#if selectedImage.joinTarget != null}
+              <button onmousedown={(e) => e.preventDefault()} onclick={() => editor && apply(placeBeside(editor.state, selectedImage.pos, selectedImage.joinTarget!, 'right'))} aria-label="Pôr ao lado da foto de cima" title="Pôr ao lado da foto de cima"><Columns2 size={17} /></button>
+            {/if}
+            {#if selectedImage.left != null}
+              <button onmousedown={(e) => e.preventDefault()} onclick={() => editor && apply(placeBeside(editor.state, selectedImage.pos, selectedImage.left!, 'left'))} aria-label="Mover para a esquerda" title="Mover para a esquerda"><ChevronLeft size={17} /></button>
+            {/if}
+            {#if selectedImage.right != null}
+              <button onmousedown={(e) => e.preventDefault()} onclick={() => editor && apply(placeBeside(editor.state, selectedImage.pos, selectedImage.right!, 'right'))} aria-label="Mover para a direita" title="Mover para a direita"><ChevronRight size={17} /></button>
+            {/if}
+            {#if selectedImage.inRow}
+              <button onmousedown={(e) => e.preventDefault()} onclick={() => editor && apply(leaveRow(editor.state, selectedImage.pos))} aria-label="Tirar da linha" title="Tirar da linha"><Rows2 size={17} /></button>
+            {/if}
+            <button onmousedown={(e) => e.preventDefault()} onclick={() => run((c) => c.deleteSelection())} aria-label="Remover foto" title="Remover foto"><Trash2 size={17} /></button>
+          </div>
+        {/if}
+
+        <input bind:this={photoInput} type="file" accept="image/*" multiple hidden onchange={(e) => void addFiles([...(e.currentTarget.files ?? [])])} />
+        <input bind:this={fileInput} type="file" multiple hidden onchange={(e) => void addFiles([...(e.currentTarget.files ?? [])])} />
+        <CameraDialog bind:open={cameraOpen} oncapture={(b) => void addFiles([{ blob: b, name: photoName() }])} />
+
+        {#if recorder.recording}
+          <div class="ed-tools rec-bar" role="toolbar" aria-label="Gravação">
+            <span class="rec-dot" aria-hidden="true"></span>
+            <span class="rec-time" aria-live="polite">Gravando · {fmtSeconds(recorder.seconds)}</span>
+            <button class="btn ghost sm" onclick={() => recorder.cancel()}>Cancelar</button>
+            <button class="btn sm rec-stop" onclick={stopRecording}><Square size={13} fill="currentColor" />Parar</button>
+          </div>
+        {:else}
         <div class="ed-tools" role="toolbar" aria-label="Formatação">
+          <DropdownMenu.Root>
+            <DropdownMenu.Trigger aria-label="Inserir" title="Inserir"><Plus size={19} /></DropdownMenu.Trigger>
+            <DropdownMenu.Portal>
+              <DropdownMenu.Content class="menu" side="top" align="start" sideOffset={10}>
+                <DropdownMenu.Item class="menu-item" onSelect={() => pick(photoInput)}><Image size={16} />Foto</DropdownMenu.Item>
+                {#if cameraAvailable}
+                  <DropdownMenu.Item class="menu-item" onSelect={() => (cameraOpen = true)}><Camera size={16} />Câmera</DropdownMenu.Item>
+                {/if}
+                <DropdownMenu.Item class="menu-item" onSelect={() => pick(fileInput)}><Paperclip size={16} />Arquivo</DropdownMenu.Item>
+                {#if canRecord()}
+                  <DropdownMenu.Item class="menu-item" onSelect={() => void recorder.start()}><Mic size={16} />Gravar áudio</DropdownMenu.Item>
+                {/if}
+                <DropdownMenu.Separator class="menu-sep" />
+                <DropdownMenu.Item class="menu-item" onSelect={() => run((c) => c.toggleCodeBlock())}><SquareCode size={16} />Bloco de código</DropdownMenu.Item>
+              </DropdownMenu.Content>
+            </DropdownMenu.Portal>
+          </DropdownMenu.Root>
+          <span class="ed-tools-sep" aria-hidden="true"></span>
           <button onmousedown={(e) => e.preventDefault()} onclick={() => run((c) => c.toggleBold())} aria-label="Negrito" aria-pressed={active.bold}><Bold size={18} /></button>
           <button onmousedown={(e) => e.preventDefault()} onclick={() => run((c) => c.toggleItalic())} aria-label="Itálico" aria-pressed={active.italic}><Italic size={18} /></button>
           <button onmousedown={(e) => e.preventDefault()} onclick={() => run((c) => c.toggleHeading({ level: 3 }))} aria-label="Título" aria-pressed={active.heading}><Heading size={18} /></button>
           <button onmousedown={(e) => e.preventDefault()} onclick={() => run((c) => c.toggleBulletList())} aria-label="Lista" aria-pressed={active.list}><List size={18} /></button>
           <button onmousedown={(e) => e.preventDefault()} onclick={() => run((c) => c.toggleTaskList())} aria-label="Checklist" aria-pressed={active.check}><ListChecks size={18} /></button>
-          <button onmousedown={(e) => e.preventDefault()} onclick={() => run((c) => c.toggleCodeBlock())} aria-label="Bloco de código" title="Bloco de código" aria-pressed={active.code}><SquareCode size={18} /></button>
-          <Popover.Root bind:open={imagePickerOpen}>
-            <Popover.Trigger aria-label="Inserir imagem" onmousedown={(e) => e.preventDefault()}><ImagePlus size={18} /></Popover.Trigger>
-            <Popover.Portal>
-              <Popover.Content class="pop" side="top" sideOffset={10} onOpenAutoFocus={(e) => e.preventDefault()}>
-                <p class="pop-title">Inserir no texto</p>
-                <p class="pop-hint">A foto é otimizada para WebP antes de entrar na nota.</p>
-                <div class="pick-grid">
-                  {#each samples as s (s.hash)}
-                    <button onclick={() => insertImage(s.hash)} aria-label={s.name}><img src={api.imageUrl(s.hash, 'thumb')} alt="" /></button>
-                  {/each}
-                </div>
-              </Popover.Content>
-            </Popover.Portal>
-          </Popover.Root>
           <Popover.Root>
             <Popover.Trigger aria-label="Cor da nota"><Palette size={18} /></Popover.Trigger>
             <Popover.Portal>
@@ -326,6 +435,7 @@
           <button onmousedown={(e) => e.preventDefault()} onclick={() => run((c) => c.undo())} aria-label="Desfazer" title="Desfazer (Ctrl+Z)" disabled={!active.undo}><Undo2 size={18} /></button>
           <button onmousedown={(e) => e.preventDefault()} onclick={() => run((c) => c.redo())} aria-label="Refazer" title="Refazer (Ctrl+Shift+Z)" disabled={!active.redo}><Redo2 size={18} /></button>
         </div>
+        {/if}
       </Dialog.Content>
     </Dialog.Portal>
   </Dialog.Root>

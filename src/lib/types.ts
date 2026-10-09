@@ -37,6 +37,8 @@ export type PreviewBlock =
   | { kind: 'bullet'; text: string; depth: number }
   | { kind: 'ordered'; text: string; n: number; depth: number }
   | { kind: 'task'; text: string; done: boolean; depth: number }
+  /** Anexo no meio do texto (vídeo, áudio, PDF…): mostrado como uma linha com ícone. */
+  | { kind: 'file'; text: string; fileKind: AttachmentKind }
   /** Bloco de código: as primeiras linhas, sem formatação. */
   | { kind: 'code'; text: string }
   /** Tarefas que não couberam na prévia (máx. 4) ou texto cortado. */
@@ -51,10 +53,11 @@ export interface NoteSummary {
   /** Texto puro, sem estrutura (leitores de tela, busca). */
   excerpt: string
   preview: PreviewBlock[]
-  /** Primeira imagem do corpo, com dimensões para reservar o espaço no card. */
-  cover: { hash: string; width: number; height: number } | null
+  /** Capa: a primeira foto do corpo, ou a primeira linha de fotos lado a lado (até 4), com dimensões
+   *  para reservar o espaço no card. Vazia quando a nota não tem foto. */
+  cover: { hash: string; width: number; height: number }[]
   imageCount: number
-  /** Anexos que não são imagem (PDF, documentos, planilhas, áudio). */
+  /** Anexos que não são imagem (PDF, documentos, planilhas, áudio, vídeo), no corpo ou à parte. */
   fileCount: number
   categoryId: string | null
   color: NoteColor
@@ -118,6 +121,8 @@ export interface NoteDetail {
   tags: string[]
   /** Anexos que não aparecem no corpo (arquivos). */
   files: Attachment[]
+  /** Anexos usados no corpo (fotos, vídeos, áudios, documentos inline), para o editor desenhar sem esperar. */
+  media: Attachment[]
   createdAt: Millis
   updatedAt: Millis
 }

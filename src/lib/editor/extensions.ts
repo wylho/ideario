@@ -1,33 +1,11 @@
-import { Extension, mergeAttributes, Node, type AnyExtension } from '@tiptap/core'
+import { Extension, type AnyExtension } from '@tiptap/core'
 import StarterKit from '@tiptap/starter-kit'
 import { TaskItem, TaskList } from '@tiptap/extension-list'
 import { Placeholder } from '@tiptap/extensions'
 import { Plugin, PluginKey } from '@tiptap/pm/state'
 import { Decoration, DecorationSet } from '@tiptap/pm/view'
 import type { Node as PMNode } from '@tiptap/pm/model'
-
-/**
- * Imagem no meio do texto. O documento guarda só o hash do anexo
- * (`<img data-hash="…">`, SPEC §5); o caminho local é resolvido na hora de renderizar.
- */
-export const NoteImage = Node.create<{ resolve: (hash: string) => string }>({
-  name: 'noteImage',
-  group: 'block',
-  atom: true,
-  draggable: true,
-  addOptions: () => ({ resolve: () => '' }),
-  addAttributes: () => ({
-    hash: {
-      default: null,
-      parseHTML: (el) => el.getAttribute('data-hash'),
-      renderHTML: (attrs) => ({ 'data-hash': attrs.hash }),
-    },
-  }),
-  parseHTML: () => [{ tag: 'img[data-hash]' }],
-  renderHTML({ node, HTMLAttributes }) {
-    return ['img', mergeAttributes(HTMLAttributes, { src: this.options.resolve(node.attrs.hash), alt: '', draggable: 'false' })]
-  },
-})
+import { ImageRow, MediaLayout, NoteFile, NoteImage, type MediaInfo } from './media'
 
 /** Destaca `#tag` no corpo. As tags em si são extraídas ao salvar. */
 const Hashtags = Extension.create({
@@ -59,7 +37,12 @@ const Hashtags = Extension.create({
 })
 
 /** Esquema do corpo das notas. O mesmo conjunto serve ao editor e à conversão de HTML. */
-export function noteExtensions(opts: { resolveImage?: (hash: string) => string; placeholder?: string } = {}): AnyExtension[] {
+export function noteExtensions(opts: {
+  media?: (hash: string) => MediaInfo
+  renderFile?: (hash: string, dom: HTMLElement) => () => void
+  onFiles?: (files: File[], pos: number) => void
+  placeholder?: string
+} = {}): AnyExtension[] {
   return [
     StarterKit.configure({
       heading: { levels: [3] },
@@ -77,7 +60,10 @@ export function noteExtensions(opts: { resolveImage?: (hash: string) => string; 
       nested: false,
       a11y: { checkboxLabel: (node, checked) => `${checked ? 'Desmarcar' : 'Marcar'} “${node.textContent || 'item vazio'}”` },
     }),
-    NoteImage.configure({ resolve: opts.resolveImage ?? (() => '') }),
+    NoteImage.configure({ media: opts.media ?? (() => ({ src: '' })) }),
+    ImageRow,
+    NoteFile.configure({ render: opts.renderFile }),
+    MediaLayout.configure({ onFiles: opts.onFiles }),
     Hashtags,
     ...(opts.placeholder ? [Placeholder.configure({ placeholder: opts.placeholder })] : []),
   ]

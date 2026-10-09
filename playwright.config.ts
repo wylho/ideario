@@ -10,6 +10,8 @@ export default defineConfig({
     viewport: { width: 440, height: 900 },
     locale: 'pt-BR',
     timezoneId: 'America/Sao_Paulo',
+    // Microfone e câmera falsos, para testar o gravador e a câmera sem hardware.
+    launchOptions: { args: ['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream'] },
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'], viewport: { width: 440, height: 900 } } }],
   webServer: {
