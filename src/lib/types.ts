@@ -50,8 +50,6 @@ export interface NoteSummary {
   title: string
   /** Título, ou a primeira linha do texto quando não há título. Para listas de uma linha (Lembretes, Arquivos). */
   label: string
-  /** Texto puro, sem estrutura (leitores de tela, busca). */
-  excerpt: string
   preview: PreviewBlock[]
   /** Capa: a primeira foto do corpo, ou a primeira linha de fotos lado a lado (até 4), com dimensões
    *  para reservar o espaço no card. Vazia quando a nota não tem foto. */

@@ -202,6 +202,8 @@ CREATE VIRTUAL TABLE notes_fts USING fts5(
 );
 ```
 
+**Fase 1 (implementado):** enquanto não há Y.Doc, o corpo fica em `notes.body_json` (JSON do TipTap) e as tags numa tabela `note_tags (note_id, tag, manual)` — manuais e `#tags` do texto. A busca usa `notes_fts (note_id UNINDEXED, title, body_text, tags)`. Na Fase 2, `body_json` vira o `ydoc`.
+
 **Nota como Y.Doc:** cada nota é um documento Yjs com `Y.Map("meta")` (título, cor, categoria, pinned, archived, trashed_at, reminder, tags) e `Y.XmlFragment("body")` (conteúdo do TipTap). Assim, metadados **e** corpo fazem merge sem conflito. As colunas SQL são uma projeção atualizada a cada mudança.
 
 Imagens no corpo referenciam o anexo por hash (`<img data-hash="…">`). O front resolve o caminho local via protocolo de assets do Tauri.
@@ -327,7 +329,7 @@ Cada fase termina com o app rodando e algo verificável.
 - **D2 — Ordem das plataformas.** Confirmar desktop → Android.
 - **D3 — Notas visíveis no Drive?** A opção `appDataFolder` (oculta) é a recomendada. A alternativa é uma pasta visível com Markdown legível sem o app, que exige o escopo `drive.file` e uma conversão Yjs↔Markdown. Uma opção intermediária é exportar Markdown sob demanda.
 - **D4 — Nome definitivo do app.** ✅ Decidido: **Ideario** (sem acento).
-- **D5 — Ícones das categorias.** Usar um conjunto fixo (ex.: Lucide) ou emoji?
+- **D5 — Ícones das categorias.** ✅ Decidido: **só cor**, sem ícone.
 
 ---
 

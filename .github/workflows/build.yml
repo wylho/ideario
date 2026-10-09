@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   check:
-    name: Verificar (tipos, testes e2e, núcleo)
+    name: Verificar (tipos, testes e2e, núcleo, app nativo)
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v5
@@ -39,6 +39,12 @@ jobs:
       - name: Testes do núcleo
         working-directory: src-tauri
         run: cargo test
+      - name: Testes no app nativo (WebKitGTK via WebDriver)
+        run: |
+          sudo apt-get install -y webkit2gtk-driver xvfb
+          cargo install tauri-driver --locked
+          npx tauri build --debug --no-bundle
+          xvfb-run -a -s "-screen 0 1400x900x24" node tests/native/run.mjs
 
   bundle:
     name: Instalador (${{ matrix.name }})
