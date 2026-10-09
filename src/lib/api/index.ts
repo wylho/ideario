@@ -1,7 +1,7 @@
 // Camada de dados da UI. No app, os comandos Tauri (`invoke`) do núcleo Rust (SQLite local, Fase 1);
 // no navegador (`npm run dev`, prévia) e nos testes e2e, um mock em memória com dados de exemplo.
 import type {
-  Attachment, AttachmentKind, AttachmentRow, Box, Category, Filter, NoteDetail, NoteInput, NotePatch, NoteSort, NoteSummary, Settings, SyncState, SyncStatus, TagCount, Tone, ViewCounts,
+  Attachment, AttachmentKind, AttachmentRow, KeepReport, Box, Category, Filter, NoteDetail, NoteInput, NotePatch, NoteSort, NoteSummary, Settings, SyncState, SyncStatus, TagCount, Tone, ViewCounts,
 } from '../types'
 import { invoke, isTauri } from '@tauri-apps/api/core'
 import { mockApi } from './mock'
@@ -66,6 +66,10 @@ export interface Api {
   pendingPreviews(): Promise<{ hash: string; kind: AttachmentKind }[]>
   /** Prévia em PNG (primeira página do PDF, um quadro do vídeo); vazio = não foi possível. */
   setPreview(hash: string, png: Uint8Array): Promise<void>
+  /** É um Takeout do Google Keep? Quantas notas e mídias (null = um zip qualquer). Só no app. */
+  inspectTakeout(path: string): Promise<{ notes: number; media: number } | null>
+  /** Importa o Takeout (a lista se atualiza no fim). Só no app. */
+  importKeep(path: string, onProgress: (done: number, total: number) => void): Promise<KeepReport>
   /** Só no app: importa pelo caminho um arquivo arrastado do sistema (lido no núcleo). */
   importPath(path: string): Promise<Attachment>
   /** Salva uma cópia do anexo (no app: na pasta Downloads, e devolve o caminho; no navegador: download, e devolve null). */

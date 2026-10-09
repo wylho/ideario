@@ -24,6 +24,8 @@ const DAY: Millis = 24 * 60 * 60 * 1000;
 const TRASH_DAYS: Millis = 30;
 /// Espaço entre posições da ordem personalizada; mover usa o meio entre vizinhos.
 const STEP: f64 = 1024.0;
+/// Cores das categorias (as mesmas de src/lib/colors.ts).
+const CATEGORY_COLORS: [&str; 10] = ["#C26A3D", "#B8901F", "#4F8A3E", "#3E8E7E", "#3D63D6", "#8A6BC4", "#C2557A", "#C0392B", "#8B5E3C", "#5F7380"];
 /// Formato da projeção gravada (2: blocos de arquivo levam o hash, para a miniatura).
 const PROJECTION_VERSION: u32 = 2;
 
@@ -534,6 +536,23 @@ impl Store {
         Ok(Category { id, name: name.to_string(), color: color.to_string(), icon: None, note_count: 0 })
     }
 
+    /// Categoria pelo nome (sem diferenciar maiúsculas nem acentos); se não existe, cria com a próxima cor livre.
+    /// Devolve o id e se foi criada agora.
+    pub fn category_by_name_or_create(&self, name: &str) -> Result<(String, bool)> {
+        let key = fold(name.trim());
+        let cats = self.list_categories()?;
+        if let Some(c) = cats.iter().find(|c| fold(&c.name) == key) {
+            return Ok((c.id.clone(), false));
+        }
+        let used: Vec<String> = cats.iter().map(|c| c.color.to_lowercase()).collect();
+        let color = CATEGORY_COLORS
+            .iter()
+            .find(|c| !used.contains(&c.to_lowercase()))
+            .copied()
+            .unwrap_or(CATEGORY_COLORS[cats.len() % CATEGORY_COLORS.len()]);
+        Ok((self.create_category(name, color)?.id, true))
+    }
+
     pub fn update_category(&self, id: &str, name: Option<&str>, color: Option<&str>) -> Result<()> {
         if let Some(n) = name.map(str::trim).filter(|n| !n.is_empty()) {
             self.conn.execute("UPDATE categories SET name = ?2, updated_at = ?3 WHERE id = ?1", params![id, n, now()]).map_err(err)?;
@@ -680,6 +699,16 @@ impl Store {
     }
 
     /// Estado Yjs da nota (para o editor abrir e, na Fase 5, para o Drive).
+    pub fn note_exists(&self, id: &str) -> Result<bool> {
+        self.conn.query_row("SELECT EXISTS (SELECT 1 FROM notes WHERE id = ?1)", [id], |r| r.get(0)).map_err(err)
+    }
+
+    /// Datas vindas de fora (importação do Keep): criação e última edição originais.
+    pub fn set_times(&self, id: &str, created: Millis, updated: Millis) -> Result<()> {
+        self.conn.execute("UPDATE notes SET created_at = ?2, updated_at = ?3 WHERE id = ?1", params![id, created, updated]).map_err(err)?;
+        Ok(())
+    }
+
     pub fn ydoc(&self, id: &str) -> Result<Option<Vec<u8>>> {
         self.conn
             .query_row("SELECT ydoc FROM notes WHERE id = ?1", [id], |r| r.get::<_, Option<Vec<u8>>>(0))

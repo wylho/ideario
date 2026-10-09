@@ -101,4 +101,13 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
   Downloads ou escolher a pasta (diálogo nativo); prévia de PDFs e documentos; bug: card tremendo ao arrastar e cards
   quebrados ao redimensionar a janela (Masonry). Visualizador de PDF no Linux (a WebKitGTK não mostra PDF no
   iframe; dá para usar o pdf.js que já está no app).
-- **Próximo passo: Importar do Keep (Fase 6, antecipada). Precisa de um Takeout real do usuário.**
+- **Importar do Keep (Fase 6, antecipada): concluída.** `keep.rs` lê o zip do Takeout (nomes em UTF-8 sem a marca, como o
+  Finder grava; ignora `__MACOSX`, `._*`, `.DS_Store`) e converte cada nota: HTML do texto (parágrafos, h1/h2 → título,
+  negrito/itálico pelo `<span style>`), checklist, fotos pelo pipeline, links (anotações) como texto, 1º marcador →
+  categoria e os demais → tags, cor mais próxima, fixada/arquivada/lixeira (lixeira conta 30 dias a partir da
+  importação) e as datas originais. Id estável (UUID v5): importar de novo pula as que já entraram. Mídia ausente do zip
+  é contada no resumo. `Core::import_keep` (fotos fora da trava, evento `keep-progress`); entrada pela janela (soltar o
+  zip, `FileDrop`) ou Configurações → Importar (diálogo nativo, `tauri-plugin-dialog`). Validado no Takeout real do
+  usuário (447 notas, 1,2 s); teste `real_takeout` (ignorado, `IDEARIO_TAKEOUT=…`) mostra só contagens.
+  Os dados do usuário não vão para o repositório: os testes usam um Takeout inventado no mesmo formato.
+- **Próximo passo: Fase 4 (lembretes com notificação e captura).**

@@ -22,7 +22,20 @@ export interface ConfirmAsk {
   confirm: string
   onconfirm: () => void
 }
-export type AppDialog = NameDialog | ConfirmAsk
+/** Aviso com só um botão (ex.: resumo de uma importação). */
+export interface InfoDialog {
+  kind: 'info'
+  title: string
+  lines: string[]
+}
+export type AppDialog = NameDialog | ConfirmAsk | InfoDialog
+
+/** Tarefa longa em andamento (ex.: importar do Keep): mostrada com barra de progresso. */
+export interface Task {
+  label: string
+  done: number
+  total: number
+}
 
 /** Arquivo solto na janela: File no navegador; caminho no app (o núcleo lê do disco). */
 export type DroppedFile = File | { path: string }
@@ -165,6 +178,12 @@ class AppState {
   confirm(d: Omit<ConfirmAsk, 'kind'>) {
     this.dialog = { kind: 'confirm', ...d }
   }
+
+  info(d: Omit<InfoDialog, 'kind'>) {
+    this.dialog = { kind: 'info', ...d }
+  }
+
+  task = $state<Task | null>(null)
 
   // ---------- seleção múltipla (visão Notas) ----------
   /** Notas selecionadas. Com alguma selecionada, a barra superior vira a barra de ações em lote. */

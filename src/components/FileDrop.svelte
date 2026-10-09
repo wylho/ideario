@@ -2,6 +2,7 @@
   import { FilePlus2, Paperclip } from '@lucide/svelte'
   import { isTauri } from '@tauri-apps/api/core'
   import { app, type DroppedFile } from '../lib/app.svelte'
+  import { offerKeepImport } from '../lib/keep.svelte'
 
   // Arquivos arrastados do computador para a janela: com uma nota aberta, entram nela (no ponto do texto
   // onde caírem, ou no fim se caírem fora do texto); sem nota aberta, viram uma nota nova.
@@ -34,7 +35,11 @@
           else if (p.type === 'drop') {
             over = false
             const at = { x: p.position.x / devicePixelRatio, y: p.position.y / devicePixelRatio }
-            deliver(p.paths.map((path) => ({ path })), at)
+            const files = p.paths.map((path) => ({ path }))
+            // Um zip do Google Takeout: oferece importar as notas do Keep em vez de anexar o zip.
+            const zip = p.paths.length === 1 && /\.zip$/i.test(p.paths[0]) ? p.paths[0] : null
+            if (zip && !blocked()) void offerKeepImport(zip).then((keep) => keep || deliver(files, at))
+            else deliver(files, at)
           }
         })
         .then((un) => (gone ? un() : (stop = un))),

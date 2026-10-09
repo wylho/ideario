@@ -190,3 +190,17 @@ export interface SyncStatus {
   noteCount: number
   cacheUsedBytes: number
 }
+
+/** Resumo de uma importação do Google Keep. */
+export interface KeepReport {
+  notes: number
+  /** Já tinham entrado antes. */
+  skipped: number
+  photos: number
+  /** Citadas nas notas mas fora do zip. */
+  missingMedia: number
+  /** Marcadores que viraram categorias novas. */
+  categories: string[]
+  archived: number
+  trashed: number
+}

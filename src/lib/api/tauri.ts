@@ -55,6 +55,16 @@ export const tauriApi: Api = {
   },
   pendingPreviews: () => invoke('pending_previews'),
   setPreview: (hash, png) => invoke('set_preview', png, { headers: { 'x-hash': hash } }),
+  inspectTakeout: (path) => invoke('inspect_takeout', { path }),
+  async importKeep(path, onProgress) {
+    const { listen } = await import('@tauri-apps/api/event')
+    const stop = await listen<[number, number]>('keep-progress', (e) => onProgress(e.payload[0], e.payload[1]))
+    try {
+      return await write('import_keep', { path })
+    } finally {
+      stop()
+    }
+  },
   importPath: (path) => invoke('import_path', { path }),
   downloadAttachment: (a) => invoke<string>('download_attachment', { hash: a.hash, name: a.name }),
 

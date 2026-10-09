@@ -6,6 +6,8 @@
   import { ago } from '../lib/format'
   import { paletteColors, theme, type ThemePref } from '../lib/theme.svelte'
   import { background } from '../lib/background.svelte'
+  import { pickKeepTakeout } from '../lib/keep.svelte'
+  import { isTauri } from '@tauri-apps/api/core'
   import { DESKTOPS, PALETTES, type DesktopId, type PaletteId } from '../lib/palettes'
   import Picker from './Picker.svelte'
   import type { PhotoQuality, Settings, SyncStatus } from '../lib/types'
@@ -142,6 +144,16 @@
               <Switch.Root id="so-wifi" class="switch" bind:checked={settings.wifiOnly}><Switch.Thumb class="thumb" /></Switch.Root>
             </label>
           </section>
+
+          {#if isTauri()}
+            <section class="set-group">
+              <h3>Importar</h3>
+              <div class="set-row">
+                <span><b>Google Keep</b><small>Escolha o zip do Google Takeout. Categorias, cores, checklists e fotos vêm junto; importar de novo não repete notas.</small></span>
+                <button class="btn ghost" onclick={() => { app.settingsOpen = false; void pickKeepTakeout() }}>Importar…</button>
+              </div>
+            </section>
+          {/if}
 
           <section class="set-group">
             <h3>Fotos</h3>
