@@ -11,8 +11,13 @@ export function estimateCard(n: NoteSummary, w: number): number {
   let h = 26 // padding do corpo
   if (n.cover) h += Math.min(260, (w * n.cover.height) / n.cover.width)
   if (n.title) h += lines(n.title, 9) * 20 + 6
-  if (n.excerpt) h += n.title ? lines(n.excerpt, 6.6, 6) * 19.6 + 6 : lines(n.excerpt, 7.8, 6) * 23 + 6
-  if (n.checklist.length) h += (n.checklist.length + (n.checklistTotal > n.checklist.length ? 1 : 0)) * 22 + 6
+  for (const b of n.preview) {
+    if (b.kind === 'more') h += 20
+    else if (b.kind === 'heading') h += lines(b.text, 8, 2) * 20 + 2
+    else if (b.kind === 'text') h += lines(b.text, n.title ? 6.6 : 7.8, 4) * (n.title ? 19.6 : 23) + 3
+    else h += lines(b.text, 6.6, 2) * 19.6 + 3
+  }
+  if (n.preview.length) h += 6
   const pills =
     (n.reminderAt != null ? 120 : 0) + (n.categoryId ? 80 : 0) + (n.fileCount ? 40 : 0) + n.tags.reduce((s, t) => s + t.length * 6.5 + 24, 0)
   if (pills) h += Math.ceil(pills / inner) * 26 + 2

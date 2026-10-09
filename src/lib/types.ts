@@ -23,18 +23,27 @@ export interface TagCount {
   count: number
 }
 
-export interface ChecklistItem {
-  text: string
-  done: boolean
-}
+/**
+ * Bloco da prévia do card, na ordem do documento. Preserva a estrutura (título, parágrafo,
+ * tópico, lista numerada, tarefa) em vez de achatar tudo num texto corrido.
+ */
+export type PreviewBlock =
+  | { kind: 'heading' | 'text'; text: string }
+  | { kind: 'bullet'; text: string; depth: number }
+  | { kind: 'ordered'; text: string; n: number; depth: number }
+  | { kind: 'task'; text: string; done: boolean; depth: number }
+  /** Tarefas que não couberam na prévia (máx. 4) ou texto cortado. */
+  | { kind: 'more'; count: number }
 
 /** Projeção de uma nota para listas e cards (colunas derivadas do Y.Doc). */
 export interface NoteSummary {
   id: string
   title: string
+  /** Título, ou a primeira linha do texto quando não há título. Para listas de uma linha (Lembretes, Arquivos). */
+  label: string
+  /** Texto puro, sem estrutura (leitores de tela, busca). */
   excerpt: string
-  checklist: ChecklistItem[]
-  checklistTotal: number
+  preview: PreviewBlock[]
   /** Primeira imagem do corpo, com dimensões para reservar o espaço no card. */
   cover: { hash: string; width: number; height: number } | null
   imageCount: number
