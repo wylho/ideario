@@ -1052,3 +1052,52 @@ test('texto da interface não se seleciona; no editor, sim', async ({ page }) =>
   await page.locator('#corpo p').dblclick({ position: { x: 12, y: 8 } })
   expect(await selected()).toBe('palavra')
 })
+
+test.describe('categorias e tags', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 })
+  })
+  const side = (page: Page) => page.locator('.sidebar')
+
+  test('criar, renomear, mudar a cor e apagar categoria (com Desfazer)', async ({ page }) => {
+    await side(page).getByRole('button', { name: 'Nova categoria' }).click()
+    await page.getByLabel('Nome', { exact: true }).fill('Viagens')
+    await page.getByRole('dialog').getByRole('button', { name: 'Criar', exact: true }).click()
+    const item = side(page).locator('.d-item', { hasText: 'Viagens' })
+    await expect(item).toBeVisible()
+    // nova categoria já vem filtrada
+    await expect(page.locator('.filter-title')).toContainText('Viagens')
+    await item.click({ button: 'right' })
+    await page.getByRole('menuitem', { name: 'Renomear…' }).click()
+    await page.getByLabel('Nome', { exact: true }).fill('Férias')
+    await page.getByRole('button', { name: 'Salvar' }).click()
+    await expect(side(page).locator('.d-item', { hasText: 'Férias' })).toBeVisible()
+    await side(page).locator('.d-item', { hasText: 'Férias' }).click({ button: 'right' })
+    await page.getByRole('menuitem', { name: 'Cor' }).hover()
+    await page.getByRole('menuitem', { name: 'Rosa' }).click()
+    await expect(side(page).locator('.d-item', { hasText: 'Férias' }).locator('.dot')).toHaveCSS('background-color', 'rgb(194, 85, 122)')
+    // apagar uma categoria com notas: as notas ficam, sem categoria; Desfazer devolve
+    await side(page).getByRole('button', { name: 'Tudo', exact: true }).click()
+    const linvo = side(page).locator('.d-item', { hasText: 'Linvo' })
+    await linvo.click({ button: 'right' })
+    await page.getByRole('menuitem', { name: 'Apagar categoria' }).click()
+    await expect(linvo).toHaveCount(0)
+    await expect(page.locator('.card', { hasText: 'Ideias de campanha Q4' })).toHaveCount(1)
+    await page.locator('.toast').getByRole('button', { name: 'Desfazer' }).click()
+    await expect(side(page).locator('.d-item', { hasText: 'Linvo' }).locator('.count')).toHaveText('4')
+  })
+
+  test('renomear e tirar uma tag em todas as notas', async ({ page }) => {
+    const chip = (t: string) => side(page).locator('.chip', { hasText: new RegExp(`^#${t}\\d`) })
+    await chip('compras').click({ button: 'right' })
+    await page.getByRole('menuitem', { name: 'Renomear…' }).click()
+    await page.getByLabel('Novo nome', { exact: true }).fill('Mercado')
+    await page.getByRole('button', { name: 'Renomear', exact: true }).click()
+    await expect(chip('mercado')).toBeVisible()
+    await expect(chip('compras')).toHaveCount(0)
+    await chip('mercado').click({ button: 'right' })
+    await page.getByRole('menuitem', { name: 'Tirar de todas as notas' }).click()
+    await page.getByRole('button', { name: 'Tirar', exact: true }).click()
+    await expect(chip('mercado')).toHaveCount(0)
+  })
+})

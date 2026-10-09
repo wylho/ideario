@@ -1,11 +1,12 @@
 // Menus de contexto de cada tipo de elemento. Um lugar só, para o mesmo item se comportar igual em todo o app.
 import {
-  Archive, ArchiveRestore, Bell, BellOff, Check, CircleCheck, Copy, Download, ExternalLink, Files, Filter, FilterX, Image, Palette, Pin, PinOff,
+  Archive, ArchiveRestore, Bell, BellOff, Check, CircleCheck, Copy, Pencil, Download, ExternalLink, Files, Filter, FilterX, Image, Palette, Pin, PinOff,
   Play, Plus, RotateCcw, Tag, Trash2, AlarmClock,
 } from '@lucide/svelte'
 import { api } from './api'
 import { app } from './app.svelte'
-import { fmtReminder } from './format'
+import { fmtReminder, normalizeTag } from './format'
+import { CATEGORY_COLORS, COLOR_NAMES, nextCategoryColor } from './colors'
 import { SEP, type MenuEntry } from './menu'
 import { quickTimes, snoozeTimes } from './reminders'
 import type { AttachmentRow, NoteColor, NotePatch, NoteSummary } from './types'
@@ -146,10 +147,24 @@ export function attachmentMenu(r: AttachmentRow): MenuEntry[] {
   ]
 }
 
+/** Nova categoria: nome e cor (a primeira cor ainda não usada já vem marcada). */
+export function newCategory(then?: (id: string) => void) {
+  app.askName({
+    title: 'Nova categoria', label: 'Nome', value: '', confirm: 'Criar',
+    color: nextCategoryColor(app.categories.map((c) => c.color)),
+    submit: (name, color) => void api.createCategory(name, color!).then((c) => then?.(c.id)),
+  })
+}
+
 export function categoryMenu(id: string): MenuEntry[] {
   const c = app.category(id)
   if (!c) return []
   const on = app.filter.categoryId === id
+  const remove = async () => {
+    const notes = await api.deleteCategory(id)
+    if (app.filter.categoryId === id) app.filter.categoryId = null
+    app.say(`Categoria ${c.name} apagada`, { label: 'Desfazer', run: () => void api.restoreCategory(id, notes) })
+  }
   return [
     on
       ? { label: `Tirar filtro ${c.name}`, icon: FilterX, onSelect: () => app.setCategory(id) }
@@ -162,6 +177,16 @@ export function categoryMenu(id: string): MenuEntry[] {
       label: `Ver lembretes de ${c.name}`, icon: Bell,
       onSelect: () => { app.filter.categoryId = id; app.setView('reminders'); app.drawerOpen = false },
     },
+    SEP,
+    {
+      label: 'Renomear…', icon: Pencil,
+      onSelect: () => app.askName({ title: 'Renomear categoria', label: 'Nome', value: c.name, confirm: 'Salvar', submit: (name) => void api.updateCategory(id, { name }) }),
+    },
+    {
+      label: 'Cor', icon: Palette,
+      sub: CATEGORY_COLORS.map((col) => ({ label: COLOR_NAMES[col] ?? col, swatch: col, checked: c.color.toLowerCase() === col.toLowerCase(), onSelect: () => void api.updateCategory(id, { color: col }) })),
+    },
+    { label: 'Apagar categoria', icon: Trash2, danger: true, hint: c.noteCount ? 'as notas ficam' : undefined, onSelect: () => void remove() },
   ]
 }
 
@@ -171,5 +196,32 @@ export function tagMenu(tag: string): MenuEntry[] {
     { label: on ? 'Tirar do filtro' : 'Adicionar ao filtro', icon: on ? FilterX : Filter, onSelect: () => app.toggleTag(tag) },
     { label: 'Só esta tag', icon: Tag, onSelect: () => { app.filter = { categoryId: null, tags: [tag] }; app.drawerOpen = false } },
     { label: `Nova nota com #${tag}`, icon: Plus, onSelect: () => { app.drawerOpen = false; app.openNew({ categoryId: null, tags: [tag] }) } },
+    SEP,
+    {
+      label: 'Renomear…', icon: Pencil,
+      onSelect: () =>
+        app.askName({
+          title: `Renomear #${tag}`, label: 'Novo nome', value: tag, confirm: 'Renomear',
+          submit: (to) =>
+            void api.renameTag(tag, to).then((n) => {
+              if (app.filter.tags.includes(tag)) app.filter.tags = app.filter.tags.map((t) => (t === tag ? normalizeTag(to) : t))
+              app.say(n === 1 ? 'Tag renomeada em 1 nota' : `Tag renomeada em ${n} notas`)
+            }),
+        }),
+    },
+    {
+      label: 'Tirar de todas as notas', icon: Trash2, danger: true,
+      onSelect: () =>
+        app.confirm({
+          title: `Tirar #${tag} de todas as notas?`,
+          text: 'A tag sai das notas. Onde ela estava escrita no texto, a palavra continua, só sem o #.',
+          confirm: 'Tirar',
+          onconfirm: () =>
+            void api.renameTag(tag, null).then((n) => {
+              app.filter.tags = app.filter.tags.filter((t) => t !== tag)
+              app.say(n === 1 ? 'Tag tirada de 1 nota' : `Tag tirada de ${n} notas`)
+            }),
+        }),
+    },
   ]
 }
