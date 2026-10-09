@@ -48,6 +48,9 @@ pub fn run() {
                 .expect("janela main ausente no tauri.conf.json");
             WebviewWindowBuilder::from_config(app.handle(), &config)?
                 .initialization_script(format!("{}\n{}", system_fonts::init_script(), system_theme::init_script()))
+                // Arquivos arrastados para a janela chegam à página (drop do HTML), não ao Tauri: a UI decide
+                // se vão para a nota aberta ou viram nota nova.
+                .disable_drag_drop_handler()
                 .build()?;
             Ok(())
         })

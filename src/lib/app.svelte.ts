@@ -81,6 +81,8 @@ class AppState {
   drawerOpen = $state(false)
   settingsOpen = $state(false)
   editor = $state<EditorTarget | null>(null)
+  /** Recebe arquivos soltos na janela enquanto o editor está aberto (o editor registra ao montar). */
+  dropIntoEditor: ((files: File[]) => void) | null = null
   lightbox = $state<AttachmentRow | null>(null)
   toast = $state<string | null>(null)
   /** Ação do toast (ex.: Desfazer). */

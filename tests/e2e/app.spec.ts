@@ -814,6 +814,36 @@ test.describe('mídia no editor', () => {
     await expect(page.locator('.f-row', { hasText: 'contrato.pdf' })).toHaveCount(1)
   })
 
+  // Arquivo arrastado do computador: um DataTransfer com Files, como o sistema entrega.
+  const dropFiles = async (page: Page, selector: string, files: { name: string; type: string; text: string }[]) => {
+    const dt = await page.evaluateHandle((files) => {
+      const dt = new DataTransfer()
+      for (const f of files) dt.items.add(new File([f.text], f.name, { type: f.type }))
+      return dt
+    }, files)
+    await page.dispatchEvent(selector, 'dragover', { dataTransfer: dt })
+    await page.dispatchEvent(selector, 'drop', { dataTransfer: dt })
+  }
+
+  test('arrastar arquivos sem nota aberta cria uma nota nova com eles (zip incluído)', async ({ page }) => {
+    await dropFiles(page, '.content', [
+      { name: 'contrato.pdf', type: 'application/pdf', text: '%PDF-1.4' },
+      { name: 'takeout.zip', type: 'application/zip', text: 'PK' },
+    ])
+    await expect(page.locator('#corpo .nf-card')).toHaveCount(2)
+    await expect(page.locator('#corpo')).toContainText('takeout.zip')
+    await back(page)
+    await expect(page.locator('.card .pv-file', { hasText: 'contrato.pdf' })).toHaveCount(1)
+  })
+
+  test('arrastar arquivo com a nota aberta anexa nela (fora do texto vai para o fim)', async ({ page }) => {
+    await newNote(page)
+    await page.keyboard.type('Primeira linha')
+    await dropFiles(page, '.editor input[placeholder="Título"]', [{ name: 'planilha.csv', type: 'text/csv', text: 'a,b' }])
+    await expect(page.locator('#corpo .nf-card')).toContainText('planilha.csv')
+    await expect(page.locator('#corpo > *').first()).toHaveText('Primeira linha')
+  })
+
   test('áudio no meio da nota toca no player', async ({ page }) => {
     await expect(page.locator('.card', { hasText: 'Shadowing' }).locator('.pv-file')).toContainText('Shadowing ep. 42.mp3')
     await openNote(page, 'Shadowing: episódio 42')
