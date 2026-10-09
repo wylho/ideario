@@ -284,7 +284,7 @@ test.describe('visão × filtro', () => {
 
   test('visão vazia no filtro mostra aviso e mantém o filtro', async ({ page }) => {
     await chip(page, 'Hospital').click()
-    await expect(tabN(page, 'Lembretes')).toHaveText('0')
+    await expect(tabN(page, 'Lembretes')).toHaveCount(0)
     await tab(page, 'Lembretes')
     await expect(page.locator('.empty h3')).toHaveText('Nenhum lembrete em Hospital')
     await expect(chip(page, 'Hospital')).toHaveClass(/on/)
@@ -294,14 +294,15 @@ test.describe('visão × filtro', () => {
   })
 
   test('categoria e tags se combinam e as contagens acompanham', async ({ page }) => {
-    await expect(tabN(page, 'Notas')).toHaveText('21')
+    await expect(tabN(page, 'Notas')).toHaveCount(0)
+    await expect(tabN(page, 'Lembretes')).toHaveText('11')
     await chip(page, 'Linvo').click()
-    await expect(tabN(page, 'Notas')).toHaveText('4')
+    await expect(tabN(page, 'Lembretes')).toHaveText('2')
     await chip(page, 'Tags').click()
     await page.locator('.sheet .chip', { hasText: '#campanha' }).click()
     await page.getByRole('button', { name: 'Pronto' }).click()
     await expect(cards(page)).toHaveCount(2)
-    await expect(tabN(page, 'Notas')).toHaveText('2')
+    await expect(tabN(page, 'Lembretes')).toHaveText('2')
     await expect(page.locator('#busca')).toHaveAttribute('placeholder', 'Buscar notas em Linvo · #campanha')
   })
 
@@ -473,4 +474,88 @@ test('nuvem do sync só aparece quando há algo a dizer', async ({ page }) => {
   await page.locator('.sync-ind').click()
   await expect(page.locator('.sheet-title')).toHaveText('Configurações')
   await page.context().setOffline(false)
+})
+
+test.describe('ordenar e arrastar', () => {
+  const titles = (page: Page, section = 1) =>
+    page.locator('.drag-section').nth(section).locator('.card').evaluateAll((els) => els.map((e) => e.getAttribute('aria-label')))
+  async function dragCard(page: Page, from: string, to: string, where: 'before' | 'after' = 'before') {
+    const a = (await cards(page).filter({ hasText: from }).boundingBox())!
+    const b = (await cards(page).filter({ hasText: to }).boundingBox())!
+    await page.mouse.move(a.x + 30, a.y + 20)
+    await page.mouse.down()
+    await page.mouse.move(a.x + 40, a.y + 30, { steps: 3 })
+    const y = where === 'before' ? b.y + 10 : b.y + b.height - 10
+    await page.mouse.move(b.x + 30, y, { steps: 12 })
+    await page.waitForTimeout(150)
+    await page.mouse.move(b.x + 32, y + 1, { steps: 2 })
+    await page.mouse.up()
+  }
+
+  test('menu de ordem: categoria agrupa por categoria', async ({ page }) => {
+    await page.getByRole('button', { name: /^Ordenar/ }).click()
+    await page.getByRole('menuitemradio', { name: 'Categoria' }).click()
+    await expect(page.locator('.section-label')).toContainText(['Fixadas', 'Arómate', 'Fluency', 'Gestão de Pessoas', 'Hospital', 'Linvo', 'MBA', 'Sem categoria'])
+    await page.reload()
+    await expect(page.locator('.section-label', { hasText: 'Arómate' })).toHaveCount(1)
+  })
+
+  test('título A–Z', async ({ page }) => {
+    await page.getByLabel('Ver em lista').click()
+    await page.getByRole('button', { name: /^Ordenar/ }).click()
+    await page.getByRole('menuitemradio', { name: 'Título (A–Z)' }).click()
+    const t = await titles(page)
+    expect(t).toEqual([...t].sort((x, y) => x!.localeCompare(y!, 'pt-BR', { sensitivity: 'base' })))
+  })
+
+  test('arrastar muda a ordem, passa para Personalizada e não abre a nota', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 1400 })
+    await page.getByLabel('Ver em lista').click()
+    const before = await titles(page, 0)
+    const last = before[before.length - 1]!
+    await dragCard(page, last, before[0]!, 'before')
+    await expect(page.locator('.editor')).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Ordenar: Personalizada' })).toBeVisible()
+    await expect.poll(async () => (await titles(page, 0))[0]).toBe(last)
+    // A ordem fica: trocar de visão e voltar mantém.
+    await page.locator('.view-dock .lens', { hasText: 'Lembretes' }).click()
+    await page.locator('.view-dock .lens', { hasText: 'Notas' }).click()
+    expect((await titles(page, 0))[0]).toBe(last)
+  })
+
+  test('Esc cancela o arraste', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 1400 })
+    await page.getByLabel('Ver em lista').click()
+    const before = await titles(page, 0)
+    const a = (await cards(page).filter({ hasText: before[2]! }).boundingBox())!
+    const b = (await cards(page).filter({ hasText: before[0]! }).boundingBox())!
+    await page.mouse.move(a.x + 30, a.y + 20)
+    await page.mouse.down()
+    await page.mouse.move(b.x + 30, b.y + 10, { steps: 12 })
+    await page.keyboard.press('Escape')
+    await page.mouse.up()
+    expect(await titles(page, 0)).toEqual(before)
+    await expect(page.locator('.drag-ghost')).toHaveCount(0)
+  })
+
+  test('na ordem por categoria, arrastar oferece trocar para a ordem livre', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 })
+    await page.getByRole('button', { name: /^Ordenar/ }).click()
+    await page.getByRole('menuitemradio', { name: 'Categoria' }).click()
+    await dragCard(page, 'Paleta outono', 'Embalagem: direção visual')
+    await expect(page.locator('.toast')).toContainText('agrupados')
+    await page.locator('.toast').getByRole('button', { name: 'Usar ordem livre' }).click()
+    await expect(page.getByRole('button', { name: 'Ordenar: Personalizada' })).toBeVisible()
+  })
+})
+
+test('lateral: chevron mostra e oculta as tags e lembra a escolha', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 })
+  const toggle = page.locator('.sidebar').getByRole('button', { name: 'Tags', exact: true })
+  await expect(page.locator('.sidebar .tag-cloud')).toBeVisible()
+  await toggle.click()
+  await expect(page.locator('.sidebar .tag-cloud')).toHaveCount(0)
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false')
+  await page.reload()
+  await expect(page.locator('.sidebar .tag-cloud')).toHaveCount(0)
 })

@@ -59,6 +59,8 @@ export interface NoteSummary {
   tags: string[]
   createdAt: Millis
   updatedAt: Millis
+  /** Posição na ordem personalizada (menor vem antes). */
+  position: number
 }
 
 export interface Attachment {
@@ -153,6 +155,9 @@ export interface ViewCounts {
 }
 
 export type View = 'notes' | 'reminders' | 'files' | 'moodboard'
+
+/** Ordem das notas. 'custom' é a ordem livre, montada arrastando os cards. */
+export type NoteSort = 'custom' | 'updated' | 'created' | 'category' | 'title'
 
 export type FileFilter = 'all' | AttachmentKind
 export type FileSort = 'recent' | 'name' | 'size'

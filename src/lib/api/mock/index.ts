@@ -4,7 +4,7 @@
 import type { Api } from '..'
 import { fold, hashTags } from '../../format'
 import type {
-  Attachment, AttachmentRow, Box, Category, Filter, NoteInput, NotePatch, NoteSummary, PreviewBlock, RichDoc, RichNode, Settings, SyncState, TagCount,
+  Attachment, AttachmentRow, Box, Category, Filter, NoteInput, NotePatch, NoteSort, NoteSummary, PreviewBlock, RichDoc, RichNode, Settings, SyncState, TagCount,
 } from '../../types'
 import { uuidv7 } from '../../uuid'
 import { fakeImageSrc } from './fake-images'
@@ -16,6 +16,8 @@ interface StoredNote extends NoteInput {
   updatedAt: number
   /** Hashes dos anexos que não estão no corpo. */
   files: string[]
+  /** Ordem personalizada. */
+  position: number
 }
 
 interface Projection {
@@ -28,6 +30,8 @@ interface Projection {
 }
 
 const TRASH_DAYS = 30
+/** Espaço entre posições da ordem personalizada; mover usa o meio entre vizinhos. */
+const STEP = 1024
 // Limites da prévia do card. Ficam aqui em cima porque o seed já projeta as notas ao carregar o módulo.
 // A prévia vai além do que cabe no card; o card corta na altura máxima e esmaece o fim.
 const MAX_BLOCKS = 24
@@ -63,6 +67,7 @@ for (const s of seedNotes()) {
     reminderAt: s.reminderAt, reminderDone: !!s.reminderDone, tags: s.tags,
     createdAt: s.updatedAt - 2 * DAY, updatedAt: s.updatedAt,
     files: SEED_FILES.filter((f) => f.noteId === s.id).map((f) => f.hash),
+    position: 0,
   })
   // Imagens herdam a data da nota em que entraram.
   for (const h of project(body).images) {
@@ -71,6 +76,8 @@ for (const s of seedNotes()) {
   }
 }
 purgeTrash()
+// Ordem personalizada inicial = mais recentes primeiro.
+;[...notes.values()].sort((a, b) => b.updatedAt - a.updatedAt).forEach((n, i) => (n.position = i * STEP))
 
 // ---------- projeção ----------
 
@@ -164,6 +171,7 @@ function summarize(n: StoredNote): NoteSummary {
     cover: first ? { hash: first.hash, width: first.width ?? 4, height: first.height ?? 3 } : null, imageCount: p.images.length, fileCount: n.files.length,
     categoryId: n.categoryId, color: n.color, pinned: n.pinned, archived: n.archived, trashedAt: n.trashedAt,
     reminderAt: n.reminderAt, reminderDone: n.reminderDone, tags: tagsOf(n), createdAt: n.createdAt, updatedAt: n.updatedAt,
+    position: n.position,
   }
 }
 
@@ -201,6 +209,23 @@ function matches(n: StoredNote, query: string) {
 
 const byRecent = (a: StoredNote, b: StoredNote) => b.updatedAt - a.updatedAt
 
+/** Comparador de cada ordem. Categoria segue a ordem das categorias; sem categoria vai para o fim. */
+function compareFor(sort: NoteSort) {
+  const catIndex = (n: StoredNote) => {
+    const i = SEED_CATEGORIES.findIndex((c) => c.id === n.categoryId)
+    return i < 0 ? Infinity : i
+  }
+  switch (sort) {
+    case 'custom': return (a: StoredNote, b: StoredNote) => a.position - b.position
+    case 'created': return (a: StoredNote, b: StoredNote) => b.createdAt - a.createdAt
+    case 'title': return (a: StoredNote, b: StoredNote) => labelOf(a).localeCompare(labelOf(b), 'pt-BR', { sensitivity: 'base' })
+    case 'category': return (a: StoredNote, b: StoredNote) => catIndex(a) - catIndex(b) || a.position - b.position
+    default: return byRecent
+  }
+}
+
+const minPosition = () => Math.min(0, ...[...notes.values()].map((n) => n.position))
+
 function rowsFor(n: StoredNote, hashes: string[]): AttachmentRow[] {
   return hashes.flatMap((h) => {
     const a = attachments.get(h)
@@ -237,8 +262,34 @@ function scheduleSync() {
 const done = <T>(v: T) => Promise.resolve(v)
 
 export const mockApi: Api = {
-  listNotes({ filter, box, query }) {
-    return done([...notes.values()].filter((n) => inBox(n, box) && passes(n, filter) && matches(n, query)).sort(byRecent).map(summarize))
+  listNotes({ filter, box, query, sort }) {
+    return done([...notes.values()].filter((n) => inBox(n, box) && passes(n, filter) && matches(n, query)).sort(compareFor(sort)).map(summarize))
+  },
+
+  moveNote(id, { after, before }) {
+    const n = notes.get(id)
+    if (!n) return done(undefined)
+    const a = after ? notes.get(after)?.position : undefined
+    const b = before ? notes.get(before)?.position : undefined
+    let pos = a != null && b != null ? (a + b) / 2 : a != null ? a + STEP : b != null ? b - STEP : n.position
+    if (a != null && b != null && !(pos > a && pos < b)) {
+      // Sem espaço entre os vizinhos: renumera tudo e tenta de novo.
+      ;[...notes.values()].sort((x, y) => x.position - y.position).forEach((x, i) => (x.position = i * STEP))
+      pos = (notes.get(after!)!.position + notes.get(before!)!.position) / 2
+    }
+    if (pos !== n.position) {
+      n.position = pos
+      changed()
+    }
+    return done(undefined)
+  },
+
+  adoptOrder(sort) {
+    if (sort !== 'custom') {
+      ;[...notes.values()].sort(compareFor(sort)).forEach((n, i) => (n.position = i * STEP))
+      changed()
+    }
+    return done(undefined)
   },
 
   listReminders({ filter, query, includeDone }) {
@@ -300,7 +351,7 @@ export const mockApi: Api = {
     const next: NoteInput = { ...input, body: structuredClone(input.body), tags: [...new Set(input.tags)] }
     if (prev && sameContent(prev, next)) return done(summarize(prev))
     const now = Date.now()
-    notes.set(next.id, { ...next, createdAt: prev?.createdAt ?? now, updatedAt: now, files: prev?.files ?? [] })
+    notes.set(next.id, { ...next, createdAt: prev?.createdAt ?? now, updatedAt: now, files: prev?.files ?? [], position: prev?.position ?? minPosition() - STEP })
     changed()
     return done(summarize(notes.get(next.id)!))
   },
@@ -332,7 +383,7 @@ export const mockApi: Api = {
     const now = Date.now()
     const copy: StoredNote = {
       ...structuredClone(n), id: uuidv7(), title: n.title ? `${n.title} (cópia)` : '', pinned: false,
-      reminderAt: null, reminderDone: false, createdAt: now, updatedAt: now,
+      reminderAt: null, reminderDone: false, createdAt: now, updatedAt: now, position: n.position - 1,
     }
     notes.set(copy.id, copy)
     changed()

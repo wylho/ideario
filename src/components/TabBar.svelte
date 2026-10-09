@@ -2,7 +2,7 @@
   import { app } from '../lib/app.svelte'
   import { VIEWS } from '../lib/views'
 
-  // Celular e janela média: abas embaixo, perto do dedo. O número é quanto há em cada visão para o filtro atual.
+  // Celular e janela média: abas embaixo, perto do dedo. Só Lembretes mostra quantos estão pendentes.
 </script>
 
 <nav class="tabbar" aria-label="Visão">
@@ -11,7 +11,7 @@
     <button class:on={app.view === id} aria-current={app.view === id ? 'page' : undefined} onclick={() => app.setView(id)}>
       <span class="tab-ico">
         <Icon size={20} />
-        <span class="tab-n" class:zero={!n} class:late={id === 'reminders' && app.counts.overdue > 0}>{n}</span>
+        {#if id === 'reminders' && n}<span class="tab-n" class:late={app.counts.overdue > 0}>{n}</span>{/if}
       </span>
       {label}
     </button>

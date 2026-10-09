@@ -1,13 +1,13 @@
 // Camada de dados da UI. Na Fase 0 é atendida por um mock em memória;
 // na Fase 1 a mesma interface passa a chamar os comandos Tauri (`invoke`) do núcleo Rust.
 import type {
-  AttachmentRow, Box, Category, Filter, NoteDetail, NoteInput, NotePatch, NoteSummary, Settings, SyncState, SyncStatus, TagCount, Tone, ViewCounts,
+  AttachmentRow, Box, Category, Filter, NoteDetail, NoteInput, NotePatch, NoteSort, NoteSummary, Settings, SyncState, SyncStatus, TagCount, Tone, ViewCounts,
 } from '../types'
 import { invoke, isTauri } from '@tauri-apps/api/core'
 import { mockApi } from './mock'
 
 export interface Api {
-  listNotes(p: { filter: Filter; box: Box; query: string }): Promise<NoteSummary[]>
+  listNotes(p: { filter: Filter; box: Box; query: string; sort: NoteSort }): Promise<NoteSummary[]>
   listReminders(p: { filter: Filter; query: string; includeDone: boolean }): Promise<NoteSummary[]>
   /** Todos os anexos (fotos e arquivos) das notas ativas que passam no filtro. */
   listAttachments(p: { filter: Filter; query: string }): Promise<AttachmentRow[]>
@@ -24,6 +24,10 @@ export interface Api {
   setReminderDone(id: string, done: boolean): Promise<void>
   /** Muda metadados sem abrir o editor (menus de contexto). */
   updateNote(id: string, patch: NotePatch): Promise<void>
+  /** Ordem personalizada: coloca a nota entre `after` e `before` (ids vizinhos; null nas pontas). */
+  moveNote(id: string, p: { after: string | null; before: string | null }): Promise<void>
+  /** Passa a ordem personalizada a ser igual à ordem `sort` atual (ao começar a arrastar numa ordem por data). */
+  adoptOrder(sort: NoteSort): Promise<void>
   /** Cria uma cópia da nota (sem lembrete) e devolve o id da nova. */
   duplicateNote(id: string): Promise<string>
   /** Texto da nota para copiar, com a estrutura em texto simples (tópicos, tarefas). */
