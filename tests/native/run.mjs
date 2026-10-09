@@ -180,6 +180,20 @@ try {
     await s.waitFor(`return [...document.querySelectorAll('.card')].some((c) => c.getAttribute('aria-label') === 'Bolo da vó' && c.querySelector('.card-media img'))`, 'capa no card')
   })
 
+  await test('soltar um arquivo na janela (sem nota aberta) cria uma nota com ele', async () => {
+    await s.exec(`
+      const dt = new DataTransfer()
+      dt.items.add(new File(['PK'], 'takeout.zip', { type: 'application/zip' }))
+      const el = document.querySelector('.content')
+      el.dispatchEvent(new DragEvent('dragover', { bubbles: true, cancelable: true, dataTransfer: dt }))
+      el.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: dt }))
+      return true`)
+    await s.waitFor(`return document.querySelector('#corpo .nf-card')?.textContent.includes('takeout.zip')`, 'anexo na nota nova')
+    await sleep(700)
+    await s.exec(`document.querySelector('[aria-label="Voltar e salvar"]').click(); return true`)
+    await s.waitFor(`return [...document.querySelectorAll('.card .pv-file')].some((f) => f.textContent.includes('takeout.zip'))`, 'card com o zip')
+  })
+
   await test('fechar e reabrir: tudo continua lá, na hora', async () => {
     await s.end()
     s = await Session.start()

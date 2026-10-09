@@ -821,3 +821,14 @@ button { cursor: pointer; }
 .d-toggle:hover { color: var(--fg); }
 .d-toggle svg { transition: transform .18s ease; }
 .d-toggle[aria-expanded="false"] svg { transform: rotate(-90deg); }
+
+/* arquivos arrastados do computador: sem nota aberta vira nota nova; com nota aberta, anexa nela */
+.file-drop {
+  position: fixed; inset: 0; z-index: 90; pointer-events: none; display: grid; place-items: end center; padding-bottom: 40px;
+  background: color-mix(in oklab, var(--accent) 7%, transparent); box-shadow: inset 0 0 0 3px var(--accent); animation: fade .12s ease;
+}
+.file-drop.into-note { background: transparent; }
+.file-drop-hint {
+  display: flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 12px;
+  background: var(--accent); color: var(--on-accent, #fff); font-size: 13.5px; font-weight: 600; box-shadow: 0 6px 24px rgb(0 0 0 / .18);
+}

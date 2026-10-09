@@ -186,7 +186,11 @@
       if (start && 'files' in start) void addFiles(start.files)
       else if (start && 'record' in start) void recorder.start()
       else if (start && 'camera' in start) cameraOpen = true
+      // Soltos fora do texto (título, margens, fundo): entram no fim da nota.
+      const drop = (files: File[]) => void addFiles(files, ed.state.doc.content.size)
+      app.dropIntoEditor = drop
       return () => {
+        if (app.dropIntoEditor === drop) app.dropIntoEditor = null
         if (!closed) save()
         ed.destroy()
       }
