@@ -64,7 +64,7 @@ test('busca ignora acentos e exige todos os termos', async ({ page }) => {
 })
 
 test('filtro por tag e por categoria; o "+" herda o filtro', async ({ page }) => {
-  await cards(page).filter({ hasText: 'Embalagem' }).locator('.pill.tag', { hasText: '#embalagem' }).click()
+  await cards(page).filter({ hasText: 'direção visual' }).locator('.pill.tag', { hasText: '#embalagem' }).click()
   await expect(page.locator('.filter-row .chip.on', { hasText: '#embalagem' })).toHaveCount(1)
   await expect(page.locator('#busca')).toHaveAttribute('placeholder', 'Buscar notas em #embalagem')
   await page.getByLabel('Nova nota').click()
@@ -72,13 +72,13 @@ test('filtro por tag e por categoria; o "+" herda o filtro', async ({ page }) =>
   await back(page)
   await page.locator('.filter-row').getByRole('button', { name: 'Limpar' }).click()
 
-  await drawerItem(page, 'Hospital 1')
-  await expect(cards(page)).toHaveCount(1)
+  await drawerItem(page, 'Hospital 2')
+  await expect(cards(page)).toHaveCount(2)
   await newNote(page)
   await expect(page.locator('#categoria')).toContainText('Hospital')
   await page.keyboard.type('Levar documentos')
   await back(page)
-  await expect(cards(page)).toHaveCount(2)
+  await expect(cards(page)).toHaveCount(3)
 })
 
 test('fixar, cor, arquivar, lixeira e restaurar', async ({ page }) => {
@@ -115,14 +115,15 @@ test('fixar, cor, arquivar, lixeira e restaurar', async ({ page }) => {
 test('lembretes: grupos, concluir pela lista e ponto de atrasados', async ({ page }) => {
   await expect(page.locator('.tabbar .tab-n.late')).toHaveCount(1)
   await tab(page, 'Lembretes')
-  await expect(page.locator('.section-label')).toHaveText([/Atrasados/, /Hoje/, /Amanhã/, /Próximos/])
+  await expect(page.locator('.section-label')).toHaveText([/Atrasados/, /Hoje/, /Amanhã/, /Próximos/, /Concluídos/])
   await page.locator('.r-item', { hasText: 'Comprar pilha' }).getByLabel('Concluir lembrete').click()
   await expect(page.locator('.toast')).toHaveText('Lembrete concluído')
+  await page.locator('.r-item', { hasText: 'Rótulos' }).getByLabel('Concluir lembrete').click()
   await expect(page.locator('.r-item', { hasText: 'Comprar pilha' })).toHaveCount(0)
   await expect(page.locator('.tabbar .tab-n.late')).toHaveCount(0)
   const doneToggle = page.getByRole('button', { name: /Concluídos/ })
   await expect(doneToggle).toHaveAttribute('aria-expanded', 'false')
-  await expect(doneToggle).toContainText('1')
+  await expect(doneToggle).toContainText('4')
   await doneToggle.click()
   await expect(page.locator('.r-item.done', { hasText: 'Comprar pilha' })).toHaveCount(1)
   await page.locator('.r-item.done', { hasText: 'Comprar pilha' }).getByLabel('Reabrir lembrete').click()
@@ -141,9 +142,9 @@ test('lembrete definido no editor aparece na aba', async ({ page }) => {
 
 test('arquivos: tipos, ordenação, grade e nota de origem', async ({ page }) => {
   await tab(page, 'Arquivos')
-  await expect(page.locator('.stats b').first()).toHaveText('14')
+  await expect(page.locator('.stats b').first()).toHaveText('24')
   await page.locator('.seg-item', { hasText: 'PDFs' }).click()
-  await expect(page.locator('.f-row')).toHaveCount(2)
+  await expect(page.locator('.f-row')).toHaveCount(5)
   await page.locator('.seg-item', { hasText: 'Tudo' }).click()
   await page.locator('#ordenar').click()
   await page.getByRole('option', { name: 'Tamanho' }).click()
@@ -155,10 +156,10 @@ test('arquivos: tipos, ordenação, grade e nota de origem', async ({ page }) =>
 
 test('moodboard: filtro por tom e visualizador', async ({ page }) => {
   await tab(page, 'Moodboard')
-  await expect(page.locator('.mood-tile')).toHaveCount(8)
+  await expect(page.locator('.mood-tile')).toHaveCount(14)
   await page.locator('.tone', { hasText: 'Verdes' }).click()
-  await expect(page.locator('.mood-tile')).toHaveCount(1)
-  await page.locator('.mood-tile').click()
+  await expect(page.locator('.mood-tile')).toHaveCount(2)
+  await page.locator('.mood-tile', { hasText: 'Paleta outono' }).click()
   await expect(page.locator('.lb-pal code')).toHaveCount(5)
   await expect(page.locator('.lb-opt')).toContainText('−92%')
   await page.getByRole('button', { name: 'Abrir nota' }).click()
@@ -207,8 +208,8 @@ test.describe('responsivo', () => {
     await expect(page.getByLabel('Abrir menu')).toHaveCount(0)
     await expect(cols(page)).toHaveCount(4)
 
-    await page.locator('.sidebar').getByRole('button', { name: 'Hospital 1' }).click()
-    await expect(cards(page)).toHaveCount(1)
+    await page.locator('.sidebar').getByRole('button', { name: 'Hospital 2' }).click()
+    await expect(cards(page)).toHaveCount(2)
 
     await cards(page).first().click()
     const box = (await page.locator('.editor').boundingBox())!
@@ -252,13 +253,13 @@ test.describe('visão × filtro', () => {
 
   test('o filtro continua ao trocar de visão', async ({ page }) => {
     await chip(page, 'Linvo').click()
-    await expect(cards(page)).toHaveCount(2)
+    await expect(cards(page)).toHaveCount(4)
     await tab(page, 'Lembretes')
-    await expect(page.locator('.r-title')).toHaveText(['Ideias de campanha Q4'])
+    await expect(page.locator('.r-title')).toHaveText(['Post de lançamento do app', 'Ideias de campanha Q4'])
     await tab(page, 'Arquivos')
-    await expect(page.locator('.stats b').first()).toHaveText('4')
+    await expect(page.locator('.stats b').first()).toHaveText('5')
     await tab(page, 'Moodboard')
-    await expect(page.locator('.mood-tile')).toHaveCount(3)
+    await expect(page.locator('.mood-tile')).toHaveCount(4)
     await expect(chip(page, 'Linvo')).toHaveClass(/on/)
     await expect(page.locator('#busca')).toHaveAttribute('placeholder', 'Buscar imagens em Linvo')
   })
@@ -268,7 +269,7 @@ test.describe('visão × filtro', () => {
     await chip(page, 'Fluency').click()
     await expect(page.locator('.r-title')).toHaveText(['Phrasal verbs pra revisar'])
     await chip(page, 'Gestão de Pessoas').click()
-    await expect(page.locator('.r-title')).toHaveText(['1:1 com o time — pauta'])
+    await expect(page.locator('.r-title')).toHaveText(['1:1 com o time — pauta', 'Feedbacks do trimestre'])
     await expect(page.locator('.tabbar button.on')).toContainText('Lembretes')
   })
 
@@ -280,35 +281,35 @@ test.describe('visão × filtro', () => {
     await expect(chip(page, 'Hospital')).toHaveClass(/on/)
     await page.getByRole('button', { name: 'Ver lembretes de tudo' }).click()
     await expect(chip(page, 'Tudo')).toHaveClass(/on/)
-    await expect(page.locator('.r-item')).toHaveCount(5)
+    await expect(page.locator('.r-item')).toHaveCount(11)
   })
 
   test('categoria e tags se combinam e as contagens acompanham', async ({ page }) => {
-    await expect(tabN(page, 'Notas')).toHaveText('10')
+    await expect(tabN(page, 'Notas')).toHaveText('21')
     await chip(page, 'Linvo').click()
-    await expect(tabN(page, 'Notas')).toHaveText('2')
+    await expect(tabN(page, 'Notas')).toHaveText('4')
     await chip(page, 'Tags').click()
     await page.locator('.sheet .chip', { hasText: '#campanha' }).click()
     await page.getByRole('button', { name: 'Pronto' }).click()
-    await expect(cards(page)).toHaveCount(1)
-    await expect(tabN(page, 'Notas')).toHaveText('1')
+    await expect(cards(page)).toHaveCount(2)
+    await expect(tabN(page, 'Notas')).toHaveText('2')
     await expect(page.locator('#busca')).toHaveAttribute('placeholder', 'Buscar notas em Linvo · #campanha')
   })
 
   test('Arquivo e Lixeira ficam na visão Notas; trocar de visão volta às notas ativas', async ({ page }) => {
     await drawerItem(page, 'Arquivo')
-    await expect(cards(page)).toHaveCount(1)
+    await expect(cards(page)).toHaveCount(2)
     await tab(page, 'Moodboard')
     await expect(page.locator('.scope-pill')).toHaveCount(0)
     await tab(page, 'Notas')
-    await expect(cards(page)).toHaveCount(10)
+    await expect(cards(page)).toHaveCount(21)
   })
 
   test('desktop: barra de visões com contagens e título da categoria', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 800 })
-    await page.locator('.sidebar').getByRole('button', { name: 'Linvo 2' }).click()
+    await page.locator('.sidebar').getByRole('button', { name: 'Linvo 4' }).click()
     await expect(page.locator('.filter-title')).toContainText('Linvo')
-    await expect(page.locator('.view-dock .lens', { hasText: 'Lembretes' }).locator('.n')).toHaveText('1')
+    await expect(page.locator('.view-dock .lens', { hasText: 'Lembretes' }).locator('.n')).toHaveText('2')
     await page.locator('.view-dock .lens', { hasText: 'Arquivos' }).click()
     await expect(page.locator('.filter-title')).toContainText('Linvo')
     await page.getByRole('button', { name: 'Limpar filtro' }).click()
