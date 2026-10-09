@@ -1,0 +1,10 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Ideario",
+  "bundle": {
+    "linux": {
+      "deb": { "desktopTemplate": "linux/ideario.desktop" },
+      "rpm": { "desktopTemplate": "linux/ideario.desktop" }
+    }
+  }
+}

@@ -1,0 +1,148 @@
+// Tipos compartilhados entre a UI e a camada de dados.
+// Espelham o que o núcleo Rust vai devolver (SPEC §5): a UI recebe dados prontos
+// para exibir (trecho, capa, contagens) e nunca parseia o corpo da nota.
+
+export type NoteColor = 'none' | 'sand' | 'sage' | 'sky' | 'rose' | 'lilac' | 'butter'
+export type Tone = 'quente' | 'frio' | 'verde' | 'rosa' | 'neutro'
+export type AttachmentKind = 'image' | 'pdf' | 'doc' | 'sheet' | 'audio' | 'other'
+
+/** Epoch em milissegundos. */
+export type Millis = number
+
+export interface Category {
+  id: string
+  name: string
+  color: string
+  icon: string | null
+  /** Notas visíveis (fora do arquivo e da lixeira). */
+  noteCount: number
+}
+
+export interface TagCount {
+  name: string
+  count: number
+}
+
+export interface ChecklistItem {
+  text: string
+  done: boolean
+}
+
+/** Projeção de uma nota para listas e cards (colunas derivadas do Y.Doc). */
+export interface NoteSummary {
+  id: string
+  title: string
+  excerpt: string
+  checklist: ChecklistItem[]
+  checklistTotal: number
+  /** Primeira imagem do corpo, com dimensões para reservar o espaço no card. */
+  cover: { hash: string; width: number; height: number } | null
+  imageCount: number
+  /** Anexos que não são imagem (PDF, documentos, planilhas, áudio). */
+  fileCount: number
+  categoryId: string | null
+  color: NoteColor
+  pinned: boolean
+  archived: boolean
+  trashedAt: Millis | null
+  reminderAt: Millis | null
+  reminderDone: boolean
+  tags: string[]
+  createdAt: Millis
+  updatedAt: Millis
+}
+
+export interface Attachment {
+  hash: string
+  kind: AttachmentKind
+  mime: string
+  name: string
+  bytes: number
+  origBytes: number | null
+  width: number | null
+  height: number | null
+  palette: string[] | null
+  tone: Tone | null
+  addedAt: Millis
+}
+
+/** Anexo listado na aba Arquivos ou no Moodboard, com a nota de origem. */
+export interface AttachmentRow extends Attachment {
+  noteId: string
+  noteTitle: string
+  categoryId: string | null
+}
+
+/** Nó do documento rico (formato JSON do TipTap/ProseMirror). */
+export interface RichNode {
+  type: string
+  attrs?: Record<string, any>
+  content?: RichNode[]
+  text?: string
+  marks?: { type: string; attrs?: Record<string, any> }[]
+}
+
+/** Documento do editor. Na Fase 2 passa a viver num Y.XmlFragment. */
+export type RichDoc = RichNode & { type: 'doc' }
+
+export interface NoteDetail {
+  id: string
+  title: string
+  body: RichDoc
+  categoryId: string | null
+  color: NoteColor
+  pinned: boolean
+  archived: boolean
+  trashedAt: Millis | null
+  reminderAt: Millis | null
+  reminderDone: boolean
+  /** Tags manuais. As `#tags` do corpo são derivadas e não ficam aqui. */
+  tags: string[]
+  /** Anexos que não aparecem no corpo (arquivos). */
+  files: Attachment[]
+  createdAt: Millis
+  updatedAt: Millis
+}
+
+export interface NoteInput {
+  id: string
+  title: string
+  body: RichDoc
+  categoryId: string | null
+  color: NoteColor
+  pinned: boolean
+  archived: boolean
+  trashedAt: Millis | null
+  reminderAt: Millis | null
+  reminderDone: boolean
+  tags: string[]
+}
+
+export type Scope =
+  | { kind: 'all' }
+  | { kind: 'category'; id: string }
+  | { kind: 'tag'; tag: string }
+  | { kind: 'archive' }
+  | { kind: 'trash' }
+
+export type View = 'notes' | 'reminders' | 'files' | 'moodboard'
+
+export type FileFilter = 'all' | AttachmentKind
+export type FileSort = 'recent' | 'name' | 'size'
+
+export type PhotoQuality = 'economy' | 'balanced' | 'high'
+
+export interface Settings {
+  wifiOnly: boolean
+  keepOriginals: boolean
+  photoQuality: PhotoQuality
+  /** Limite do cache em GB (0,5 a 5). */
+  cacheLimitGb: number
+}
+
+export interface SyncStatus {
+  connected: boolean
+  lastSyncAt: Millis | null
+  noteCount: number
+  cacheUsedBytes: number
+}
