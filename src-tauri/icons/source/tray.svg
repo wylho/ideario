@@ -1,0 +1,8 @@
+<svg width="64" height="64" viewBox="128 128 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
+<!-- Ícone da bandeja / barra de menus: só o desenho de dentro, monocromático. Preto = template do macOS (o sistema pinta); claro/escuro no Linux. -->
+<rect x="128" y="128" width="112" height="112" rx="20" fill="black"/>
+<rect x="272" y="128" width="112" height="40" rx="20" fill="black"/>
+<rect x="272" y="200" width="112" height="40" rx="20" fill="black"/>
+<rect x="128" y="272" width="256" height="40" rx="20" fill="black"/>
+<rect x="128" y="344" width="256" height="40" rx="20" fill="black"/>
+</svg>
