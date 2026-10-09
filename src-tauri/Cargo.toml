@@ -24,6 +24,14 @@ lto = true
 panic = "abort"
 strip = true
 
-# Linux: lê a fonte da área de trabalho (GNOME, KDE…) para a UI parecer nativa.
+# Linux: lê a fonte e o destaque da área de trabalho (GNOME, KDE…) para a UI parecer nativa.
 [target.'cfg(target_os = "linux")'.dependencies]
 gtk = "0.18"
+
+# Windows: cor de destaque do sistema (registro do DWM), para o tema Sistema.
+[target.'cfg(target_os = "windows")'.dependencies]
+winreg = "0.56"
+
+# macOS: cor de destaque do sistema (NSColor.controlAccentColor), para o tema Sistema.
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2-app-kit = { version = "0.3", default-features = false, features = ["std", "NSColor", "NSColorSpace", "objc2-core-foundation"] }

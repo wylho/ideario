@@ -2,6 +2,7 @@
 //! Próximos módulos: `db` (SQLite + FTS5), `notes` (Y.Doc via yrs), `media`, `sync`, `reminders`, `import`.
 
 mod system_fonts;
+mod system_theme;
 
 use tauri::WebviewWindowBuilder;
 
@@ -9,8 +10,8 @@ use tauri::WebviewWindowBuilder;
 pub fn run() {
     tauri::Builder::default()
         .setup(|app| {
-            // A janela é criada aqui (e não pelo tauri.conf.json) para receber as fontes do sistema
-            // antes de a página carregar, sem troca visível de fonte.
+            // A janela é criada aqui (e não pelo tauri.conf.json) para receber as fontes e as cores do
+            // sistema antes de a página carregar, sem troca visível de fonte ou de cor.
             let config = app
                 .config()
                 .app
@@ -20,7 +21,7 @@ pub fn run() {
                 .cloned()
                 .expect("janela main ausente no tauri.conf.json");
             WebviewWindowBuilder::from_config(app.handle(), &config)?
-                .initialization_script(system_fonts::init_script())
+                .initialization_script(format!("{}\n{}", system_fonts::init_script(), system_theme::init_script()))
                 .build()?;
             Ok(())
         })

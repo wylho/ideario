@@ -1416,10 +1416,12 @@ name = "ideario"
 version = "0.1.0"
 dependencies = [
  "gtk",
+ "objc2-app-kit",
  "serde",
  "serde_json",
  "tauri",
  "tauri-build",
+ "winreg",
 ]
 
 [[package]]
