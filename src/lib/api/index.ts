@@ -28,7 +28,10 @@ export interface Api {
 
   getNote(id: string): Promise<NoteDetail | null>
   /** Cria ou atualiza. `tags` são as manuais; as `#palavra` do corpo entram na projeção. */
-  saveNote(input: NoteInput): Promise<NoteSummary>
+  /** Estado Yjs da nota (vazio se ela ainda não existe): o editor abre o Y.Doc com ele. */
+  getNoteState(id: string): Promise<Uint8Array>
+  /** Atualização Yjs do editor; cria a nota se ela ainda não existe. A lista e a busca se atualizam. */
+  applyNoteUpdate(id: string, update: Uint8Array): Promise<void>
   setReminderDone(id: string, done: boolean): Promise<void>
   /** Quantas notas há na lixeira (para mostrar "Esvaziar lixeira" só quando há o que esvaziar). */
   trashCount(): Promise<number>

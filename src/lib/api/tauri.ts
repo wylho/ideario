@@ -6,8 +6,8 @@ const listeners = new Set<() => void>()
 const changed = () => listeners.forEach((fn) => fn())
 
 /** Comando que muda dados: avisa a UI para recarregar as listas quando termina. */
-async function write<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {
-  const r = await invoke<T>(cmd, args)
+async function write<T>(cmd: string, args?: Parameters<typeof invoke>[1], options?: Parameters<typeof invoke>[2]): Promise<T> {
+  const r = await invoke<T>(cmd, args, options)
   changed()
   return r
 }
@@ -28,7 +28,8 @@ export const tauriApi: Api = {
   renameTag: (from, to) => write('rename_tag', { from, to }),
 
   getNote: (id) => invoke('get_note', { id }),
-  saveNote: (input) => write('save_note', { input }),
+  getNoteState: async (id) => new Uint8Array(await invoke<ArrayBuffer>('get_note_state', { id })),
+  applyNoteUpdate: (id, update) => write('apply_note_update', update, { headers: { 'x-id': id } }),
   setReminderDone: (id, done) => write('set_reminder_done', { id, done }),
   trashCount: () => invoke('trash_count'),
   emptyTrash: () => write('empty_trash'),

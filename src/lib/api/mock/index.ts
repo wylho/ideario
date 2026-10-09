@@ -6,7 +6,9 @@ import { fold, hashTags, normalizeTag } from '../../format'
 import type {
   Attachment, AttachmentKind, AttachmentRow, Box, Category, Filter, NoteInput, NotePatch, NoteSort, NoteSummary, PreviewBlock, RichDoc, RichNode, Settings, SyncState, TagCount,
 } from '../../types'
+import * as Y from 'yjs'
 import { uuidv7 } from '../../uuid'
+import { noteToState, stateToNote } from './ydoc'
 import { fakeImageSrc } from './fake-images'
 import { DAY, SEED_CATEGORIES, SEED_FILES, SEED_IMAGES, seedNotes } from './seed'
 
@@ -330,6 +332,19 @@ function scheduleSync() {
 
 const done = <T>(v: T) => Promise.resolve(v)
 
+/** Estado Yjs entregue ao editor por nota (base das atualizações dele). */
+const states = new Map<string, Uint8Array>()
+
+/** Cria ou atualiza. Sem mudança de conteúdo, não mexe (nem na data): abrir e fechar não "edita" a nota. */
+function saveNote(input: NoteInput) {
+  const prev = notes.get(input.id)
+  const next: NoteInput = { ...input, body: structuredClone(input.body), tags: [...new Set(input.tags)] }
+  if (prev && sameContent(prev, next)) return
+  const now = Date.now()
+  notes.set(next.id, { ...next, createdAt: prev?.createdAt ?? now, updatedAt: now, files: prev?.files ?? [], position: prev?.position ?? minPosition() - STEP })
+  changed()
+}
+
 export const mockApi: Api = {
   listNotes({ filter, box, query, sort }) {
     return done([...notes.values()].filter((n) => inBox(n, box) && passes(n, filter) && matches(n, query)).sort(compareFor(sort)).map(summarize))
@@ -481,14 +496,24 @@ export const mockApi: Api = {
     })
   },
 
-  saveNote(input) {
-    const prev = notes.get(input.id)
-    const next: NoteInput = { ...input, body: structuredClone(input.body), tags: [...new Set(input.tags)] }
-    if (prev && sameContent(prev, next)) return done(summarize(prev))
-    const now = Date.now()
-    notes.set(next.id, { ...next, createdAt: prev?.createdAt ?? now, updatedAt: now, files: prev?.files ?? [], position: prev?.position ?? minPosition() - STEP })
-    changed()
-    return done(summarize(notes.get(next.id)!))
+  // O editor abre a nota como Y.Doc. O mock guarda JSON: monta o estado e guarda o que entregou, para as
+  // atualizações do editor se aplicarem sobre a mesma base (como no núcleo).
+  getNoteState(id) {
+    const n = notes.get(id)
+    const state = n ? noteToState(n) : new Uint8Array()
+    states.set(id, state)
+    return done(state)
+  },
+
+  applyNoteUpdate(id, update) {
+    const base = states.get(id) ?? (notes.has(id) ? noteToState(notes.get(id)!) : new Uint8Array())
+    const doc = new Y.Doc()
+    if (base.length) Y.applyUpdate(doc, base)
+    Y.applyUpdate(doc, update)
+    const state = Y.encodeStateAsUpdate(doc)
+    states.set(id, state)
+    saveNote(stateToNote(id, state))
+    return done(undefined)
   },
 
   setReminderDone(id, value) {

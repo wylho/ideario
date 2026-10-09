@@ -31,9 +31,13 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
 - D3 continua em aberto (SPEC §11); decidir antes da Fase 5.
 
 ## Estado atual
-- **Fase 0 e Fase 1 concluídas.** No app, a UI fala com o núcleo Rust (`src/lib/api/tauri.ts` → `src-tauri/src/commands.rs`):
-  SQLite com FTS5 (`store.rs`: migrações por `user_version`, corpo da nota em JSON do TipTap + colunas derivadas;
-  vira Y.Doc na Fase 2), projeção no núcleo (`projection.rs`), anexos por hash com protocolo `att://` (`attachments.rs`),
+- **Fases 0, 1 e 2 concluídas.** No app, a UI fala com o núcleo Rust (`src/lib/api/tauri.ts` → `src-tauri/src/commands.rs`):
+  SQLite com FTS5 (`store.rs`: migrações por `user_version`; antes de migrar guarda `ideario.db.vN.bak`).
+  **Cada nota é um Y.Doc** (`ydoc.rs` com yrs; `src/lib/ydoc.ts` no front): `meta` (Y.Map) + `body` (Y.XmlFragment no formato
+  do y-prosemirror). A coluna `notes.ydoc` é a fonte da verdade; `body_json` e as demais colunas são projeção dela.
+  O editor usa o TipTap Collaboration sobre o Y.Doc (desfazer do Yjs) e manda atualizações binárias
+  (`get_note_state` / `apply_note_update`, sem JSON); menus que mudam metadados passam pelo `meta` no núcleo.
+  O mock monta o Y.Doc a partir do JSON (`src/lib/api/mock/ydoc.ts`, mesmo formato do núcleo). Projeção no núcleo (`projection.rs`), anexos por hash com protocolo `att://` (`attachments.rs`),
   categorias e tags gerenciáveis, nota de boas-vindas no primeiro uso. Medido (release, 5 mil notas): consulta 12–15 ms,
   busca 7 ms, reabrir com a lista na tela em ~0,5 s (lista virtualizada a partir de 200 itens, `Masonry.svelte`).
 - A UI só fala com `src/lib/api` (interface `Api`). No navegador (`npm run dev`, prévia) e nos testes e2e ela é atendida
@@ -78,4 +82,6 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
   nativo (`npx tauri build --debug --no-bundle && xvfb-run -a node tests/native/run.mjs`; precisa de webkit2gtk-driver e
   tauri-driver), desempenho (`tests/native/perf.mjs`, build de release) e `npm run tauri build`.
 - Release: `.github/workflows/release.yml` (Actions → Release → Run workflow; precisa estar no branch padrão).
-- **Próximo passo: Fase 2 (Y.Doc por nota via yrs; o corpo em JSON vira o estado Yjs, colunas derivadas iguais).**
+- Ordem combinada com o usuário (plano em https://claude.ai/code/artifact/45aafe33-c71a-4b29-abb6-4caf94af6817):
+  Fase 3 (Mídia) → Importar Keep (Fase 6, antecipada; precisa de um Takeout real) → Fase 4 → Fase 5 → Fase 7.
+- **Próximo passo: Fase 3 (pipeline de mídia, SPEC §7).**

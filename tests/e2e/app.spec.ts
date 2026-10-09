@@ -740,6 +740,36 @@ test('arquivos: baixar pelo menu de contexto e pelo visualizador', async ({ page
   await img
 })
 
+test('Fase 2 (Y.Doc): negrito e checklist persistem ao reabrir; a prévia do card acompanha', async ({ page }) => {
+  await newNote(page)
+  await page.locator('#titulo').fill('Compras do mês')
+  await page.locator('#corpo').click()
+  await page.keyboard.press('Control+b')
+  await page.keyboard.type('urgente')
+  await page.keyboard.press('Control+b')
+  await page.keyboard.type(' hoje')
+  await back(page)
+  const card = cards(page).filter({ hasText: 'Compras do mês' })
+  await expect(card).toContainText('urgente hoje')
+  await card.click()
+  await expect(page.locator('#corpo strong')).toHaveText('urgente')
+  // checklist pelo atalho "[ ] " e marcado no editor; o card mostra o estado
+  // só teclado (um clique deixa o editor ajustando a seleção por alguns ms): Enter no título leva ao texto
+  await page.locator('#titulo').press('Enter')
+  await expect(page.locator('#corpo')).toBeFocused() // o foco chega no quadro seguinte
+  await page.keyboard.press('Control+End')
+  // o navegador move o cursor e o editor lê no evento selectionchange seguinte: deixa ele passar
+  await page.evaluate(() => new Promise((r) => setTimeout(() => requestAnimationFrame(r))))
+  await page.keyboard.press('Enter')
+  await page.keyboard.type('[ ] leite')
+  await page.getByRole('checkbox', { name: 'Marcar “leite”' }).click()
+  await back(page)
+  await expect(card.locator('.pv-task.done')).toContainText('leite')
+  await card.click()
+  await expect(page.locator('#corpo ul[data-type="taskList"] > li').first()).toHaveAttribute('data-checked', 'true')
+  await expect(page.locator('#corpo strong')).toHaveText('urgente')
+})
+
 test('bloco de código: único lugar com fonte mono; aparece no card', async ({ page }) => {
   await newNote(page)
   await page.getByRole('button', { name: 'Inserir' }).click()

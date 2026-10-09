@@ -9,6 +9,7 @@ mod store;
 mod system_fonts;
 mod system_theme;
 mod text;
+mod ydoc;
 
 use tauri::{Manager, WebviewWindowBuilder};
 
@@ -26,7 +27,7 @@ pub fn run() {
                 let core = app.state::<Core>();
                 let res = match core.store.lock() {
                     Ok(store) => attachments::serve(&store, &core.data, &req),
-                    Err(_) => tauri::http::Response::builder().status(503).body(Vec::new()).unwrap(),
+                    Err(_) => attachments::status_only(tauri::http::StatusCode::SERVICE_UNAVAILABLE),
                 };
                 responder.respond(res);
             });
@@ -71,6 +72,8 @@ pub fn run() {
             commands::rename_tag,
             commands::get_note,
             commands::save_note,
+            commands::get_note_state,
+            commands::apply_note_update,
             commands::set_reminder_done,
             commands::update_note,
             commands::move_note,

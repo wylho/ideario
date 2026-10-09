@@ -16,25 +16,33 @@ fn tray_icon<R: Runtime>(app: &AppHandle<R>, tray: TrayIconBuilder<R>) -> TrayIc
     #[cfg(target_os = "macos")]
     {
         // Imagem "template": o macOS pinta de claro ou escuro conforme a barra de menus (e o destaque ao clicar).
-        let _ = app;
-        let icon = tauri::image::Image::from_bytes(include_bytes!("../icons/tray-dark.png")).expect("ícone da bandeja");
-        tray.icon(icon).icon_as_template(true)
+        match tauri::image::Image::from_bytes(include_bytes!("../icons/tray-dark.png")) {
+            Ok(icon) => tray.icon(icon).icon_as_template(true),
+            Err(_) => fallback(app, tray),
+        }
     }
     #[cfg(target_os = "linux")]
     {
         // O Linux não pinta o ícone: escolhemos pela cor do painel. O do GNOME (e da maioria) é escuro; no KDE o
         // painel segue o esquema de cores.
-        let _ = app;
         let light_panel = crate::system_theme::detect().scheme.is_some_and(|s| s.mode == "light");
         let bytes: &[u8] = if light_panel { include_bytes!("../icons/tray-dark.png") } else { include_bytes!("../icons/tray-light.png") };
-        tray.icon(tauri::image::Image::from_bytes(bytes).expect("ícone da bandeja"))
+        match tauri::image::Image::from_bytes(bytes) {
+            Ok(icon) => tray.icon(icon),
+            Err(_) => fallback(app, tray),
+        }
     }
     #[cfg(not(any(target_os = "macos", target_os = "linux")))]
     {
-        match app.default_window_icon() {
-            Some(icon) => tray.icon(icon.clone()),
-            None => tray,
-        }
+        fallback(app, tray)
+    }
+}
+
+/// O ícone colorido do app (Windows, ou se o monocromático não carregar).
+fn fallback<R: Runtime>(app: &AppHandle<R>, tray: TrayIconBuilder<R>) -> TrayIconBuilder<R> {
+    match app.default_window_icon() {
+        Some(icon) => tray.icon(icon.clone()),
+        None => tray,
     }
 }
 

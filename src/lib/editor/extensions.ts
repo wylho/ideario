@@ -1,5 +1,8 @@
 import { Extension, type AnyExtension } from '@tiptap/core'
 import StarterKit from '@tiptap/starter-kit'
+import Collaboration from '@tiptap/extension-collaboration'
+import type * as Y from 'yjs'
+import { BODY } from '../ydoc'
 import { TaskItem, TaskList } from '@tiptap/extension-list'
 import { Placeholder } from '@tiptap/extensions'
 import { Plugin, PluginKey } from '@tiptap/pm/state'
@@ -44,9 +47,13 @@ export function noteExtensions(opts: {
   onFiles?: (files: File[], pos: number) => void
   onMenu?: (pos: number, e: MouseEvent) => void
   placeholder?: string
+  /** Y.Doc da nota: o corpo vive no `body` dele (TipTap Collaboration, com o desfazer do Yjs). */
+  ydoc?: Y.Doc
 } = {}): AnyExtension[] {
   return [
     StarterKit.configure({
+      // Com o Y.Doc, desfazer/refazer vêm do Yjs (Collaboration).
+      ...(opts.ydoc ? { undoRedo: false as const } : {}),
       heading: { levels: [3] },
       blockquote: false,
       code: false,
@@ -68,5 +75,6 @@ export function noteExtensions(opts: {
     MediaLayout.configure({ onFiles: opts.onFiles, onMenu: opts.onMenu }),
     Hashtags,
     ...(opts.placeholder ? [Placeholder.configure({ placeholder: opts.placeholder })] : []),
+    ...(opts.ydoc ? [Collaboration.configure({ document: opts.ydoc, field: BODY })] : []),
   ]
 }

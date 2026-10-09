@@ -1,0 +1,7 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc d6f8948d185288dddaa37d170cc232b839728e4ab64b838d9065b7d9f1c67c9f # shrinks to body = Object {"content": Array [Object {"content": Array [Object {"marks": Array [Object {"type": String("italic")}], "text": String("à"), "type": String("text")}, Object {"text": String("ã"), "type": String("text")}], "type": String("paragraph")}], "type": String("doc")}, title = "", pinned = false, when = None, tags = []

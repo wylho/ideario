@@ -137,12 +137,18 @@ pub fn save_copy(data: &Path, downloads: &Path, hash: &str, name: &str) -> Resul
 /// Responde a `att://localhost/<hash>` com o arquivo, inteiro ou só o trecho pedido (Range).
 pub fn serve(store: &Store, data: &Path, req: &Request<Vec<u8>>) -> Response<Vec<u8>> {
     let hash: String = req.uri().path().trim_start_matches('/').chars().filter(|c| c.is_ascii_hexdigit()).collect();
-    let not_found = || Response::builder().status(StatusCode::NOT_FOUND).body(Vec::new()).unwrap();
+    let not_found = || status_only(StatusCode::NOT_FOUND);
     if hash.is_empty() {
         return not_found();
     }
     let Ok(bytes) = std::fs::read(dir(data).join(&hash)) else { return not_found() };
-    let mime = store.attachment_mime(&hash).ok().flatten().unwrap_or_else(|| "application/octet-stream".into());
+    // Tipo vindo do banco: se não servir de cabeçalho (caractere inválido), vai como binário genérico.
+    let mime = store
+        .attachment_mime(&hash)
+        .ok()
+        .flatten()
+        .filter(|m| header::HeaderValue::from_str(m).is_ok())
+        .unwrap_or_else(|| "application/octet-stream".into());
     let len = bytes.len();
     let range = req
         .headers()
@@ -160,14 +166,21 @@ pub fn serve(store: &Store, data: &Path, req: &Request<Vec<u8>>) -> Response<Vec
         .header(header::CONTENT_TYPE, mime)
         .header(header::ACCEPT_RANGES, "bytes")
         .header(header::CACHE_CONTROL, "max-age=31536000, immutable");
-    match range {
+    let res = match range {
         Some((start, end)) => base
             .status(StatusCode::PARTIAL_CONTENT)
             .header(header::CONTENT_RANGE, format!("bytes {start}-{end}/{len}"))
-            .body(bytes[start..=end].to_vec())
-            .unwrap(),
-        None => base.status(StatusCode::OK).body(bytes).unwrap(),
-    }
+            .body(bytes[start..=end].to_vec()),
+        None => base.status(StatusCode::OK).body(bytes),
+    };
+    res.unwrap_or_else(|_| status_only(StatusCode::INTERNAL_SERVER_ERROR))
+}
+
+/// Resposta vazia só com o código (não falha: sem cabeçalhos a montar).
+pub fn status_only(code: StatusCode) -> Response<Vec<u8>> {
+    let mut res = Response::new(Vec::new());
+    *res.status_mut() = code;
+    res
 }
 
 #[cfg(test)]
@@ -198,6 +211,12 @@ mod tests {
         assert_eq!(res.status(), StatusCode::PARTIAL_CONTENT);
         assert_eq!(res.body(), b"234");
         let dl = save_copy(&tmp, &tmp.join("dl"), &a.hash, "a.txt").unwrap();
+        // tipo gravado que não serve de cabeçalho não derruba o servidor
+        store.conn.execute("UPDATE attachments SET mime = 'text/plain\nX: y' WHERE hash = ?1", [&a.hash]).unwrap();
+        let req = Request::builder().uri(format!("att://localhost/{}", a.hash)).body(Vec::new()).unwrap();
+        let res = serve(&store, &tmp, &req);
+        assert_eq!(res.status(), StatusCode::OK);
+        assert_eq!(res.headers()[header::CONTENT_TYPE], "application/octet-stream");
         let dl2 = save_copy(&tmp, &tmp.join("dl"), &a.hash, "a.txt").unwrap();
         assert!(dl.ends_with("a.txt") && dl2.ends_with("a (1).txt"));
         let _ = std::fs::remove_dir_all(&tmp);
