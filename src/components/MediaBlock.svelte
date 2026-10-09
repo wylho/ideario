@@ -1,6 +1,7 @@
 <script lang="ts">
   import { Download } from '@lucide/svelte'
   import { api } from '../lib/api'
+  import { download } from '../lib/menus'
   import { fmtBytes } from '../lib/format'
   import { KIND_ICONS, KIND_LABELS } from '../lib/file-kinds'
   import AudioPlayer from './AudioPlayer.svelte'
@@ -37,6 +38,6 @@
         <small>{KIND_LABELS[a.kind]} · {fmtBytes(a.bytes)}</small>
       {/if}
     </div>
-    <button class="icon-btn sm" aria-label="Baixar {a.name}" title="Baixar" onclick={() => void api.downloadAttachment(a)}><Download size={16} /></button>
+    <button class="icon-btn sm" aria-label="Baixar {a.name}" title="Baixar" onclick={() => void download(a)}><Download size={16} /></button>
   </div>
 {/if}

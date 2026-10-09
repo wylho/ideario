@@ -2,6 +2,7 @@
   import { Dialog } from 'bits-ui'
   import { Download, X } from '@lucide/svelte'
   import { api } from '../lib/api'
+  import { download } from '../lib/menus'
   import { app } from '../lib/app.svelte'
   import { fmtBytes } from '../lib/format'
   import { KIND_ICONS, KIND_LABELS } from '../lib/file-kinds'
@@ -70,7 +71,7 @@
             {/if}
           </p>
           <div class="lb-actions">
-            <button class="btn ghost" onclick={() => void api.downloadAttachment(img)}><Download size={16} />Baixar</button>
+            <button class="btn ghost" onclick={() => void download(img)}><Download size={16} />Baixar</button>
             {#if app.editor?.id !== img.noteId}
               <button class="btn primary" onclick={() => app.openNote(img.noteId)}>Abrir nota</button>
             {/if}

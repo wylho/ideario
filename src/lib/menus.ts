@@ -36,6 +36,16 @@ function change(n: NoteSummary, patch: NotePatch, msg?: string) {
   if (msg) app.say(msg, { label: 'Desfazer', run: () => void api.updateNote(n.id, before) })
 }
 
+/** Baixar um anexo: no app vai para a pasta Downloads e o aviso diz onde; no navegador, o download normal. */
+export async function download(a: Pick<AttachmentRow, 'hash' | 'name' | 'mime'>) {
+  try {
+    const path = await api.downloadAttachment(a)
+    if (path) app.say(`Salvo em Downloads: ${path.split(/[\\/]/).pop()}`)
+  } catch {
+    app.say('Não foi possível salvar o arquivo')
+  }
+}
+
 /** A mesma mudança em várias notas, com um "Desfazer" só para todas. */
 export function changeMany(notes: NoteSummary[], patch: NotePatch, msg: string) {
   const before = notes.map((n) => [n.id, Object.fromEntries(Object.keys(patch).map((k) => [k, n[k as keyof NoteSummary]])) as NotePatch] as const)
@@ -129,7 +139,7 @@ export function attachmentMenu(r: AttachmentRow): MenuEntry[] {
     ...(r.kind === 'image' ? [{ label: 'Ver imagem', icon: Image, onSelect: () => (app.lightbox = r) }] : []),
     ...(r.kind === 'video' || r.kind === 'audio' ? [{ label: 'Tocar', icon: Play, onSelect: () => (app.lightbox = r) }] : []),
     { label: 'Abrir nota de origem', icon: ExternalLink, onSelect: () => app.openNote(r.noteId) },
-    { label: 'Baixar', icon: Download, onSelect: () => void api.downloadAttachment(r) },
+    { label: 'Baixar', icon: Download, onSelect: () => void download(r) },
     SEP,
     { label: 'Copiar nome do arquivo', icon: Copy, onSelect: () => copy(r.name, 'Nome') },
     ...(r.palette ? [{ label: 'Copiar cor', icon: Palette, sub: r.palette.map((hex) => ({ label: hex, swatch: hex, onSelect: () => copy(hex, hex) })) }] : []),

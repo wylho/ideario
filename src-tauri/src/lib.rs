@@ -1,18 +1,41 @@
-//! Núcleo do Ideario (SPEC §4). Na Fase 0 só abre a janela; a UI usa dados de exemplo.
-//! Próximos módulos: `db` (SQLite + FTS5), `notes` (Y.Doc via yrs), `media`, `sync`, `reminders`, `import`.
+//! Núcleo do Ideario (SPEC §4). Fase 1: banco local (SQLite + FTS5), notas, categorias, tags e anexos.
+//! Próximos módulos: Y.Doc por nota (yrs, Fase 2), pipeline de mídia (Fase 3), lembretes (4), sync (5), importação (6).
 
+mod attachments;
 mod background;
+mod commands;
+mod projection;
+mod store;
 mod system_fonts;
 mod system_theme;
+mod text;
 
-use tauri::WebviewWindowBuilder;
+use tauri::{Manager, WebviewWindowBuilder};
+
+use commands::Core;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .manage(background::Background::default())
         .on_window_event(background::on_window_event)
+        // Fotos, vídeos, áudios e documentos das notas: `att://localhost/<hash>` (convertFileSrc(hash, 'att')).
+        .register_asynchronous_uri_scheme_protocol("att", |ctx, req, responder| {
+            let app = ctx.app_handle().clone();
+            std::thread::spawn(move || {
+                let core = app.state::<Core>();
+                let res = match core.store.lock() {
+                    Ok(store) => attachments::serve(&store, &core.data, &req),
+                    Err(_) => tauri::http::Response::builder().status(503).body(Vec::new()).unwrap(),
+                };
+                responder.respond(res);
+            });
+        })
         .setup(|app| {
+            // Banco local (SQLite) na pasta de dados do app; abre antes da janela, para a lista vir na hora.
+            let data = app.path().app_data_dir()?;
+            app.manage(Core::open(data).map_err(|e| format!("não foi possível abrir o banco: {e}"))?);
+
             // A janela é criada aqui (e não pelo tauri.conf.json) para receber as fontes e as cores do
             // sistema antes de a página carregar, sem troca visível de fonte ou de cor.
             let config = app
@@ -28,7 +51,39 @@ pub fn run() {
                 .build()?;
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![app_version, background::set_background])
+        .invoke_handler(tauri::generate_handler![
+            app_version,
+            background::set_background,
+            commands::list_notes,
+            commands::list_reminders,
+            commands::list_attachments,
+            commands::list_images,
+            commands::view_counts,
+            commands::list_categories,
+            commands::create_category,
+            commands::update_category,
+            commands::delete_category,
+            commands::restore_category,
+            commands::list_tags,
+            commands::rename_tag,
+            commands::get_note,
+            commands::save_note,
+            commands::set_reminder_done,
+            commands::update_note,
+            commands::move_note,
+            commands::adopt_order,
+            commands::duplicate_note,
+            commands::note_text,
+            commands::delete_note,
+            commands::trash_count,
+            commands::empty_trash,
+            commands::get_settings,
+            commands::save_settings,
+            commands::sync_status,
+            commands::get_attachments,
+            commands::import_file,
+            commands::download_attachment,
+        ])
         .build(tauri::generate_context!())
         .expect("erro ao iniciar o Ideario")
         .run(|_app, _event| {

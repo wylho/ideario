@@ -18,6 +18,7 @@
   import MediaBlock from './MediaBlock.svelte'
   import CameraDialog from './CameraDialog.svelte'
   import { api } from '../lib/api'
+  import { download } from '../lib/menus'
   import { app, type EditorTarget } from '../lib/app.svelte'
   import { noteExtensions } from '../lib/editor/extensions'
   import { ago, fmtBytes, hashTags, normalizeTag } from '../lib/format'
@@ -269,7 +270,7 @@
       const a = media.get(imgHash)
       out.push(
         { label: 'Ver', icon: Eye, onSelect: () => a && viewAttachment(a) },
-        { label: 'Baixar', icon: Download, onSelect: () => a && void api.downloadAttachment(a) },
+        { label: 'Baixar', icon: Download, onSelect: () => a && void download(a) },
         { label: 'Copiar imagem', icon: Copy, onSelect: () => void copyImage(imgHash) },
         SEP,
       )
@@ -278,7 +279,7 @@
       const a = media.get(node.attrs.hash)
       out.push(
         { label: 'Abrir', icon: ExternalLink, onSelect: () => a && viewAttachment(a) },
-        { label: 'Baixar', icon: Download, onSelect: () => a && void api.downloadAttachment(a) },
+        { label: 'Baixar', icon: Download, onSelect: () => a && void download(a) },
         { label: 'Copiar nome', icon: Copy, onSelect: () => a && void navigator.clipboard.writeText(a.name).then(() => app.say('Nome copiado')) },
         SEP,
       )
