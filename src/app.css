@@ -68,27 +68,36 @@ button { cursor: pointer; }
 .main { position: relative; flex: 1; min-width: 0; height: 100%; display: flex; flex-direction: column; --content-max: 1480px; }
 .main.view-reminders, .main.list { --content-max: 720px; }
 .main.view-files { --content-max: 920px; }
-/* Barra lateral recolhível. O ☰ fica sempre no canto superior esquerdo: no cabeçalho da barra quando
-   aberta, no topo quando fechada (mesma posição), como a gaveta do celular. */
+/* Desktop como no Keep: barra superior fixa (☰, marca, busca) e, abaixo, a lateral e o conteúdo.
+   A lateral recolhe para um trilho de ícones; o topo não se move. */
+.body { flex: 1; min-height: 0; display: flex; position: relative; }
+.shell { flex-direction: column; }
+.topbar.appbar {
+  display: grid; grid-template-columns: 40px calc(var(--side-w) - 72px) minmax(0, 720px) 1fr; column-gap: 8px;
+  height: 64px; padding: 0 16px 0 12px; border-bottom: 1px solid var(--line); flex: none;
+}
+:root { --side-w: 272px; --rail-w: 72px; }
+.brand-area { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.brand-mark { width: 30px; height: 30px; flex: none; }
+.appbar .brand { font-size: 22px; }
+.top-actions { display: flex; align-items: center; justify-content: flex-end; gap: 4px; }
 .sidebar {
-  --side-w: 272px;
-  flex: none; width: var(--side-w); height: 100%; overflow: hidden; border-right: 1px solid var(--line); background: var(--bg);
-  transition: width .24s cubic-bezier(.2, .8, .2, 1), border-color .24s;
+  flex: none; width: var(--side-w); height: 100%; overflow-x: hidden; overflow-y: auto; background: var(--bg);
+  transition: width .24s cubic-bezier(.2, .8, .2, 1);
 }
-.sidebar-inner {
-  width: var(--side-w); height: 100%; display: flex; flex-direction: column;
-  transition: opacity .18s ease, transform .24s cubic-bezier(.2, .8, .2, 1);
-}
-.side-closed .sidebar { width: 0; border-right-width: 0; }
-.side-closed .sidebar-inner { opacity: 0; transform: translateX(-16px); }
-.side-head { display: grid; grid-template-columns: 40px 1fr; column-gap: 6px; align-items: center; padding: 16px 16px 14px 12px; }
-.side-head .brand { line-height: 40px; }
-.shell.wide .nav-btn { margin-left: -12px; animation: fade .2s ease; }
+.sidebar .drawer-scroll { padding: 10px 10px 24px; overflow: visible; }
+.rail .sidebar { width: var(--rail-w); }
+.d-item.rail-only { display: none; }
+/* trilho: só ícones, centralizados; rótulos, contagens e nuvem de tags somem */
+.sidebar .d-item .grow, .sidebar .d-item .count, .sidebar .d-label, .sidebar .tag-cloud { transition: opacity .16s ease; }
+.rail .sidebar .d-item .grow, .rail .sidebar .d-item .count, .rail .sidebar .d-label, .rail .sidebar .tag-cloud { opacity: 0; pointer-events: none; }
+.rail .sidebar .d-label, .rail .sidebar .tag-cloud { display: none; }
+.rail .sidebar .d-item.rail-only { display: flex; }
+.rail .sidebar .d-item { width: 52px; padding: 0 16px; gap: 0; overflow: hidden; }
+.rail .sidebar .d-sep { margin-inline: 12px; }
 
 /* topo */
 .topbar { display: flex; align-items: center; gap: 6px; padding: 10px 10px 8px 6px; }
-.shell.wide .topbar { padding: 14px 24px 10px; gap: 10px; }
-.shell.wide .search { max-width: 720px; }
 .icon-btn {
   display: inline-grid; place-items: center; width: 40px; height: 40px; border-radius: 999px; color: var(--fg); flex: none;
 }

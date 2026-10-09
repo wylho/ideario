@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Menu, Plus } from '@lucide/svelte'
+  import { Plus } from '@lucide/svelte'
   import { app } from './lib/app.svelte'
   import TopBar from './components/TopBar.svelte'
   import TabBar from './components/TabBar.svelte'
@@ -36,24 +36,18 @@
 
 <svelte:window onkeydown={onKeydown} />
 
-<div class="shell" class:wide={app.wide} class:side-closed={app.wide && !app.sidebarOpen}>
+<div class="shell" class:wide={app.wide} class:rail={app.wide && !app.sidebarOpen}>
+  {#if app.wide}<TopBar />{/if}
+  <div class="body">
   {#if app.wide}
-    <!-- Recolhida, a barra sai da ordem de foco; o ☰ passa para o topo, no mesmo lugar. -->
-    <aside class="sidebar" aria-label="Navegação" inert={!app.sidebarOpen}>
-      <div class="sidebar-inner">
-        <div class="side-head">
-          <button class="icon-btn" aria-label="Ocultar barra lateral" aria-expanded="true" title="Ocultar barra lateral (Ctrl+\)" onclick={() => app.toggleSidebar()}>
-            <Menu size={20} />
-          </button>
-          <span class="brand">Ideario</span>
-        </div>
-        <NavList />
-      </div>
+    <!-- Como no Keep: aberta mostra tudo; recolhida vira um trilho só de ícones. A barra superior não se move. -->
+    <aside class="sidebar" aria-label="Navegação">
+      <NavList />
     </aside>
   {/if}
 
   <div class="main view-{app.view}" class:list={app.view === 'notes' && app.layout === 'list'}>
-    <TopBar />
+    {#if !app.wide}<TopBar />{/if}
 
     <FilterBar />
 
@@ -81,6 +75,7 @@
         <button onclick={() => { app.toastAction?.run(); app.toast = null; app.toastAction = null }}>{app.toastAction.label}</button>
       {/if}
     </div>
+  </div>
   </div>
 
   {#if !app.wide}<Drawer />{/if}

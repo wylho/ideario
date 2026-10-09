@@ -326,20 +326,23 @@ test.describe('visão × filtro', () => {
   })
 })
 
-test('desktop: barra lateral recolhe e volta pelo ☰, no mesmo lugar, e lembra a escolha', async ({ page }) => {
+test('desktop: barra superior fixa; lateral recolhe para trilho de ícones e lembra a escolha', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 })
-  const open = await page.getByLabel('Ocultar barra lateral').boundingBox()
-  await page.getByLabel('Ocultar barra lateral').click()
-  await expect(page.locator('.sidebar')).toHaveAttribute('inert', '')
-  await expect.poll(async () => (await page.locator('.sidebar').boundingBox())!.width).toBe(0)
-  const closed = await page.getByLabel('Mostrar barra lateral').boundingBox()
-  expect(closed!.x).toBe(open!.x)
-  expect(closed!.y).toBe(open!.y)
+  const menu = await page.getByLabel('Recolher barra lateral').boundingBox()
+  const busca = await page.locator('#busca').boundingBox()
+  await page.getByLabel('Recolher barra lateral').click()
+  await expect.poll(async () => (await page.locator('.sidebar').boundingBox())!.width).toBe(72)
+  // O topo não se move.
+  expect(await page.getByLabel('Expandir barra lateral').boundingBox()).toEqual(menu)
+  expect(await page.locator('#busca').boundingBox()).toEqual(busca)
+  // No trilho, as categorias continuam clicáveis (bolinhas com dica).
+  await page.locator('.sidebar').getByRole('button', { name: 'Hospital 2' }).click()
+  await expect(cards(page)).toHaveCount(2)
   await page.reload()
-  await expect(page.getByLabel('Mostrar barra lateral')).toBeVisible()
+  await expect(page.getByLabel('Expandir barra lateral')).toBeVisible()
   await page.keyboard.press('Control+\\')
-  await expect(page.getByLabel('Ocultar barra lateral')).toBeVisible()
-  await expect(page.locator('.sidebar')).not.toHaveAttribute('inert', '')
+  await expect(page.getByLabel('Recolher barra lateral')).toBeVisible()
+  await expect(page.locator('.sidebar .d-item.rail-only')).toBeHidden()
 })
 
 test('prévia do card mantém títulos, tópicos e a ordem do documento', async ({ page }) => {
