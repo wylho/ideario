@@ -17,8 +17,20 @@
   // sem atrasar a primeira pintura da lista.
   const editorModule = import('./components/Editor.svelte')
 
+  const typing = (e: KeyboardEvent) => !!(e.target as Element | null)?.closest?.('input, textarea, [contenteditable="true"]')
+
   function onKeydown(e: KeyboardEvent) {
     const mod = e.ctrlKey || e.metaKey
+    // Seleção múltipla: Esc limpa; Ctrl+A marca todas as notas da tela.
+    if (e.key === 'Escape' && app.selected.size && !app.editor && !e.defaultPrevented) {
+      app.clearSelection()
+      return
+    }
+    if (mod && e.key.toLowerCase() === 'a' && app.view === 'notes' && !app.editor && !typing(e)) {
+      e.preventDefault()
+      app.selectAll()
+      return
+    }
     if (!mod || e.altKey || app.editor) return
     if (e.key === '\\' && app.wide) {
       e.preventDefault()
@@ -36,7 +48,7 @@
 
 <svelte:window onkeydown={onKeydown} />
 
-<div class="shell" class:wide={app.wide} class:rail={app.wide && !app.sidebarOpen}>
+<div class="shell" class:wide={app.wide} class:rail={app.wide && !app.sidebarOpen} class:selecting-notes={app.selected.size > 0}>
   {#if app.wide}<TopBar />{/if}
   <div class="body">
   {#if app.wide}

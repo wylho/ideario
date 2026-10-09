@@ -1,6 +1,6 @@
 // Menus de contexto de cada tipo de elemento. Um lugar só, para o mesmo item se comportar igual em todo o app.
 import {
-  Archive, ArchiveRestore, Bell, BellOff, Check, Copy, Download, ExternalLink, Files, Filter, FilterX, Image, Palette, Pin, PinOff,
+  Archive, ArchiveRestore, Bell, BellOff, Check, CircleCheck, Copy, Download, ExternalLink, Files, Filter, FilterX, Image, Palette, Pin, PinOff,
   Play, Plus, RotateCcw, Tag, Trash2, AlarmClock,
 } from '@lucide/svelte'
 import { api } from './api'
@@ -36,6 +36,16 @@ function change(n: NoteSummary, patch: NotePatch, msg?: string) {
   if (msg) app.say(msg, { label: 'Desfazer', run: () => void api.updateNote(n.id, before) })
 }
 
+/** A mesma mudança em várias notas, com um "Desfazer" só para todas. */
+export function changeMany(notes: NoteSummary[], patch: NotePatch, msg: string) {
+  const before = notes.map((n) => [n.id, Object.fromEntries(Object.keys(patch).map((k) => [k, n[k as keyof NoteSummary]])) as NotePatch] as const)
+  for (const n of notes) void api.updateNote(n.id, patch)
+  app.say(msg, { label: 'Desfazer', run: () => before.forEach(([id, p]) => void api.updateNote(id, p)) })
+}
+
+/** "Nota arquivada" ou "3 notas arquivadas". */
+export const manyMsg = (n: number, one: string, many: string) => (n === 1 ? `Nota ${one}` : `${n} notas ${many}`)
+
 function reminderEntries(n: Pick<NoteSummary, 'id' | 'reminderAt'>, set: (v: number | null) => void, times = quickTimes()): MenuEntry[] {
   return [
     ...times.map(([label, at]) => ({ label, icon: AlarmClock, hint: fmtReminder(at).replace(/^.*?, /, ''), onSelect: () => set(at) })),
@@ -47,6 +57,7 @@ export function noteMenu(n: NoteSummary): MenuEntry[] {
   if (n.trashedAt != null) {
     return [
       { label: 'Abrir', icon: ExternalLink, onSelect: () => app.openNote(n.id) },
+      { label: 'Selecionar', icon: CircleCheck, onSelect: () => app.toggleSelect(n.id) },
       { label: 'Restaurar', icon: ArchiveRestore, onSelect: () => change(n, { trashedAt: null }, 'Nota restaurada') },
       SEP,
       {
@@ -57,6 +68,7 @@ export function noteMenu(n: NoteSummary): MenuEntry[] {
   }
   return [
     { label: 'Abrir', icon: ExternalLink, onSelect: () => app.openNote(n.id) },
+    { label: 'Selecionar', icon: CircleCheck, onSelect: () => app.toggleSelect(n.id) },
     { label: n.pinned ? 'Desafixar' : 'Fixar', icon: n.pinned ? PinOff : Pin, onSelect: () => change(n, { pinned: !n.pinned }) },
     {
       label: n.reminderAt != null ? 'Lembrete' : 'Lembrar', icon: Bell,

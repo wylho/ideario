@@ -1,7 +1,8 @@
 // Estado da interface e dados compartilhados entre as telas.
 // Visão (como ver) e filtro (o que ver) são independentes: trocar um nunca desfaz o outro.
+import { SvelteSet } from 'svelte/reactivity'
 import { api } from './api'
-import type { AttachmentRow, Box, Category, FileGroup, FileSort, Filter, NoteSort, SyncState, TagCount, Tone, View, ViewCounts } from './types'
+import type { AttachmentRow, NoteSummary, Box, Category, FileGroup, FileSort, Filter, NoteSort, SyncState, TagCount, Tone, View, ViewCounts } from './types'
 import { uuidv7 } from './uuid'
 
 export interface EditorTarget {
@@ -127,24 +128,60 @@ class AppState {
     return parts.length ? parts.join(' · ') : null
   }
 
+  // ---------- seleção múltipla (visão Notas) ----------
+  /** Notas selecionadas. Com alguma selecionada, a barra superior vira a barra de ações em lote. */
+  selected = new SvelteSet<string>()
+  /** Última nota marcada: ponto de partida do Shift+clique. */
+  private anchor: string | null = null
+  /** Notas na tela, na ordem em que aparecem (o NotesView atualiza). Serve ao Shift e ao Ctrl+A. */
+  visibleNotes = $state.raw<NoteSummary[]>([])
+
+  /** Marca ou desmarca; com Shift, marca tudo entre a última marcada e esta, na ordem da tela. */
+  toggleSelect(id: string, range = false) {
+    const order = this.visibleNotes.map((n) => n.id)
+    const a = this.anchor ? order.indexOf(this.anchor) : -1
+    const b = order.indexOf(id)
+    if (range && a >= 0 && b >= 0) {
+      for (const x of order.slice(Math.min(a, b), Math.max(a, b) + 1)) this.selected.add(x)
+    } else if (this.selected.has(id)) {
+      this.selected.delete(id)
+    } else {
+      this.selected.add(id)
+    }
+    this.anchor = id
+  }
+
+  selectAll() {
+    for (const n of this.visibleNotes) this.selected.add(n.id)
+  }
+
+  clearSelection() {
+    this.selected.clear()
+    this.anchor = null
+  }
+
   setView(v: View) {
+    this.clearSelection()
     if (v !== 'notes') this.box = 'active'
     this.view = v
   }
 
   /** Escolhe a categoria (ou nenhuma, com null). Tocar na já escolhida tira o filtro de categoria. */
   setCategory(id: string | null) {
+    this.clearSelection()
     this.filter.categoryId = this.filter.categoryId === id ? null : id
     this.box = 'active'
   }
 
   toggleTag(tag: string) {
+    this.clearSelection()
     const t = this.filter.tags
     this.filter.tags = t.includes(tag) ? t.filter((x) => x !== tag) : [...t, tag]
     this.box = 'active'
   }
 
   clearFilter() {
+    this.clearSelection()
     this.filter = { categoryId: null, tags: [] }
   }
 
@@ -173,6 +210,7 @@ class AppState {
   }
 
   openBox(box: Box) {
+    this.clearSelection()
     this.box = box
     this.view = 'notes'
     this.drawerOpen = false
