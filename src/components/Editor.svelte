@@ -18,7 +18,7 @@
   import MediaBlock from './MediaBlock.svelte'
   import CameraDialog from './CameraDialog.svelte'
   import { api } from '../lib/api'
-  import { download } from '../lib/menus'
+  import { download, newCategory } from '../lib/menus'
   import { app, type EditorTarget } from '../lib/app.svelte'
   import { noteExtensions } from '../lib/editor/extensions'
   import { ago, fmtBytes, hashTags, normalizeTag } from '../lib/format'
@@ -80,6 +80,13 @@
   }
 
   const cat = $derived(app.category(meta?.categoryId))
+  const NEW_CATEGORY = '__new'
+  /** Seletor de categoria; "Nova categoria…" cria e já põe a nota nela. */
+  function pickCategory(v: string) {
+    if (!meta) return
+    if (v === NEW_CATEGORY) newCategory((id) => meta && (meta.categoryId = id))
+    else meta.categoryId = v === 'none' ? null : v
+  }
   const extraTags = $derived(bodyTags.filter((t) => !meta?.tags.includes(t)))
   const active = $derived.by(() => {
     void tick
@@ -488,7 +495,7 @@
             <Select.Root
               type="single"
               items={[{ value: 'none', label: 'Sem categoria' }, ...app.categories.map((c) => ({ value: c.id, label: c.name }))]}
-              bind:value={() => meta?.categoryId ?? 'none', (v) => meta && (meta.categoryId = v === 'none' ? null : v)}
+              bind:value={() => meta?.categoryId ?? 'none', pickCategory}
             >
               <Select.Trigger id="categoria" class="picker" aria-label="Categoria">
                 {#if cat}<i class="dot" style:background={cat.color}></i>{:else}<Tag size={14} />{/if}
@@ -507,6 +514,8 @@
                         {/snippet}
                       </Select.Item>
                     {/each}
+                    <div class="menu-sep" role="separator"></div>
+                    <Select.Item value={NEW_CATEGORY} label="Nova categoria" class="menu-item"><Plus size={16} />Nova categoria…</Select.Item>
                   </Select.Viewport>
                 </Select.Content>
               </Select.Portal>

@@ -98,6 +98,8 @@ export function noteMenu(n: NoteSummary): MenuEntry[] {
           label: c.name, swatch: c.color, checked: n.categoryId === c.id,
           onSelect: () => change(n, { categoryId: c.id }, `Movida para ${c.name}`),
         })),
+        SEP,
+        { label: 'Nova categoria…', icon: Plus, onSelect: () => newCategory((id, name) => change(n, { categoryId: id }, `Movida para ${name}`)) },
       ],
     },
     SEP,
@@ -148,11 +150,11 @@ export function attachmentMenu(r: AttachmentRow): MenuEntry[] {
 }
 
 /** Nova categoria: nome e cor (a primeira cor ainda não usada já vem marcada). */
-export function newCategory(then?: (id: string) => void) {
+export function newCategory(then?: (id: string, name: string) => void) {
   app.askName({
     title: 'Nova categoria', label: 'Nome', value: '', confirm: 'Criar',
     color: nextCategoryColor(app.categories.map((c) => c.color)),
-    submit: (name, color) => void api.createCategory(name, color!).then((c) => then?.(c.id)),
+    submit: (name, color) => void api.createCategory(name, color!).then((c) => then?.(c.id, c.name)),
   })
 }
 
