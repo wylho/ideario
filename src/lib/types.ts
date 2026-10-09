@@ -113,6 +113,9 @@ export interface NoteDetail {
   updatedAt: Millis
 }
 
+/** Campos que os menus de contexto mudam sem abrir o editor. */
+export type NotePatch = Partial<Pick<NoteInput, 'pinned' | 'color' | 'categoryId' | 'archived' | 'trashedAt' | 'reminderAt' | 'reminderDone'>>
+
 export interface NoteInput {
   id: string
   title: string

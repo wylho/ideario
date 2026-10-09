@@ -4,8 +4,9 @@
 import type { Api } from '..'
 import { fold, hashTags } from '../../format'
 import type {
-  Attachment, AttachmentRow, Box, Category, Filter, NoteInput, NoteSummary, PreviewBlock, RichDoc, RichNode, Settings, TagCount,
+  Attachment, AttachmentRow, Box, Category, Filter, NoteInput, NotePatch, NoteSummary, PreviewBlock, RichDoc, RichNode, Settings, TagCount,
 } from '../../types'
+import { uuidv7 } from '../../uuid'
 import { fakeImageSrc } from './fake-images'
 import { DAY, SEED_CATEGORIES, SEED_FILES, SEED_IMAGES, seedNotes } from './seed'
 
@@ -298,6 +299,44 @@ export const mockApi: Api = {
       changed()
     }
     return done(undefined)
+  },
+
+  updateNote(id, patch) {
+    const n = notes.get(id)
+    if (!n) return done(undefined)
+    const keys = Object.keys(patch) as (keyof NotePatch)[]
+    if (keys.some((k) => n[k] !== patch[k])) {
+      Object.assign(n, patch)
+      n.updatedAt = Date.now()
+      changed()
+    }
+    return done(undefined)
+  },
+
+  duplicateNote(id) {
+    const n = notes.get(id)
+    if (!n) return Promise.reject(new Error('nota não encontrada'))
+    const now = Date.now()
+    const copy: StoredNote = {
+      ...structuredClone(n), id: uuidv7(), title: n.title ? `${n.title} (cópia)` : '', pinned: false,
+      reminderAt: null, reminderDone: false, createdAt: now, updatedAt: now,
+    }
+    notes.set(copy.id, copy)
+    changed()
+    return done(copy.id)
+  },
+
+  noteText(id) {
+    const n = notes.get(id)
+    if (!n) return done('')
+    const lines = project(n.body).blocks.map((b) => {
+      const pad = 'depth' in b ? '  '.repeat(b.depth) : ''
+      if (b.kind === 'task') return `${pad}${b.done ? '☑' : '☐'} ${b.text}`
+      if (b.kind === 'bullet') return `${pad}• ${b.text}`
+      if (b.kind === 'ordered') return `${pad}${b.n}. ${b.text}`
+      return 'text' in b ? b.text : ''
+    })
+    return done([n.title, ...lines].filter(Boolean).join('\n'))
   },
 
   deleteNote(id) {

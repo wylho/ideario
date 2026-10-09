@@ -366,3 +366,74 @@ test('clicar na pílula do lembrete abre o menu do lembrete; o X remove', async 
   await page.getByLabel('Remover lembrete').click()
   await expect(page.locator('.rem-pill')).toHaveCount(0)
 })
+
+test.describe('menus de contexto', () => {
+  const menu = (page: Page) => page.locator('.menu.ctx').first()
+  const item = (page: Page, name: string | RegExp) => page.getByRole('menuitem', { name })
+
+  test('card: fixar e mudar a cor pelo clique direito', async ({ page }) => {
+    const card = () => cards(page).filter({ hasText: 'Horários e estacionamento' })
+    await card().click({ button: 'right' })
+    await expect(menu(page)).toBeVisible()
+    await item(page, 'Fixar').click()
+    await expect(page.locator('.masonry').first().locator('.card h3')).toContainText(['Horários e estacionamento'])
+    await card().click({ button: 'right' })
+    await item(page, 'Cor').click()
+    await item(page, 'Lilás').click()
+    await expect(card()).toHaveClass(/c-lilac/)
+  })
+
+  test('card: arquivar com desfazer', async ({ page }) => {
+    await cards(page).filter({ hasText: 'Horários e estacionamento' }).click({ button: 'right' })
+    await item(page, 'Arquivar').click()
+    await expect(cards(page).filter({ hasText: 'Horários e estacionamento' })).toHaveCount(0)
+    await page.locator('.toast').getByRole('button', { name: 'Desfazer' }).click()
+    await expect(cards(page).filter({ hasText: 'Horários e estacionamento' })).toHaveCount(1)
+  })
+
+  test('card: categoria e cópia', async ({ page }) => {
+    await cards(page).filter({ hasText: 'Horários e estacionamento' }).click({ button: 'right' })
+    await item(page, 'Categoria').click()
+    await item(page, 'Linvo').click()
+    await expect(page.locator('.toast')).toContainText('Movida para Linvo')
+    await cards(page).filter({ hasText: 'Horários e estacionamento' }).first().click({ button: 'right' })
+    await item(page, 'Fazer uma cópia').click()
+    await expect(cards(page).filter({ hasText: 'Horários e estacionamento' })).toHaveCount(2)
+  })
+
+  test('lembrete: adiar pelo menu', async ({ page }) => {
+    await tab(page, 'Lembretes')
+    await page.locator('.r-item', { hasText: 'Comprar pilha' }).click({ button: 'right' })
+    await item(page, 'Adiar').click()
+    await item(page, /Amanhã de manhã/).click()
+    await expect(page.locator('.r-group', { hasText: 'Amanhã' }).locator('.r-title')).toContainText(['Comprar pilha AA e lâmpada da varanda'])
+  })
+
+  test('categoria na lateral: nova nota já na categoria', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 })
+    await page.locator('.sidebar').getByRole('button', { name: 'Fluency 2' }).click({ button: 'right' })
+    await item(page, 'Nova nota em Fluency').click()
+    await expect(page.locator('#categoria')).toContainText('Fluency')
+  })
+
+  test('teclado: Shift+F10 abre o menu do card focado; Esc fecha sem abrir a nota', async ({ page }) => {
+    const card = cards(page).filter({ hasText: 'Horários e estacionamento' })
+    await card.focus()
+    await page.keyboard.press('Shift+F10')
+    await expect(menu(page)).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(menu(page)).toHaveCount(0)
+    await expect(page.locator('.editor')).toHaveCount(0)
+  })
+
+  test('sem menu do navegador fora dos campos de texto', async ({ page }) => {
+    const blocked = await page.evaluate(() => {
+      const ev = new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 5, clientY: 5 })
+      document.querySelector('.section-label')!.dispatchEvent(ev)
+      const inField = new MouseEvent('contextmenu', { bubbles: true, cancelable: true })
+      document.getElementById('busca')!.dispatchEvent(inField)
+      return [ev.defaultPrevented, inField.defaultPrevented]
+    })
+    expect(blocked).toEqual([true, false])
+  })
+})

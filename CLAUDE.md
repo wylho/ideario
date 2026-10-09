@@ -32,6 +32,9 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
   Masonry é JS (`Masonry.svelte` + `estimateCard`), porque a WebKitGTK não equilibra `columns:` do CSS.
 - Navegação (proposta A): `app.view` (como ver) e `app.filter` (categoria + tags, o que ver) são independentes; `app.box`
   = active/archive/trash só na visão Notas. Seletor de visão embaixo com `app.counts` (`api.viewCounts`).
+- Menus de contexto: `ContextMenu.svelte` (clique direito, Shift+F10, toque longo) + itens em `src/lib/menus.ts`.
+  O menu do navegador é bloqueado fora de campos de texto (`main.ts`). Ações com "Desfazer" no toast.
+- Prévia dos cards: a projeção entrega `preview` (blocos na ordem do documento) e `label`; a UI não parseia o corpo.
 - Tags: `tags` na nota guarda só as manuais; as `#tags` do corpo são derivadas na projeção (evita gravar tags pela metade
   durante o salvamento contínuo).
 - Verificação: `npm run check`, `npm run test:e2e`, `npm run tauri build`.

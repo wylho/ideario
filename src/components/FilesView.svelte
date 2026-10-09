@@ -7,6 +7,8 @@
   import Empty from './Empty.svelte'
   import ViewEmpty from './ViewEmpty.svelte'
   import Picker from './Picker.svelte'
+  import ContextMenu from './ContextMenu.svelte'
+  import { attachmentMenu } from '../lib/menus'
   import type { AttachmentKind, AttachmentRow, FileFilter, FileSort } from '../lib/types'
 
   let filter = $state<FileFilter>('all')
@@ -68,7 +70,9 @@
     <div class="f-list">
       {#each list as r (r.noteId + r.hash)}
         {@const cat = app.category(r.categoryId)}
-        <button class="f-row" onclick={() => open(r)}>
+        <ContextMenu items={() => attachmentMenu(r)}>
+          {#snippet children(trigger)}
+        <button {...trigger} class="f-row" onclick={() => open(r)}>
           {#if r.kind === 'image'}<img class="f-thumb" src={api.imageUrl(r.hash, 'thumb')} alt="" />{:else}{@render fileIcon(r)}{/if}
           <span class="f-text">
             <span class="f-name">{r.name}</span>
@@ -82,17 +86,23 @@
             {#if r.origBytes}<small>de {fmtBytes(r.origBytes)}</small>{/if}
           </span>
         </button>
+          {/snippet}
+        </ContextMenu>
       {/each}
     </div>
   {/if}
 {:else}
   <div class="f-grid">
     {#each list as r (r.noteId + r.hash)}
-      <button class="f-tile" onclick={() => open(r)}>
+      <ContextMenu items={() => attachmentMenu(r)}>
+        {#snippet children(trigger)}
+      <button {...trigger} class="f-tile" onclick={() => open(r)}>
         {#if r.kind === 'image'}<img src={api.imageUrl(r.hash, 'thumb')} alt="" />{:else}{@render fileIcon(r, true)}{/if}
         <span class="f-name">{r.name}</span>
         <span class="f-sub">{fmtBytes(r.bytes)}</span>
       </button>
+        {/snippet}
+      </ContextMenu>
     {/each}
   </div>
 {/if}

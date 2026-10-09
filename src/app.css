@@ -557,3 +557,23 @@ button { cursor: pointer; }
 .pop-actions .btn { flex: 1; }
 
 .quick span, .quick small { white-space: nowrap; }
+
+/* menus de contexto */
+.menu.ctx { min-width: 228px; }
+.menu-item .grow { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.menu-item[data-state="open"] { background: var(--raised); }
+.menu-chev { margin-left: auto; color: var(--muted); display: grid; }
+.menu-hint { margin-left: auto; color: var(--muted); font-size: 12px; font-family: var(--font-mono); white-space: nowrap; }
+.menu-swatch { width: 16px; height: 16px; border-radius: 999px; flex: none; box-shadow: inset 0 0 0 1px rgb(0 0 0 / .12); }
+.menu-item svg { flex: none; color: var(--muted); }
+.menu-item.danger svg { color: inherit; }
+/* sem seleção de texto nem balão nativo ao segurar o dedo em itens com menu */
+.card, .r-item, .f-row, .f-tile, .mood-tile, .d-item, .chip { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.card[data-state="open"], .r-item[data-state="open"], .f-row[data-state="open"], .f-tile[data-state="open"], .mood-tile[data-state="open"] {
+  outline: 2px solid var(--accent); outline-offset: 2px;
+}
+/* toast com ação */
+.toast { display: flex; align-items: center; gap: 14px; }
+.toast.has-action { pointer-events: auto; }
+.toast button { color: var(--accent-soft); font-weight: 700; font-size: 13.5px; }
+.r-item[data-state="open"], .f-row[data-state="open"] { outline-offset: -2px; border-radius: 14px; background: var(--raised); }
