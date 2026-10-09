@@ -510,8 +510,8 @@ test('card grande para na altura máxima e esmaece o fim; os metadados continuam
   await page.setViewportSize({ width: 1280, height: 800 })
   const longo = cards(page).filter({ hasText: 'Feedbacks do trimestre' })
   await expect(longo.locator('.preview')).toHaveAttribute('data-clipped', '')
-  const pv = (await longo.locator('.preview').boundingBox())!
-  expect(pv.height).toBeLessThanOrEqual(300)
+  // A grade refaz as colunas depois de mudar o tamanho da janela; mede quando o card já está no lugar.
+  await expect.poll(async () => (await longo.locator('.preview').boundingBox())?.height ?? Infinity).toBeLessThanOrEqual(300)
   await expect(longo.locator('.card-meta')).toBeVisible()
   const curto = cards(page).filter({ hasText: 'Horários e estacionamento' })
   await expect(curto.locator('.preview')).not.toHaveAttribute('data-clipped', '')
@@ -1045,6 +1045,8 @@ test.describe('blocos no editor', () => {
     await page.locator('#corpo .img-row img').first().click({ button: 'right' })
     await expect(page.getByRole('menuitem', { name: 'Ver', exact: true })).toBeVisible()
     await page.keyboard.press('Escape')
+    // espera o menu do clique direito sumir (ele também tem "Copiar")
+    await expect(page.getByRole('menuitem', { name: 'Ver', exact: true })).toHaveCount(0)
     await page.locator('#corpo .img-row').hover()
     await page.locator('.blk-handle').click()
     await page.getByRole('menuitem', { name: 'Copiar', exact: true }).click()
