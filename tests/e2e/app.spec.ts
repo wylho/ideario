@@ -560,24 +560,38 @@ test('lateral: chevron mostra e oculta as tags e lembra a escolha', async ({ pag
   await expect(page.locator('.sidebar .tag-cloud')).toHaveCount(0)
 })
 
-test('desktop: marca, visões e ações com folgas iguais; busca é um ícone que abre o campo e fecha vazio', async ({ page }) => {
+test('desktop: visões no meio com folgas iguais e paradas; busca abre por cima da folga; a nuvem não empurra nada', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 })
+  const box = async (sel: string) => (await page.locator(sel).first().boundingBox())!
   // Folgas iguais: fim da marca → visões e visões → ícones da direita.
   const gaps = async () => {
-    const brand = (await page.locator('.brand-area').boundingBox())!
-    const v = (await page.locator('.view-switch').boundingBox())!
-    const actions = (await page.locator('.top-actions').boundingBox())!
+    const brand = await box('.brand-area')
+    const v = await box('.view-switch')
+    const actions = await box('.top-actions')
     return [v.x - (brand.x + brand.width), actions.x - (v.x + v.width)]
   }
   const [l, r] = await gaps()
   expect(Math.abs(l - r)).toBeLessThan(1.5)
+  const views = await box('.view-switch')
+  const sort = await box('.top-actions [aria-label^="Ordenar"]')
+  const same = (a: { x: number; width: number }, b: { x: number; width: number }) => {
+    expect(a.x).toBeCloseTo(b.x, 0)
+    expect(a.x + a.width).toBeCloseTo(b.x + b.width, 0)
+  }
+  const still = async () => {
+    same(await box('.view-switch'), views)
+    same(await box('.top-actions [aria-label^="Ordenar"]'), sort)
+  }
+
   await expect(page.locator('#busca')).toHaveCount(0)
   await page.getByRole('button', { name: 'Buscar', exact: true }).click()
   await expect(page.locator('#busca')).toBeFocused()
   await page.keyboard.type('paraty')
   await expect(cards(page)).toHaveCount(1)
-  const [l2, r2] = await gaps()
-  expect(Math.abs(l2 - r2)).toBeLessThan(1.5)
+  await still()
+  // o campo cresce para a esquerda sem cobrir as visões
+  const field = await box('.search.inline')
+  expect(field.x).toBeGreaterThan(views.x + views.width)
   await page.locator('.card').first().focus()
   await expect(page.locator('#busca')).toHaveValue('paraty')
   await page.locator('#busca').fill('')
@@ -585,4 +599,17 @@ test('desktop: marca, visões e ações com folgas iguais; busca é um ícone qu
   await expect(page.locator('#busca')).toHaveCount(0)
   await page.keyboard.press('Control+f')
   await expect(page.locator('#busca')).toBeFocused()
+  await page.locator('#busca').press('Escape')
+
+  // trocar de visão não mexe nas visões (os espaços da direita ficam reservados)
+  await page.locator('.view-switch').getByRole('button', { name: /Arquivos/ }).click()
+  same(await box('.view-switch'), views)
+  await page.locator('.view-switch').getByRole('button', { name: /Notas/ }).click()
+
+  // a nuvem aparece no primeiro espaço do grupo da direita: nada se move
+  await newNote(page)
+  await page.keyboard.type('Sincroniza')
+  await back(page)
+  await expect(page.locator('.sync-ind')).toBeVisible({ timeout: 5000 })
+  await still()
 })
