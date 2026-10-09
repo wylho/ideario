@@ -560,24 +560,17 @@ test('lateral: chevron mostra e oculta as tags e lembra a escolha', async ({ pag
   await expect(page.locator('.sidebar .tag-cloud')).toHaveCount(0)
 })
 
-test('desktop: visões no meio com folgas iguais e paradas; busca abre por cima da folga; a nuvem não empurra nada', async ({ page }) => {
+test('desktop: visões no canto direito e ações ao lado, paradas; busca e nuvem só ocupam a folga', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 })
   const box = async (sel: string) => (await page.locator(sel).first().boundingBox())!
-  // Folgas iguais: fim da marca → visões e visões → ícones da direita.
-  const gaps = async () => {
-    const brand = await box('.brand-area')
-    const v = await box('.view-switch')
-    const actions = await box('.top-actions')
-    return [v.x - (brand.x + brand.width), actions.x - (v.x + v.width)]
-  }
-  const [l, r] = await gaps()
-  expect(Math.abs(l - r)).toBeLessThan(1.5)
-  const views = await box('.view-switch')
-  const sort = await box('.top-actions [aria-label^="Ordenar"]')
   const same = (a: { x: number; width: number }, b: { x: number; width: number }) => {
     expect(a.x).toBeCloseTo(b.x, 0)
     expect(a.x + a.width).toBeCloseTo(b.x + b.width, 0)
   }
+  const views = await box('.view-switch')
+  expect(views.x + views.width).toBeCloseTo(1280 - 14, 0)
+  const sort = await box('.top-actions [aria-label^="Ordenar"]')
+  const lupa = await box('.top-actions [aria-label="Buscar"]')
   const still = async () => {
     same(await box('.view-switch'), views)
     same(await box('.top-actions [aria-label^="Ordenar"]'), sort)
@@ -589,9 +582,9 @@ test('desktop: visões no meio com folgas iguais e paradas; busca abre por cima 
   await page.keyboard.type('paraty')
   await expect(cards(page)).toHaveCount(1)
   await still()
-  // o campo cresce para a esquerda sem cobrir as visões
+  // o campo cresce para a esquerda, a partir de onde estava a lupa
   const field = await box('.search.inline')
-  expect(field.x).toBeGreaterThan(views.x + views.width)
+  expect(field.x + field.width).toBeCloseTo(lupa.x + lupa.width, 0)
   await page.locator('.card').first().focus()
   await expect(page.locator('#busca')).toHaveValue('paraty')
   await page.locator('#busca').fill('')
@@ -601,15 +594,16 @@ test('desktop: visões no meio com folgas iguais e paradas; busca abre por cima 
   await expect(page.locator('#busca')).toBeFocused()
   await page.locator('#busca').press('Escape')
 
-  // trocar de visão não mexe nas visões (os espaços da direita ficam reservados)
+  // trocar de visão não mexe nas visões
   await page.locator('.view-switch').getByRole('button', { name: /Arquivos/ }).click()
   same(await box('.view-switch'), views)
   await page.locator('.view-switch').getByRole('button', { name: /Notas/ }).click()
 
-  // a nuvem aparece no primeiro espaço do grupo da direita: nada se move
+  // a nuvem aparece à esquerda de tudo: nada se move
   await newNote(page)
   await page.keyboard.type('Sincroniza')
   await back(page)
   await expect(page.locator('.sync-ind')).toBeVisible({ timeout: 5000 })
   await still()
+  same(await box('.top-actions [aria-label="Buscar"]'), lupa)
 })
