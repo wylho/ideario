@@ -573,7 +573,7 @@
           <DropdownMenu.Root>
             <DropdownMenu.Trigger aria-label="Inserir" title="Inserir"><Plus size={19} /></DropdownMenu.Trigger>
             <DropdownMenu.Portal>
-              <DropdownMenu.Content class="menu" side="top" align="start" sideOffset={10}>
+              <DropdownMenu.Content class="menu" side="top" align="start" sideOffset={10} onCloseAutoFocus={(e) => e.preventDefault()}>
                 <DropdownMenu.Item class="menu-item" onSelect={() => pick(photoInput)}><Image size={16} />Foto</DropdownMenu.Item>
                 {#if cameraAvailable}
                   <DropdownMenu.Item class="menu-item" onSelect={() => (cameraOpen = true)}><Camera size={16} />Câmera</DropdownMenu.Item>
