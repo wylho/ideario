@@ -1,7 +1,7 @@
 // Camada de dados da UI. Na Fase 0 é atendida por um mock em memória;
 // na Fase 1 a mesma interface passa a chamar os comandos Tauri (`invoke`) do núcleo Rust.
 import type {
-  AttachmentRow, Box, Category, Filter, NoteDetail, NoteInput, NoteSummary, Settings, SyncStatus, TagCount, Tone, ViewCounts,
+  AttachmentRow, Box, Category, Filter, NoteDetail, NoteInput, NotePatch, NoteSummary, Settings, SyncStatus, TagCount, Tone, ViewCounts,
 } from '../types'
 import { invoke, isTauri } from '@tauri-apps/api/core'
 import { mockApi } from './mock'
@@ -22,6 +22,12 @@ export interface Api {
   /** Cria ou atualiza. `tags` são as manuais; as `#palavra` do corpo entram na projeção. */
   saveNote(input: NoteInput): Promise<NoteSummary>
   setReminderDone(id: string, done: boolean): Promise<void>
+  /** Muda metadados sem abrir o editor (menus de contexto). */
+  updateNote(id: string, patch: NotePatch): Promise<void>
+  /** Cria uma cópia da nota (sem lembrete) e devolve o id da nova. */
+  duplicateNote(id: string): Promise<string>
+  /** Texto da nota para copiar, com a estrutura em texto simples (tópicos, tarefas). */
+  noteText(id: string): Promise<string>
   /** Apaga definitivamente (só a partir da lixeira). */
   deleteNote(id: string): Promise<void>
 

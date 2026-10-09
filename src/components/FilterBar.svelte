@@ -2,6 +2,8 @@
   import { Dialog } from 'bits-ui'
   import { Hash, X } from '@lucide/svelte'
   import { app } from '../lib/app.svelte'
+  import { categoryMenu } from '../lib/menus'
+  import ContextMenu from './ContextMenu.svelte'
 
   // O que está sendo visto. No desktop: título com a categoria e as tags ativas.
   // No celular: linha de categorias sempre à mão e as tags numa folha.
@@ -43,9 +45,13 @@
   <div class="filter-row" role="group" aria-label="Categoria">
     <button class="chip" class:on={!app.filter.categoryId} onclick={() => (app.filter.categoryId = null)}>Tudo</button>
     {#each app.categories as c (c.id)}
-      <button class="chip" class:on={app.filter.categoryId === c.id} aria-pressed={app.filter.categoryId === c.id} onclick={() => app.setCategory(c.id)}>
-        <i class="dot" style:background={c.color}></i>{c.name}
-      </button>
+      <ContextMenu items={() => categoryMenu(c.id)}>
+        {#snippet children(trigger)}
+          <button {...trigger} class="chip" class:on={app.filter.categoryId === c.id} aria-pressed={app.filter.categoryId === c.id} onclick={() => app.setCategory(c.id)}>
+            <i class="dot" style:background={c.color}></i>{c.name}
+          </button>
+        {/snippet}
+      </ContextMenu>
     {/each}
     <button class="chip" class:on={app.filter.tags.length > 0} onclick={() => (tagsOpen = true)}>
       <Hash size={14} />Tags{#if app.filter.tags.length}<span class="count">{app.filter.tags.length}</span>{/if}

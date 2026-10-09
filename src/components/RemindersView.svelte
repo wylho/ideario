@@ -4,6 +4,8 @@
   import { app, live } from '../lib/app.svelte'
   import { dayDiff, fmtShortDate, fmtTime, isOverdue } from '../lib/format'
   import ViewEmpty from './ViewEmpty.svelte'
+  import ContextMenu from './ContextMenu.svelte'
+  import { reminderMenu } from '../lib/menus'
   import type { NoteSummary } from '../lib/types'
 
   let showDone = $state(false)
@@ -34,7 +36,9 @@
 {#snippet item(n: NoteSummary)}
   {@const cat = app.category(n.categoryId)}
   {@const dd = dayDiff(n.reminderAt!)}
-  <div class="r-item" class:done={n.reminderDone}>
+  <ContextMenu items={() => reminderMenu(n)}>
+    {#snippet children(trigger)}
+  <div {...trigger} class="r-item" class:done={n.reminderDone}>
     <button class="r-check" aria-label={n.reminderDone ? 'Reabrir lembrete' : 'Concluir lembrete'} onclick={() => toggle(n)}>
       {#if n.reminderDone}<Check size={14} strokeWidth={3} />{/if}
     </button>
@@ -52,6 +56,8 @@
       {#if dd === 0 && n.reminderDone}<small>hoje</small>{/if}
     </span>
   </div>
+    {/snippet}
+  </ContextMenu>
 {/snippet}
 
 {#if list.ready && !pending.length}

@@ -76,7 +76,12 @@
 
     {#if app.wide}<ViewDock />{:else}<TabBar />{/if}
 
-    <div class="toast" class:show={!!app.toast} role="status" aria-live="polite">{app.toast}</div>
+    <div class="toast" class:show={!!app.toast} class:has-action={!!app.toastAction} role="status" aria-live="polite">
+      <span>{app.toast}</span>
+      {#if app.toastAction}
+        <button onclick={() => { app.toastAction?.run(); app.toast = null; app.toastAction = null }}>{app.toastAction.label}</button>
+      {/if}
+    </div>
   </div>
 
   {#if !app.wide}<Drawer />{/if}

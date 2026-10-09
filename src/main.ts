@@ -6,4 +6,12 @@ import './lib/theme.svelte'
 
 applySystemFonts()
 
+// Um app, não um site: sem o menu do navegador (Voltar, Recarregar, Inspecionar).
+// Campos de texto e o editor mantêm o menu nativo (copiar, colar, corretor ortográfico).
+// Os menus do Ideario tratam o evento antes, no próprio elemento.
+document.addEventListener('contextmenu', (e) => {
+  if ((e.target as Element).closest?.('input, textarea, [contenteditable="true"]')) return
+  e.preventDefault()
+})
+
 export default mount(App, { target: document.getElementById('app')! })

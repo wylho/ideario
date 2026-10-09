@@ -5,6 +5,8 @@
   import Empty from './Empty.svelte'
   import Masonry from './Masonry.svelte'
   import ViewEmpty from './ViewEmpty.svelte'
+  import ContextMenu from './ContextMenu.svelte'
+  import { attachmentMenu } from '../lib/menus'
   import type { AttachmentRow, Tone } from '../lib/types'
 
   const TONES: { id: Tone; label: string; sw: string }[] = [
@@ -36,11 +38,15 @@
 {/if}
 
 {#snippet tile(r: AttachmentRow)}
-  <button class="mood-tile" onclick={() => (app.lightbox = r)}>
+  <ContextMenu items={() => attachmentMenu(r)}>
+    {#snippet children(trigger)}
+  <button {...trigger} class="mood-tile" onclick={() => (app.lightbox = r)}>
     <img src={api.imageUrl(r.hash, 'thumb')} alt={r.name} style:aspect-ratio="{r.width}/{r.height}" decoding="async" />
     {#if r.palette}<span class="mood-pal">{#each r.palette as p (p)}<i style:background={p}></i>{/each}</span>{/if}
     <span class="mood-cap">{r.noteTitle}</span>
   </button>
+    {/snippet}
+  </ContextMenu>
 {/snippet}
 
 <Masonry

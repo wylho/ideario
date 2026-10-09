@@ -3,6 +3,8 @@
   import { api } from '../lib/api'
   import { app } from '../lib/app.svelte'
   import { fmtReminder, isOverdue, withHashtags } from '../lib/format'
+  import { noteMenu } from '../lib/menus'
+  import ContextMenu from './ContextMenu.svelte'
   import type { NoteSummary } from '../lib/types'
 
   let { n }: { n: NoteSummary } = $props()
@@ -14,7 +16,10 @@
 
 {#snippet rich(text: string)}{#each withHashtags(text) as s, i (i)}{#if s.tag}<span class="hashtag">{s.text}</span>{:else}{s.text}{/if}{/each}{/snippet}
 
+<ContextMenu items={() => noteMenu(n)}>
+  {#snippet children(trigger)}
 <div
+  {...trigger}
   class="card c-{n.color}"
   onclick={open}
   onkeydown={(e) => e.key === 'Enter' && e.target === e.currentTarget && open()}
@@ -66,3 +71,5 @@
     {/if}
   </div>
 </div>
+  {/snippet}
+</ContextMenu>

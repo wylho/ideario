@@ -35,6 +35,8 @@ class AppState {
   editor = $state<EditorTarget | null>(null)
   lightbox = $state<AttachmentRow | null>(null)
   toast = $state<string | null>(null)
+  /** Ação do toast (ex.: Desfazer). */
+  toastAction = $state<{ label: string; run: () => void } | null>(null)
   /** Janela larga (desktop): barra lateral fixa no lugar da gaveta e das abas de baixo. */
   wide = $state(false)
   /** Desktop: barra lateral aberta ou recolhida. Fica guardado no aparelho. */
@@ -133,11 +135,12 @@ class AppState {
     this.drawerOpen = false
   }
 
-  openNew() {
+  /** Nota nova; sem `defaults`, herda a categoria e as tags do filtro ativo. */
+  openNew(defaults?: { categoryId: string | null; tags: string[] }) {
     this.editor = {
       id: uuidv7(),
       isNew: true,
-      defaults: { categoryId: this.filter.categoryId, tags: [...this.filter.tags] },
+      defaults: defaults ?? { categoryId: this.filter.categoryId, tags: [...this.filter.tags] },
     }
   }
 
@@ -146,10 +149,14 @@ class AppState {
     this.editor = { id, isNew: false }
   }
 
-  say(msg: string) {
+  say(msg: string, action?: { label: string; run: () => void }) {
     this.toast = msg
+    this.toastAction = action ?? null
     clearTimeout(this.#toastTimer)
-    this.#toastTimer = setTimeout(() => (this.toast = null), 2600)
+    this.#toastTimer = setTimeout(() => {
+      this.toast = null
+      this.toastAction = null
+    }, action ? 5000 : 2600)
   }
 }
 
