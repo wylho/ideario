@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Archive, LayoutGrid, Settings, Trash2 } from '@lucide/svelte'
+  import { Archive, Hash, LayoutGrid, Settings, Trash2 } from '@lucide/svelte'
   import { app } from '../lib/app.svelte'
   import { categoryMenu, tagMenu } from '../lib/menus'
   import ContextMenu from './ContextMenu.svelte'
@@ -17,7 +17,7 @@
 
 <div class="drawer-scroll">
   <div class="d-label"><span>Categorias</span></div>
-  <button class="d-item" class:on={!app.filter.categoryId && app.box === 'active'} onclick={() => pickCategory(null)}>
+  <button class="d-item" class:on={!app.filter.categoryId && app.box === 'active'} title="Tudo" onclick={() => pickCategory(null)}>
     <LayoutGrid size={19} /><span class="grow">Tudo</span>
   </button>
   {#each app.categories as c (c.id)}
@@ -40,6 +40,10 @@
   {/each}
 
   <div class="d-sep"></div>
+  <!-- No trilho recolhido as tags viram um ícone que expande a barra. -->
+  <button class="d-item rail-only" class:on={app.filter.tags.length > 0} title="Tags" aria-label="Tags" onclick={() => app.toggleSidebar()}>
+    <Hash size={19} />
+  </button>
   <div class="d-label"><span>Tags</span>{#if app.filter.tags.length}<button class="link" onclick={() => (app.filter.tags = [])}>Limpar</button>{/if}</div>
   <div class="tag-cloud">
     {#each app.tags as t (t.name)}
@@ -54,7 +58,7 @@
   </div>
 
   <div class="d-sep"></div>
-  <button class="d-item" class:on={app.box === 'archive'} onclick={() => app.openBox('archive')}><Archive size={19} />Arquivo</button>
-  <button class="d-item" class:on={app.box === 'trash'} onclick={() => app.openBox('trash')}><Trash2 size={19} />Lixeira</button>
-  <button class="d-item" onclick={() => { app.drawerOpen = false; app.settingsOpen = true }}><Settings size={19} />Configurações</button>
+  <button class="d-item" class:on={app.box === 'archive'} title="Arquivo" onclick={() => app.openBox('archive')}><Archive size={19} /><span class="grow">Arquivo</span></button>
+  <button class="d-item" class:on={app.box === 'trash'} title="Lixeira" onclick={() => app.openBox('trash')}><Trash2 size={19} /><span class="grow">Lixeira</span></button>
+  <button class="d-item" title="Configurações" onclick={() => { app.drawerOpen = false; app.settingsOpen = true }}><Settings size={19} /><span class="grow">Configurações</span></button>
 </div>
