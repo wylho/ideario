@@ -40,6 +40,8 @@ class AppState {
   /** Arquivo e Lixeira: só na visão Notas. */
   box = $state<Box>('active')
   query = $state('')
+  /** Desktop: campo de busca aberto (no celular ele está sempre visível). */
+  searchOpen = $state(false)
   layout = $state<'grid' | 'list'>('grid')
   /** Ordem das notas; guardada no aparelho. */
   sort = $state<NoteSort>(readSort())
