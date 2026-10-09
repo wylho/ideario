@@ -9,6 +9,7 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
 - Cada nota é um **Y.Doc** (Yjs/yrs). As colunas SQL são uma projeção derivada dele.
 - Nunca sincronizar o arquivo SQLite. No Drive, um arquivo por nota e anexos endereçados por hash.
 - Fotos sempre passam pelo pipeline: orientação EXIF, remoção de metadados, resize, WebP, miniatura, paleta e tom.
+  Exceção: qualidade **Original** (escolha do usuário) não redimensiona nem recomprime (SPEC §7). Só fotos são comprimidas.
 - Fidelidade visual ao protótipo (`prototype/index.css` tem os tokens), exceto a tipografia: fonte do sistema, nunca CDN.
 - UI em **português do Brasil**. Código e identificadores em inglês.
 - Trabalhar por fases (SPEC §10). Antes de começar uma fase, conferir as decisões pendentes (SPEC §11) e perguntar o que estiver em aberto.
@@ -38,7 +39,7 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
 - Barra superior = ☰ + marca | **menu dinâmico** (`ViewActions.svelte`) | visões. O menu dinâmico tem tudo o que depende
   da visão ou do lugar, sempre na mesma ordem e com os mesmos componentes: filtro da visão (`FilterGroup`: ícones no
   desktop, um menu no celular) → ordenar (`SortMenu`) → lista/grade (`LayoutToggle`). Lembretes: mostrar concluídos;
-  Lixeira: "Esvaziar lixeira" (com confirmação, só quando há notas). Nada de controles soltos no meio do conteúdo.
+  Lixeira: ícone de esvaziar (vassoura, neutro, com confirmação, só quando há notas). Nada de controles soltos no meio do conteúdo.
 - Contorno: tudo o que é card ou miniatura (cards, listas de lembretes/arquivos, miniaturas, moodboard, fotos no
   editor, blocos das configurações) usa o mesmo `--card-edge` translúcido; `--line` fica para controles e separadores.
 - Menus de contexto: `ContextMenu.svelte` (clique direito, Shift+F10, toque longo) + itens em `src/lib/menus.ts`.

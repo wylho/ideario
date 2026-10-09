@@ -164,7 +164,8 @@ export type NoteSort = 'custom' | 'updated' | 'created' | 'category' | 'title'
 
 export type FileSort = 'recent' | 'name' | 'size'
 
-export type PhotoQuality = 'economy' | 'balanced' | 'high'
+/** 'original': a foto fica como veio (sem redimensionar nem recomprimir). */
+export type PhotoQuality = 'economy' | 'balanced' | 'high' | 'original'
 
 export interface Settings {
   wifiOnly: boolean

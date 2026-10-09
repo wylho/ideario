@@ -342,7 +342,7 @@ button { cursor: pointer; }
 .btn.sm { height: 32px; padding: 0 12px; font-size: 13px; }
 .btn.danger { background: var(--late); color: #fff; }
 .btn.danger:hover { filter: brightness(1.06); }
-.btn.danger-text { color: var(--late); margin-right: 4px; }
+.top-gap { width: 6px; flex: none; }
 /* confirmação (só para o que não tem volta) */
 .confirm {
   position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 60; width: min(400px, calc(100vw - 32px));
