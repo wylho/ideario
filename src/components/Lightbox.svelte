@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Dialog } from 'bits-ui'
-  import { Download, X } from '@lucide/svelte'
+  import { X } from '@lucide/svelte'
   import { api } from '../lib/api'
   import { app } from '../lib/app.svelte'
   import { fmtBytes } from '../lib/format'
@@ -49,7 +49,6 @@
             {/if}
           </p>
           <div class="lb-actions">
-            <button class="btn ghost" onclick={() => app.say('Original mantido no Drive')}><Download size={16} />Original</button>
             <button class="btn primary" onclick={() => app.openNote(img.noteId)}>Abrir nota</button>
           </div>
         </div>

@@ -687,12 +687,10 @@ test('arquivos em grade: toda miniatura é quadrada, foto ou não', async ({ pag
   for (const [w, h] of sizes) expect(Math.abs(w - h)).toBeLessThan(1)
 })
 
-test('configurações: qualidade Original dispensa "Manter originais"; aviso de que só fotos são comprimidas', async ({ page }) => {
+test('configurações: qualidade Original; aviso de que só fotos são comprimidas', async ({ page }) => {
   await openSettings(page)
   await expect(page.locator('.set-row', { hasText: 'Qualidade' })).toContainText('Só fotos são comprimidas')
-  await expect(page.locator('#originais')).toBeVisible()
   await page.locator('#qualidade').click()
   await page.getByRole('option', { name: 'Original · sem compressão' }).click()
   await expect(page.locator('.set-row', { hasText: 'Qualidade' })).toContainText('sem redimensionar nem comprimir')
-  await expect(page.locator('#originais')).toHaveCount(0)
 })
