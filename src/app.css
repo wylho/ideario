@@ -211,13 +211,14 @@ button { cursor: pointer; }
 .card-media { position: relative; overflow: hidden; border-radius: 15px 15px 0 0; }
 /* nota que é só um anexo: miniatura quadrada do arquivo (mesmas cores da visão Arquivos) */
 .card-file {
-  display: grid; place-items: center; aspect-ratio: 1; max-height: 220px; border-radius: 15px 15px 0 0;
+  /* largura toda do card; quadrada até 220 px de altura (antes encolhia e deixava um vão do lado) */
+  display: grid; place-items: center; height: min(100cqw, 220px); border-radius: 15px 15px 0 0;
   background: color-mix(in oklab, currentColor 9%, var(--raised)); color: var(--muted);
 }
 .card-file.t-pdf { color: #c4473a; } .card-file.t-video { color: #c2410c; } .card-file.t-sheet { color: #2f8a57; }
 .card-file.t-audio { color: #8a6bc4; } .card-file.t-doc { color: #3d63d6; }
 .card-file-name { margin: 0; font-size: 14px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.stack .card-file { max-height: 120px; }
+.stack .card-file { height: 120px; }
 .card-media:last-child { border-radius: 15px; }
 .card-media img { display: block; width: 100%; height: auto; max-height: 260px; object-fit: cover; }
 .card-media.row { display: flex; gap: 2px; }

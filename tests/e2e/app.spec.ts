@@ -874,6 +874,8 @@ test.describe('mídia no editor', () => {
     await expect(card.locator('.card-file.t-audio')).toBeVisible()
     const box = (await card.locator('.card-file').boundingBox())!
     expect(Math.abs(box.width - box.height)).toBeLessThan(2)
+    // ocupa a largura toda do card (sem vão do lado)
+    expect(Math.abs(box.width - (await card.boundingBox())!.width)).toBeLessThanOrEqual(2) // só a borda
     await expect(card.locator('.pill', { hasText: '1' })).toHaveCount(0)
   })
 

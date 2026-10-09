@@ -8,7 +8,7 @@ use serde_json::{json, Map, Value};
 use tauri::ipc::{InvokeBody, Request, Response};
 use tauri::{AppHandle, Manager, State};
 
-use crate::attachments;
+use crate::{attachments, media};
 use crate::store::{
     Attachment, AttachmentRow, Category, Filter, NoteDetail, NoteInput, NoteSummary, Result, Store, SyncStatus, TagCount, ViewCounts,
 };
@@ -25,6 +25,22 @@ impl Core {
         let store = Store::open(&data.join("ideario.db"))?;
         welcome(&store)?;
         Ok(Core { store: Mutex::new(store), data })
+    }
+
+    /// Fotos da Fase 1 ganham miniatura, paleta e tom (sem recomprimir). Em segundo plano, uma de cada vez; a trava
+    /// do banco só é pega para ler a lista e gravar cada resultado.
+    pub fn backfill_media(&self) {
+        let Ok(hashes) = self.with(|s| s.images_without_palette()) else { return };
+        for h in hashes {
+            let derived = std::fs::read(attachments::dir(&self.data).join(&h)).map_err(|e| e.to_string()).and_then(|b| media::derive(&b));
+            let _ = match derived {
+                Ok((thumb, palette, tone)) => std::fs::create_dir_all(self.data.join("thumbs"))
+                    .and_then(|_| std::fs::write(attachments::thumb_path(&self.data, &h), thumb))
+                    .map_err(|e| e.to_string())
+                    .and_then(|_| self.with(|s| s.set_palette(&h, &palette, Some(tone.as_str())))),
+                Err(_) => self.with(|s| s.set_palette(&h, &[], None)),
+            };
+        }
     }
 
     pub fn with<T>(&self, f: impl FnOnce(&Store) -> Result<T>) -> Result<T> {
@@ -225,25 +241,35 @@ pub fn get_attachments(core: Core_, hashes: Vec<String>) -> Result<Vec<Attachmen
 }
 
 /// Recebe o arquivo como corpo binário (sem passar por JSON); nome e tipo vão nos cabeçalhos.
+/// Assíncrono: a foto passa pelo pipeline numa thread à parte, com a janela livre e o banco destravado.
 #[tauri::command]
-pub fn import_file(core: Core_, request: Request<'_>) -> Result<Attachment> {
+pub async fn import_file(core: Core_<'_>, request: Request<'_>) -> Result<Attachment> {
     let InvokeBody::Raw(bytes) = request.body() else { return Err("arquivo ausente".into()) };
     let header = |k: &str| request.headers().get(k).and_then(|v| v.to_str().ok()).unwrap_or("").to_string();
     let name = percent_decode(&header("x-name"));
-    let mime = header("x-mime");
-    core.with(|s| attachments::import(s, &core.data, bytes, if name.is_empty() { "arquivo" } else { &name }, &mime))
+    let name = if name.is_empty() { "arquivo".to_string() } else { name };
+    import(&core, bytes.clone(), name, header("x-mime")).await
+}
+
+async fn import(core: &Core, bytes: Vec<u8>, name: String, mime: String) -> Result<Attachment> {
+    let quality = core.with(|s| Ok(attachments::quality(s)))?;
+    let prepared = tauri::async_runtime::spawn_blocking(move || attachments::prepare(bytes, &name, &mime, quality))
+        .await
+        .map_err(|e| e.to_string())?;
+    core.with(|s| attachments::save(s, &core.data, prepared))
 }
 
 /// Importa um arquivo do computador pelo caminho (arrastado para a janela): lido aqui, sem passar pela ponte.
 #[tauri::command]
-pub fn import_path(core: Core_, path: String) -> Result<Attachment> {
+pub async fn import_path(core: Core_<'_>, path: String) -> Result<Attachment> {
     let path = PathBuf::from(path);
     if path.is_dir() {
         return Err("pastas não podem ser anexadas".into());
     }
     let bytes = std::fs::read(&path).map_err(|e| e.to_string())?;
     let name = path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_else(|| "arquivo".into());
-    core.with(|s| attachments::import(s, &core.data, &bytes, &name, attachments::mime_of(&name)))
+    let mime = attachments::mime_of(&name).to_string();
+    import(&core, bytes, name, mime).await
 }
 
 /// Salva uma cópia do anexo na pasta Downloads e devolve onde ficou.
@@ -279,6 +305,36 @@ mod tests {
     fn decode_names() {
         assert_eq!(percent_decode("Grava%C3%A7%C3%A3o%2001.webm"), "Gravação 01.webm");
         assert_eq!(percent_decode("a%2"), "a%2");
+    }
+
+    #[test]
+    fn old_photos_get_thumbnail_and_palette_in_the_background() {
+        let tmp = std::env::temp_dir().join(format!("ideario-core-{}", uuid::Uuid::now_v7()));
+        let core = Core::open(tmp.clone()).unwrap();
+        // Como entrou na Fase 1: o arquivo cru, sem paleta nem miniatura.
+        let jpg = crate::media::tests::camera_jpeg(640, 480, 1);
+        std::fs::create_dir_all(attachments::dir(&tmp)).unwrap();
+        std::fs::write(attachments::dir(&tmp).join("abc1"), &jpg).unwrap();
+        std::fs::write(attachments::dir(&tmp).join("abc2"), b"isto nao e foto").unwrap();
+        core.with(|s| {
+            for h in ["abc1", "abc2"] {
+                s.insert_attachment(&crate::store::Attachment {
+                    hash: h.into(), kind: "image".into(), mime: "image/jpeg".into(), name: "x.jpg".into(), bytes: 1,
+                    orig_bytes: None, width: None, height: None, palette: None, tone: None, added_at: 0,
+                })?;
+            }
+            Ok(())
+        })
+        .unwrap();
+        core.backfill_media();
+        let atts = core.with(|s| s.get_attachments(&["abc1".into(), "abc2".into()])).unwrap();
+        let ok = atts.iter().find(|a| a.hash == "abc1").unwrap();
+        assert_eq!(ok.palette.as_ref().map(Vec::len), Some(5));
+        assert!(attachments::thumb_path(&tmp, "abc1").exists());
+        // A ilegível fica marcada (paleta vazia) para não tentar de novo a cada abertura.
+        assert_eq!(atts.iter().find(|a| a.hash == "abc2").unwrap().palette, Some(vec![]));
+        assert!(core.with(|s| s.images_without_palette()).unwrap().is_empty());
+        let _ = std::fs::remove_dir_all(&tmp);
     }
 
     #[test]

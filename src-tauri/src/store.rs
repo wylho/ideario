@@ -980,6 +980,22 @@ impl Store {
         Ok(())
     }
 
+    /// Fotos sem paleta (entraram antes do pipeline da Fase 3).
+    pub fn images_without_palette(&self) -> Result<Vec<String>> {
+        self.ids("SELECT hash FROM attachments WHERE kind = 'image' AND palette IS NULL", [])
+    }
+
+    /// Grava a paleta e o tom calculados depois (lista vazia = não deu para ler a foto; não tenta de novo).
+    pub fn set_palette(&self, hash: &str, palette: &[String], tone: Option<&str>) -> Result<()> {
+        self.conn
+            .execute(
+                "UPDATE attachments SET palette = ?2, tone = ?3 WHERE hash = ?1",
+                params![hash, serde_json::to_string(palette).map_err(err)?, tone],
+            )
+            .map_err(err)?;
+        Ok(())
+    }
+
     // ---------- configurações e sync ----------
 
     pub fn get_settings(&self) -> Result<Value> {

@@ -84,4 +84,13 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
 - Release: `.github/workflows/release.yml` (Actions → Release → Run workflow; precisa estar no branch padrão).
 - Ordem combinada com o usuário (plano em https://claude.ai/code/artifact/45aafe33-c71a-4b29-abb6-4caf94af6817):
   Fase 3 (Mídia) → Importar Keep (Fase 6, antecipada; precisa de um Takeout real) → Fase 4 → Fase 5 → Fase 7.
-- **Próximo passo: Fase 3 (pipeline de mídia, SPEC §7).**
+- **Fase 3 em andamento.** Pipeline de fotos no núcleo (`media.rs`): orientação EXIF, sem metadados, redução pela
+  qualidade (1280/2048/3072), WebP (com perda; sem perda se ficar menor), miniatura de 400 px em `<dados>/thumbs/<hash>.webp`
+  (servida por `att://…/<hash>?thumb`), paleta de 5 cores (corte da mediana) e tom. Original e GIF ficam como vieram.
+  Importação assíncrona (`attachments::prepare` fora da trava do banco; `save` grava). Fotos da Fase 1 ganham
+  miniatura/paleta/tom em segundo plano ao abrir (`Core::backfill_media`). 12 MP: ~0,7 s, 6,2 MB → 630 KB.
+- Skills do usuário para todas as fases: testes em Rust (TDD, proptest, provar que o teste pega erro quebrando o
+  código de propósito, clippy sem avisos no CI) e padrões idiomáticos de Rust (sem `unwrap` em produção, `pub` mínimo).
+- Pedidos do usuário para a fase certa: emoji grande de capa na nota; arrastar card até categoria da lateral; baixar em
+  Downloads ou escolher a pasta (diálogo nativo); prévia de PDFs e documentos; bug: card tremendo ao arrastar e cards
+  quebrados ao redimensionar a janela (Masonry).

@@ -24,6 +24,9 @@ sha2 = "0.10"
 imagesize = "0.13"
 unicode-normalization = "0.1"
 yrs = "0.28"
+image = { version = "0.25", default-features = false, features = ["jpeg", "png", "gif", "webp", "bmp", "tiff"] }
+fast_image_resize = { version = "5", features = ["image"] }
+webp = "0.3"
 
 [profile.release]
 codegen-units = 1
