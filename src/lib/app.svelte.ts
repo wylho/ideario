@@ -5,6 +5,25 @@ import { api } from './api'
 import type { AttachmentRow, NoteSummary, Box, Category, FileGroup, FileSort, Filter, NoteSort, SyncState, TagCount, Tone, View, ViewCounts } from './types'
 import { uuidv7 } from './uuid'
 
+export interface NameDialog {
+  kind: 'name'
+  title: string
+  label: string
+  value: string
+  /** Cor inicial; ausente = sem escolha de cor. */
+  color?: string
+  confirm: string
+  submit: (name: string, color: string | undefined) => void
+}
+export interface ConfirmAsk {
+  kind: 'confirm'
+  title: string
+  text: string
+  confirm: string
+  onconfirm: () => void
+}
+export type AppDialog = NameDialog | ConfirmAsk
+
 export interface EditorTarget {
   id: string
   isNew: boolean
@@ -126,6 +145,19 @@ class AppState {
   get filterLabel(): string | null {
     const parts = [this.category(this.filter.categoryId)?.name, ...this.filter.tags.map((t) => `#${t}`)].filter(Boolean)
     return parts.length ? parts.join(' · ') : null
+  }
+
+  // ---------- diálogos simples (nome/cor, confirmação) ----------
+  /** Um diálogo por vez: dar nome (e cor) a algo, ou confirmar o que não tem volta. */
+  dialog = $state<AppDialog | null>(null)
+
+  /** Pede um nome (e, se `color` vier, uma cor). */
+  askName(d: Omit<NameDialog, 'kind'>) {
+    this.dialog = { kind: 'name', ...d }
+  }
+
+  confirm(d: Omit<ConfirmAsk, 'kind'>) {
+    this.dialog = { kind: 'confirm', ...d }
   }
 
   // ---------- seleção múltipla (visão Notas) ----------

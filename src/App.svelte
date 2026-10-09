@@ -11,6 +11,7 @@
   import MoodboardView from './components/MoodboardView.svelte'
   import Lightbox from './components/Lightbox.svelte'
   import FabMenu from './components/FabMenu.svelte'
+  import AppDialogs from './components/AppDialogs.svelte'
   import SettingsSheet from './components/SettingsSheet.svelte'
 
   // O editor (TipTap) fica fora do pacote inicial: carrega em paralelo,
@@ -100,4 +101,5 @@
     {/await}
   {/if}
   <Lightbox />
+  <AppDialogs />
 </div>

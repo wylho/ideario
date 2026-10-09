@@ -19,7 +19,7 @@
       <AlertDialog.Description class="confirm-text">{text}</AlertDialog.Description>
       <div class="confirm-actions">
         <AlertDialog.Cancel class="btn ghost">Cancelar</AlertDialog.Cancel>
-        <AlertDialog.Action class="btn danger" onclick={() => { open = false; onconfirm() }}>{confirm}</AlertDialog.Action>
+        <AlertDialog.Action class="btn danger" onclick={() => { onconfirm(); open = false }}>{confirm}</AlertDialog.Action>
       </div>
     </AlertDialog.Content>
   </AlertDialog.Portal>

@@ -299,6 +299,9 @@ button { cursor: pointer; }
 .d-sep { height: 1px; background: var(--line); margin: 10px 16px; }
 .d-label { display: flex; justify-content: space-between; align-items: center; padding: 4px 16px 6px; font-size: 13px; color: var(--muted); font-weight: 600; }
 .link { color: var(--accent); font-weight: 600; font-size: 13px; }
+.d-label .d-add { width: 28px; height: 28px; margin: -6px -8px -6px 0; color: var(--muted); }
+.d-label .d-add:hover { color: var(--fg); }
+.rail .sidebar .d-add { display: none; }
 .tag-cloud { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 12px 4px; }
 .chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 11px; border-radius: 999px; border: 1px solid var(--line); font-size: 13px; color: var(--fg); }
 .chip.on { background: var(--accent-soft); border-color: transparent; color: var(--accent); }
@@ -420,6 +423,10 @@ button { cursor: pointer; }
   display: flex; flex-direction: column; gap: 8px; animation: fade .16s ease;
 }
 .confirm-title { font-size: 17px; font-weight: 600; }
+.name-form { display: flex; flex-direction: column; gap: 12px; }
+.color-pick { display: flex; flex-wrap: wrap; gap: 8px; }
+.color-dot { width: 30px; height: 30px; border-radius: 999px; display: grid; place-items: center; color: #fff; box-shadow: inset 0 0 0 1px rgb(0 0 0 / .1); }
+.color-dot[aria-checked="true"] { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--fg); }
 .confirm-text { color: var(--muted); font-size: 14px; line-height: 1.45; }
 .confirm-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
 .btn.full { width: 100%; margin-top: 4px; }

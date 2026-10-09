@@ -10,8 +10,10 @@
 
   let open = $state(false)
   let openedAt = -Infinity
+  let lastPointer = ''
+  // Só o toque longo precisa de proteção: com mouse (clique direito) não sobra clique para engolir.
   $effect(() => {
-    if (open) openedAt = performance.now()
+    if (open) openedAt = lastPointer === 'touch' ? performance.now() : -Infinity
   })
 
   // O toque longo termina num "click": não pode abrir a nota que está por baixo do menu.
@@ -59,7 +61,13 @@
 <ContextMenu.Root bind:open>
   <ContextMenu.Trigger>
     {#snippet child({ props })}
-      {@render children({ ...props, tabindex: undefined, onclickcapture: guardClick, oncontextmenucapture: keyboardAnchor })}
+      {@render children({
+        ...props,
+        tabindex: undefined,
+        onclickcapture: guardClick,
+        oncontextmenucapture: keyboardAnchor,
+        onpointerdowncapture: (e: PointerEvent) => (lastPointer = e.pointerType),
+      })}
     {/snippet}
   </ContextMenu.Trigger>
   <ContextMenu.Portal>

@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { Archive, ChevronDown, Hash, LayoutGrid, Settings, Trash2 } from '@lucide/svelte'
+  import { Archive, ChevronDown, Hash, LayoutGrid, Plus, Settings, Trash2 } from '@lucide/svelte'
   import { app } from '../lib/app.svelte'
-  import { categoryMenu, tagMenu } from '../lib/menus'
+  import { categoryMenu, newCategory, tagMenu } from '../lib/menus'
   import ContextMenu from './ContextMenu.svelte'
 
   // Só filtra (o que ver). A visão (como ver) fica na barra de baixo.
@@ -33,7 +33,10 @@
 </script>
 
 <div class="drawer-scroll">
-  <div class="d-label"><span>Categorias</span></div>
+  <div class="d-label">
+    <span>Categorias</span>
+    <button class="icon-btn sm d-add" aria-label="Nova categoria" title="Nova categoria" onclick={() => newCategory((id) => pickCategory(id))}><Plus size={16} /></button>
+  </div>
   <button class="d-item" class:on={!app.filter.categoryId && app.box === 'active'} title="Tudo" onclick={() => pickCategory(null)}>
     <LayoutGrid size={19} /><span class="grow">Tudo</span>
   </button>
