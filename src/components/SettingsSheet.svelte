@@ -5,6 +5,7 @@
   import { app } from '../lib/app.svelte'
   import { ago } from '../lib/format'
   import { paletteColors, theme, type ThemePref } from '../lib/theme.svelte'
+  import { background } from '../lib/background.svelte'
   import { DESKTOPS, PALETTES, type DesktopId, type PaletteId } from '../lib/palettes'
   import Picker from './Picker.svelte'
   import type { PhotoQuality, Settings, SyncStatus } from '../lib/types'
@@ -26,6 +27,23 @@
     if (!settings) return
     const snap = $state.snapshot(settings)
     if (runs++ > 0) void api.saveSettings(snap)
+  })
+
+  // Segundo plano: o mesmo recurso, com o nome que cada sistema usa para o lugar do ícone.
+  const keepOpen = $derived.by(() => {
+    switch (theme.system.desktop) {
+      case 'macos':
+        return { title: 'Continuar aberto na barra de menus', hint: 'O Ideario fica no alto da tela, na barra de menus, e volta na hora quando você precisar.' }
+      case 'windows':
+        return { title: 'Continuar aberto na bandeja', hint: 'O Ideario fica na bandeja do sistema, perto do relógio, e volta na hora quando você precisar.' }
+      case 'kde':
+        return { title: 'Continuar aberto na bandeja', hint: 'O Ideario fica na bandeja do sistema e volta na hora quando você precisar.' }
+      default:
+        return {
+          title: 'Continuar aberto em segundo plano',
+          hint: 'O Ideario fica na área de notificação e volta na hora. No GNOME, o ícone aparece com a extensão AppIndicator (já vem no Ubuntu).',
+        }
+    }
   })
 
   // Sistema primeiro: é o padrão e faz o app parecer nativo.
@@ -100,6 +118,14 @@
           </section>
 
           <section class="set-group">
+            <h3>Ao fechar a janela</h3>
+            <label class="set-row" for="segundo-plano">
+              <span><b>{keepOpen.title}</b><small>{keepOpen.hint}</small></span>
+              <Switch.Root id="segundo-plano" class="switch" checked={background.enabled} onCheckedChange={(v) => background.set(v)}><Switch.Thumb class="thumb" /></Switch.Root>
+            </label>
+          </section>
+
+          <section class="set-group">
             <h3>Sincronização</h3>
             <div class="sync-card">
               <CloudCheck size={22} />
@@ -121,7 +147,7 @@
             <h3>Fotos</h3>
             <div class="set-row">
               <span><b>Qualidade</b><small>{settings.photoQuality === 'original'
-                ? 'As fotos ficam como vieram, sem redimensionar nem comprimir. Ocupam bem mais espaço no Drive.'
+                ? 'As fotos ficam exatamente como vieram, sem redimensionar nem comprimir, inclusive com a localização (GPS). Ocupam bem mais espaço no Drive.'
                 : 'Aplicada ao importar.'} Só fotos são comprimidas: PDFs, documentos, áudio e vídeo ficam exatamente como foram anexados.</small></span>
               <Picker
                 id="qualidade"
