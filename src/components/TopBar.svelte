@@ -7,7 +7,7 @@
   import { app } from '../lib/app.svelte'
   import { viewInfo } from '../lib/views'
 
-  // Desktop: barra superior fixa. Marca à esquerda, visões no centro exato, ações à direita;
+  // Desktop: barra superior fixa. Marca, visões e ações com folgas iguais entre os três grupos;
   // a busca é um ícone que abre o campo ali mesmo e fica aberto enquanto houver texto.
   // Celular: ☰ + campo de busca no topo do conteúdo.
   const where = $derived(app.box === 'archive' ? 'Arquivo' : app.box === 'trash' ? 'Lixeira' : app.filterLabel)
