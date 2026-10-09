@@ -14,10 +14,9 @@
   const inArchive = $derived(app.box === 'archive')
   let confirmDelete = $state(false)
 
-  function done(fn: () => void) {
-    fn()
-    app.clearSelection()
-  }
+  // A seleção continua depois de cada ação, para encadear várias (fixar, depois mudar a cor…).
+  // Só termina no ×, no Esc, num clique no vazio, ou quando as notas saem da tela (arquivar, lixeira).
+  const done = (fn: () => void) => fn()
   async function deleteForever() {
     const n = notes.length
     for (const x of notes) await api.deleteNote(x.id)
