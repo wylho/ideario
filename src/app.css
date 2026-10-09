@@ -180,7 +180,6 @@ button { cursor: pointer; }
 .tab-ico { display: grid; place-items: center; width: 56px; height: 30px; border-radius: 999px; transition: background .15s; }
 .tabbar button.on { color: var(--fg); }
 .tabbar button.on .tab-ico { background: var(--accent-soft); color: var(--accent); }
-.badge { position: absolute; top: 4px; left: calc(50% + 12px); width: 8px; height: 8px; border-radius: 999px; background: var(--late); border: 2px solid var(--bg); }
 
 /* gaveta */
 .overlay { position: fixed; inset: 0; background: rgb(10 14 13 / .38); z-index: 20; animation: fade .15s ease; }
@@ -477,3 +476,45 @@ button { cursor: pointer; }
 .done-toggle:hover { background: var(--raised); color: var(--fg); }
 .done-toggle svg { transition: transform .15s; }
 .done-toggle[aria-expanded="true"] svg { transform: rotate(180deg); }
+
+/* filtro (o que ver): proposta A */
+.filter-bar, .filter-row { display: flex; align-items: center; gap: 6px; flex: none; width: 100%; max-width: calc(var(--content-max) + 32px); margin-inline: auto; padding: 0 16px 8px; }
+.filter-bar { flex-wrap: wrap; }
+.shell.wide .filter-bar { padding: 2px 24px 10px; max-width: calc(var(--content-max) + 48px); gap: 8px; }
+.filter-row { overflow-x: auto; scrollbar-width: none; }
+.filter-row .chip, .filter-bar .chip { flex: none; white-space: nowrap; }
+.chip svg { flex: none; }
+.chip .dot { margin-right: 1px; }
+.filter-title { display: flex; align-items: center; gap: 10px; font-family: var(--font-display); font-size: 24px; font-weight: 700; letter-spacing: -.02em; margin-right: 6px; }
+.filter-title .dot { width: 12px; height: 12px; }
+.filter-title .icon-btn { margin-left: -4px; }
+.filter-hint { font-size: 13px; color: var(--muted); }
+.filter-bar .link, .filter-row .link { white-space: nowrap; padding: 0 6px; }
+
+/* visão (como ver): barra centralizada no desktop */
+.view-dock {
+  position: absolute; left: 50%; bottom: 20px; transform: translateX(-50%); z-index: 5; display: flex; gap: 2px; padding: 4px;
+  border-radius: 999px; background: var(--surface); border: 1px solid var(--line); box-shadow: 0 10px 30px rgb(22 32 28 / .16);
+}
+.lens { display: inline-flex; align-items: center; gap: 7px; height: 40px; padding: 0 16px; border-radius: 999px; font-size: 14px; font-weight: 600; color: var(--muted); white-space: nowrap; }
+.lens:hover { color: var(--fg); background: var(--raised); }
+.lens.on { background: var(--accent); color: var(--on-accent); }
+.lens .n { font-family: var(--font-mono); font-size: 11.5px; font-weight: 500; opacity: .75; font-variant-numeric: tabular-nums; }
+.lens.zero .n { opacity: .4; }
+.lens .n.late { color: var(--late); opacity: 1; font-weight: 700; }
+.lens.on .n.late { color: inherit; }
+
+/* abas (celular): número de itens no canto do ícone */
+.tab-ico { position: relative; }
+.tab-n {
+  position: absolute; top: -4px; left: calc(50% + 6px); min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px;
+  display: grid; place-items: center; font-family: var(--font-mono); font-size: 10.5px; font-weight: 600; font-variant-numeric: tabular-nums;
+  background: var(--fg); color: var(--bg); border: 2px solid var(--bg); box-sizing: content-box;
+}
+.tab-n.zero { background: var(--line); color: var(--muted); }
+.tab-n.late { background: var(--late); color: #fff; }
+
+.empty-acts { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 8px; }
+.empty .btn.primary { flex: none; }
+.sheet-actions { display: flex; gap: 8px; justify-content: flex-end; }
+.sheet .tag-cloud { padding: 0; }

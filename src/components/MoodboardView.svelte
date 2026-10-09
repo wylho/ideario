@@ -4,6 +4,7 @@
   import { app, live } from '../lib/app.svelte'
   import Empty from './Empty.svelte'
   import Masonry from './Masonry.svelte'
+  import ViewEmpty from './ViewEmpty.svelte'
   import type { AttachmentRow, Tone } from '../lib/types'
 
   const TONES: { id: Tone; label: string; sw: string }[] = [
@@ -15,7 +16,7 @@
   ]
 
   let tone = $state<Tone | null>(null)
-  const items = live(() => api.listImages({ scope: app.scope, query: app.query, tone }), [] as AttachmentRow[])
+  const items = live(() => api.listImages({ filter: $state.snapshot(app.filter), query: app.query, tone }), [] as AttachmentRow[])
 </script>
 
 <div class="tones" role="group" aria-label="Filtrar por cor">
@@ -27,7 +28,11 @@
 </div>
 
 {#if items.ready && !items.current.length}
-  <Empty icon={Images} title="Nenhuma imagem" text="Imagens coladas nas notas aparecem aqui automaticamente." />
+  {#if tone}
+    <Empty icon={Images} title="Nenhuma imagem neste tom" text="Escolha outro tom acima." />
+  {:else}
+    <ViewEmpty view="moodboard" hint={app.filterLabel ? undefined : 'Imagens coladas nas notas aparecem aqui automaticamente.'} />
+  {/if}
 {/if}
 
 {#snippet tile(r: AttachmentRow)}

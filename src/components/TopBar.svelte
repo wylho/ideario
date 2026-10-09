@@ -2,8 +2,10 @@
   import { CloudCheck, LayoutGrid, Menu, Rows3, Search, X } from '@lucide/svelte'
   import { app } from '../lib/app.svelte'
 
-  const viewLabel = $derived({ notes: 'notas', reminders: 'lembretes', files: 'arquivos', moodboard: 'imagens' }[app.view])
-  const placeholder = $derived(`Buscar ${viewLabel}${app.scopeLabel && app.view !== 'reminders' ? ` em ${app.scopeLabel}` : ''}`)
+  import { viewInfo } from '../lib/views'
+
+  const where = $derived(app.box === 'archive' ? 'Arquivo' : app.box === 'trash' ? 'Lixeira' : app.filterLabel)
+  const placeholder = $derived(`Buscar ${viewInfo(app.view).many}${where ? ` em ${where}` : ''}`)
 </script>
 
 <header class="topbar">

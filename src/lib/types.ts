@@ -118,12 +118,27 @@ export interface NoteInput {
   tags: string[]
 }
 
-export type Scope =
-  | { kind: 'all' }
-  | { kind: 'category'; id: string }
-  | { kind: 'tag'; tag: string }
-  | { kind: 'archive' }
-  | { kind: 'trash' }
+/**
+ * O que ver. Independe da visão (como ver): trocar uma nunca desfaz a outra.
+ * Categoria e tags se combinam (a nota precisa ter todas as tags).
+ */
+export interface Filter {
+  categoryId: string | null
+  tags: string[]
+}
+
+/** Notas ativas, arquivadas ou na lixeira. Arquivo e Lixeira só existem na visão Notas. */
+export type Box = 'active' | 'archive' | 'trash'
+
+/** Quantos itens cada visão tem para o filtro atual, para mostrar antes do clique. */
+export interface ViewCounts {
+  notes: number
+  /** Lembretes pendentes. */
+  reminders: number
+  overdue: number
+  files: number
+  moodboard: number
+}
 
 export type View = 'notes' | 'reminders' | 'files' | 'moodboard'
 

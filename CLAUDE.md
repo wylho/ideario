@@ -30,6 +30,8 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
 - Layout responsivo (pedido do usuário: desktop primeiro): < 640 px = protótipo de celular; 640–959 px = gaveta + abas,
   largura total; ≥ 960 px = barra lateral fixa (`NavList`), sem abas, editor e configurações como diálogo central.
   Masonry é JS (`Masonry.svelte` + `estimateCard`), porque a WebKitGTK não equilibra `columns:` do CSS.
+- Navegação (proposta A): `app.view` (como ver) e `app.filter` (categoria + tags, o que ver) são independentes; `app.box`
+  = active/archive/trash só na visão Notas. Seletor de visão embaixo com `app.counts` (`api.viewCounts`).
 - Tags: `tags` na nota guarda só as manuais; as `#tags` do corpo são derivadas na projeção (evita gravar tags pela metade
   durante o salvamento contínuo).
 - Verificação: `npm run check`, `npm run test:e2e`, `npm run tauri build`.

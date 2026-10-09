@@ -1,13 +1,13 @@
 <script lang="ts">
-  import { Bell, Check, ChevronDown } from '@lucide/svelte'
+  import { Check, ChevronDown } from '@lucide/svelte'
   import { api } from '../lib/api'
   import { app, live } from '../lib/app.svelte'
   import { dayDiff, fmtShortDate, fmtTime, isOverdue } from '../lib/format'
-  import Empty from './Empty.svelte'
+  import ViewEmpty from './ViewEmpty.svelte'
   import type { NoteSummary } from '../lib/types'
 
   let showDone = $state(false)
-  const list = live(() => api.listReminders({ query: app.query, includeDone: true }), [] as NoteSummary[])
+  const list = live(() => api.listReminders({ filter: $state.snapshot(app.filter), query: app.query, includeDone: true }), [] as NoteSummary[])
 
   const pending = $derived(list.current.filter((n) => !n.reminderDone))
   // Concluídos: os mais recentes primeiro.
@@ -55,11 +55,11 @@
 {/snippet}
 
 {#if list.ready && !pending.length}
-  <Empty
-    icon={Bell}
-    title={app.query ? 'Nada encontrado' : done.length ? 'Tudo em dia' : 'Nenhum lembrete'}
-    text={app.query ? `Nenhum lembrete contém “${app.query}”.` : done.length ? 'Nenhum lembrete pendente.' : 'Abra uma nota e toque no sino para lembrar dela depois.'}
-  />
+  {#if done.length && !app.query}
+    <div class="empty"><h3>Tudo em dia</h3><p>Nenhum lembrete pendente{app.filterLabel ? ` em ${app.filterLabel}` : ''}.</p></div>
+  {:else}
+    <ViewEmpty view="reminders" hint={app.filterLabel ? undefined : 'Abra uma nota e toque no sino para lembrar dela depois.'} />
+  {/if}
 {/if}
 
 {#each groups as [label, g] (label)}

@@ -1,53 +1,49 @@
 <script lang="ts">
-  import { Archive, Bell, Images, Paperclip, Plus, Settings, StickyNote, Trash2 } from '@lucide/svelte'
+  import { Archive, LayoutGrid, Settings, Trash2 } from '@lucide/svelte'
   import { app } from '../lib/app.svelte'
-  import type { Scope } from '../lib/types'
 
-  // Conteúdo da navegação: na gaveta (janela estreita) e na barra lateral fixa (desktop).
-  const isOn = (kind: Scope['kind'], id?: string) => {
-    const s = app.scope
-    if (s.kind !== kind) return false
-    if (id === undefined) return true
-    return (s.kind === 'category' && s.id === id) || (s.kind === 'tag' && s.tag === id)
+  // Só filtra (o que ver). A visão (como ver) fica na barra de baixo.
+  // Na gaveta, escolher categoria fecha; tags podem ser várias, então a gaveta fica aberta.
+  const total = $derived(app.categories.reduce((s, c) => s + c.noteCount, 0))
+  const pickCategory = (id: string | null) => {
+    if (id === null) app.filter.categoryId = null
+    else app.setCategory(id)
+    app.box = 'active'
+    app.drawerOpen = false
   }
-  // Filtrar a partir de Lembretes leva para Notas (Lembretes não tem filtro).
-  const target = () => (app.view === 'reminders' ? 'notes' : app.view)
 </script>
 
 <div class="drawer-scroll">
-  <button class="d-item" class:on={app.view === 'notes' && app.scope.kind === 'all'} onclick={() => app.go('notes', { kind: 'all' })}>
-    <StickyNote size={19} />Notas
-  </button>
-  <button class="d-item" class:on={app.view === 'reminders'} onclick={() => app.go('reminders')}>
-    <Bell size={19} /><span class="grow">Lembretes</span>
-    {#if app.overdue > 0}<span class="late-count" aria-label="{app.overdue} atrasados">{app.overdue}</span>{/if}
-  </button>
-  <button class="d-item" class:on={app.view === 'files'} onclick={() => app.go('files')}><Paperclip size={19} />Arquivos</button>
-  <button class="d-item" class:on={app.view === 'moodboard'} onclick={() => app.go('moodboard')}><Images size={19} />Moodboard</button>
-
-  <div class="d-sep"></div>
   <div class="d-label"><span>Categorias</span><button class="link">Editar</button></div>
+  <button class="d-item" class:on={!app.filter.categoryId && app.box === 'active'} onclick={() => pickCategory(null)}>
+    <LayoutGrid size={19} /><span class="grow">Tudo</span>
+  </button>
   {#each app.categories as c (c.id)}
-    <button class="d-item" class:on={isOn('category', c.id)} onclick={() => app.go(target(), { kind: 'category', id: c.id })} title={c.name}>
+    <button
+      class="d-item"
+      class:on={app.filter.categoryId === c.id && app.box === 'active'}
+      aria-pressed={app.filter.categoryId === c.id}
+      onclick={() => pickCategory(c.id)}
+      title={c.name}
+    >
       <i class="dot lg" style:background={c.color}></i>
       <span class="grow">{c.name}</span>
       <span class="count">{c.noteCount}</span>
     </button>
   {/each}
-  <button class="d-item muted"><Plus size={19} />Nova categoria</button>
 
   <div class="d-sep"></div>
-  <div class="d-label"><span>Tags</span></div>
+  <div class="d-label"><span>Tags</span>{#if app.filter.tags.length}<button class="link" onclick={() => (app.filter.tags = [])}>Limpar</button>{/if}</div>
   <div class="tag-cloud">
     {#each app.tags as t (t.name)}
-      <button class="chip" class:on={isOn('tag', t.name)} onclick={() => app.go(target(), { kind: 'tag', tag: t.name })}>
+      <button class="chip" class:on={app.filter.tags.includes(t.name)} aria-pressed={app.filter.tags.includes(t.name)} onclick={() => app.toggleTag(t.name)}>
         #{t.name}<span class="count">{t.count}</span>
       </button>
     {/each}
   </div>
 
   <div class="d-sep"></div>
-  <button class="d-item" class:on={isOn('archive')} onclick={() => app.go('notes', { kind: 'archive' })}><Archive size={19} />Arquivo</button>
-  <button class="d-item" class:on={isOn('trash')} onclick={() => app.go('notes', { kind: 'trash' })}><Trash2 size={19} />Lixeira</button>
+  <button class="d-item" class:on={app.box === 'archive'} onclick={() => app.openBox('archive')}><Archive size={19} />Arquivo</button>
+  <button class="d-item" class:on={app.box === 'trash'} onclick={() => app.openBox('trash')}><Trash2 size={19} />Lixeira</button>
   <button class="d-item" onclick={() => { app.drawerOpen = false; app.settingsOpen = true }}><Settings size={19} />Configurações</button>
 </div>

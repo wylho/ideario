@@ -45,7 +45,7 @@
         {#if cat}<span class="pill"><i class="dot" style:background={cat.color}></i>{cat.name.split(' ')[0]}</span>{/if}
         {#if n.fileCount}<span class="pill"><Paperclip size={11} />{n.fileCount}</span>{/if}
         {#each n.tags as t (t)}
-          <button class="pill tag" onclick={(e) => { e.stopPropagation(); app.scope = { kind: 'tag', tag: t } }}>#{t}</button>
+          <button class="pill tag" onclick={(e) => { e.stopPropagation(); app.toggleTag(t) }}>#{t}</button>
         {/each}
       </div>
     {/if}

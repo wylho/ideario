@@ -1,15 +1,16 @@
 <script lang="ts">
-  import { Archive, StickyNote, Trash2 } from '@lucide/svelte'
+  import { Archive, Trash2 } from '@lucide/svelte'
   import { api } from '../lib/api'
   import { app, live } from '../lib/app.svelte'
   import { estimateCard } from '../lib/layout'
   import Empty from './Empty.svelte'
   import Masonry from './Masonry.svelte'
   import NoteCard from './NoteCard.svelte'
+  import ViewEmpty from './ViewEmpty.svelte'
   import type { NoteSummary } from '../lib/types'
 
-  const notes = live(() => api.listNotes({ scope: app.scope, query: app.query }), [] as NoteSummary[])
-  const isTrash = $derived(app.scope.kind === 'trash')
+  const notes = live(() => api.listNotes({ filter: $state.snapshot(app.filter), box: app.box, query: app.query }), [] as NoteSummary[])
+  const isTrash = $derived(app.box === 'trash')
   const pinned = $derived(isTrash ? [] : notes.current.filter((n) => n.pinned))
   const rest = $derived(isTrash ? notes.current : notes.current.filter((n) => !n.pinned))
 </script>
@@ -27,12 +28,13 @@
 {/snippet}
 
 {#if notes.ready && !notes.current.length}
-  {@const kind = app.scope.kind}
-  <Empty
-    icon={kind === 'trash' ? Trash2 : kind === 'archive' ? Archive : StickyNote}
-    title={app.query ? 'Nada encontrado' : kind === 'trash' ? 'Lixeira vazia' : kind === 'archive' ? 'Nada arquivado' : 'Nenhuma nota aqui'}
-    text={app.query ? `Nenhuma nota contém “${app.query}”.` : 'Toque em + para anotar algo.'}
-  />
+  {#if app.box === 'trash'}
+    <Empty icon={Trash2} title={app.query ? 'Nada encontrado' : 'Lixeira vazia'} text="Notas apagadas ficam aqui por 30 dias." />
+  {:else if app.box === 'archive'}
+    <Empty icon={Archive} title={app.query ? 'Nada encontrado' : 'Nada arquivado'} text="Notas arquivadas saem da lista, mas continuam pesquisáveis aqui." />
+  {:else}
+    <ViewEmpty view="notes" />
+  {/if}
 {:else}
   {#if isTrash}<p class="banner">Notas na lixeira são apagadas depois de 30 dias.</p>{/if}
   {#if pinned.length}

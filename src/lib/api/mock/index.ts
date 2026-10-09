@@ -4,7 +4,7 @@
 import type { Api } from '..'
 import { fold, hashTags } from '../../format'
 import type {
-  Attachment, AttachmentRow, Category, ChecklistItem, NoteInput, NoteSummary, RichDoc, RichNode, Scope, Settings, TagCount,
+  Attachment, AttachmentRow, Box, Category, ChecklistItem, Filter, NoteInput, NoteSummary, RichDoc, RichNode, Settings, TagCount,
 } from '../../types'
 import { fakeImageSrc } from './fake-images'
 import { DAY, SEED_CATEGORIES, SEED_FILES, SEED_IMAGES, seedNotes } from './seed'
@@ -109,14 +109,25 @@ function summarize(n: StoredNote): NoteSummary {
 // ---------- consultas ----------
 const isLive = (n: StoredNote) => n.trashedAt == null && !n.archived
 
-function inScope(n: StoredNote, scope: Scope) {
-  switch (scope.kind) {
-    case 'trash': return n.trashedAt != null
-    case 'archive': return n.archived && n.trashedAt == null
-    case 'category': return isLive(n) && n.categoryId === scope.id
-    case 'tag': return isLive(n) && tagsOf(n).includes(scope.tag)
-    default: return isLive(n)
-  }
+function inBox(n: StoredNote, box: Box) {
+  if (box === 'trash') return n.trashedAt != null
+  if (box === 'archive') return n.archived && n.trashedAt == null
+  return isLive(n)
+}
+
+function passes(n: StoredNote, f: Filter) {
+  if (f.categoryId && n.categoryId !== f.categoryId) return false
+  if (!f.tags.length) return true
+  const tags = tagsOf(n)
+  return f.tags.every((t) => tags.includes(t))
+}
+
+/** Notas ativas que passam no filtro, as mais recentes primeiro. */
+const activeIn = (f: Filter) => [...notes.values()].filter((n) => isLive(n) && passes(n, f)).sort(byRecent)
+
+const fileMatches = (query: string) => {
+  const q = fold(query.trim())
+  return (r: AttachmentRow) => !q || fold(r.name + ' ' + r.noteTitle).includes(q)
 }
 
 /** Busca como o FTS5 vai fazer: sem acento, todos os termos, por prefixo dentro do texto. */
@@ -153,43 +164,44 @@ function changed() {
 const done = <T>(v: T) => Promise.resolve(v)
 
 export const mockApi: Api = {
-  listNotes({ scope, query }) {
-    return done([...notes.values()].filter((n) => inScope(n, scope) && matches(n, query)).sort(byRecent).map(summarize))
+  listNotes({ filter, box, query }) {
+    return done([...notes.values()].filter((n) => inBox(n, box) && passes(n, filter) && matches(n, query)).sort(byRecent).map(summarize))
   },
 
-  listReminders({ query, includeDone }) {
+  listReminders({ filter, query, includeDone }) {
     return done(
-      [...notes.values()]
-        .filter((n) => isLive(n) && n.reminderAt != null && (includeDone || !n.reminderDone) && matches(n, query))
+      activeIn(filter)
+        .filter((n) => n.reminderAt != null && (includeDone || !n.reminderDone) && matches(n, query))
         .sort((a, b) => a.reminderAt! - b.reminderAt!)
         .map(summarize),
     )
   },
 
-  overdueCount() {
-    const now = Date.now()
-    return done([...notes.values()].filter((n) => isLive(n) && n.reminderAt != null && !n.reminderDone && n.reminderAt < now).length)
+  listAttachments({ filter, query }) {
+    return done(activeIn(filter).flatMap((n) => rowsFor(n, [...project(n.body).images, ...n.files])).filter(fileMatches(query)))
   },
 
-  listAttachments({ scope, query }) {
-    const q = fold(query.trim())
+  listImages({ filter, query, tone }) {
     return done(
-      [...notes.values()]
-        .filter((n) => inScope(n, scope))
-        .sort(byRecent)
-        .flatMap((n) => rowsFor(n, [...project(n.body).images, ...n.files]))
-        .filter((r) => !q || fold(r.name + ' ' + r.noteTitle).includes(q)),
-    )
-  },
-
-  listImages({ scope, query, tone }) {
-    return done(
-      [...notes.values()]
-        .filter((n) => inScope(n, scope) && matches(n, query))
-        .sort(byRecent)
+      activeIn(filter)
+        .filter((n) => matches(n, query))
         .flatMap((n) => rowsFor(n, project(n.body).images))
         .filter((r) => !tone || r.tone === tone),
     )
+  },
+
+  viewCounts({ filter, query }) {
+    const now = Date.now()
+    const live = activeIn(filter)
+    const found = live.filter((n) => matches(n, query))
+    const pending = found.filter((n) => n.reminderAt != null && !n.reminderDone)
+    return done({
+      notes: found.length,
+      reminders: pending.length,
+      overdue: pending.filter((n) => n.reminderAt! < now).length,
+      files: live.flatMap((n) => rowsFor(n, [...project(n.body).images, ...n.files])).filter(fileMatches(query)).length,
+      moodboard: found.reduce((s, n) => s + project(n.body).images.length, 0),
+    })
   },
 
   listCategories() {
