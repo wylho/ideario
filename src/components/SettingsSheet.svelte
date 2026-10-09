@@ -80,17 +80,22 @@
           <section class="set-group">
             <h3>Fotos</h3>
             <div class="set-row">
-              <span><b>Qualidade</b><small>Aplicada ao importar. Só as fotos são comprimidas: PDFs, documentos, áudio e vídeo ficam exatamente como foram anexados.</small></span>
+              <span><b>Qualidade</b><small>{settings.photoQuality === 'original'
+                ? 'As fotos ficam como vieram, sem redimensionar nem comprimir. Ocupam bem mais espaço no Drive.'
+                : 'Aplicada ao importar.'} Só fotos são comprimidas: PDFs, documentos, áudio e vídeo ficam exatamente como foram anexados.</small></span>
               <Picker
                 id="qualidade"
                 bind:value={settings.photoQuality}
-                options={[['economy', 'Econômica · 1280px'], ['balanced', 'Equilibrada · 2048px'], ['high', 'Alta · 3072px']] as [PhotoQuality, string][]}
+                options={[['economy', 'Econômica · 1280px'], ['balanced', 'Equilibrada · 2048px'], ['high', 'Alta · 3072px'], ['original', 'Original · sem compressão']] as [PhotoQuality, string][]}
               />
             </div>
-            <label class="set-row" for="originais">
-              <span><b>Manter originais</b><small>Guarda a foto sem compressão no Drive, além da versão otimizada.</small></span>
-              <Switch.Root id="originais" class="switch" bind:checked={settings.keepOriginals}><Switch.Thumb class="thumb" /></Switch.Root>
-            </label>
+            <!-- Com a qualidade Original não há versão otimizada, então guardar o original à parte não faz sentido. -->
+            {#if settings.photoQuality !== 'original'}
+              <label class="set-row" for="originais">
+                <span><b>Manter originais</b><small>Guarda a foto sem compressão no Drive, além da versão otimizada.</small></span>
+                <Switch.Root id="originais" class="switch" bind:checked={settings.keepOriginals}><Switch.Thumb class="thumb" /></Switch.Root>
+              </label>
+            {/if}
           </section>
 
           <section class="set-group">

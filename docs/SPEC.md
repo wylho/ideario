@@ -100,7 +100,7 @@ O Automerge foi considerado e **descartado** em favor do Yjs por causa do editor
 
 ### 3.10 Configurações
 - Sincronização: status do Drive, última sincronização, "Sincronizar agora" e "Sincronizar só no Wi-Fi" (o texto sempre sincroniza; os anexos grandes esperam o Wi-Fi).
-- Fotos: qualidade (Econômica 1280px, Equilibrada 2048px como padrão, Alta 3072px) e "Manter originais".
+- Fotos: qualidade (Econômica 1280px, Equilibrada 2048px como padrão, Alta 3072px, Original sem compressão) e "Manter originais" (some com Original). Só fotos são comprimidas; PDFs, documentos, áudio e vídeo ficam como foram anexados.
 - Cache: barra de uso e slider de limite (0,5 a 5 GB).
 - Importar do Google Keep.
 
@@ -243,6 +243,8 @@ Na importação de uma imagem (Rust, fora da thread de UI):
 5. Extrair a **paleta** (5 cores dominantes, por k-means ou median-cut) e classificar o **tom**.
 6. Calcular o hash, gravar em `attachments`, guardar o original só se "Manter originais".
 7. HEIC (iPhone) precisa de decodificador próprio. Tratar na fase mobile.
+
+Na qualidade **Original** os passos 2 e 3 não acontecem: o arquivo fica com os bytes de imagem como vieram. Os metadados (GPS etc.) saem sem recodificar, mantendo só a orientação. Miniatura, paleta e tom são gerados normalmente.
 
 **Cache**: texto e miniaturas ficam sempre locais. Arquivos grandes e fotos em tamanho cheio obedecem ao limite configurado com despejo **LRU** (`last_access`). Arquivos despejados viram `thumb_only` e são baixados de novo ao abrir.
 

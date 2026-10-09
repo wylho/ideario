@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { CheckCheck, File as FileIcon, FileAudio, FileText, FileVideoCamera, Image, Trash2 } from '@lucide/svelte'
+  import { CheckCheck, File as FileIcon, FileAudio, FileText, FileVideoCamera, Image, BrushCleaning } from '@lucide/svelte'
   import SortMenu from './SortMenu.svelte'
   import LayoutToggle from './LayoutToggle.svelte'
   import FilterGroup from './FilterGroup.svelte'
@@ -49,11 +49,8 @@
 
 {#if app.view === 'notes'}
   {#if app.box === 'trash' && trashed.current > 0}
-    {#if app.wide}
-      <button class="btn ghost sm danger-text" onclick={() => (confirmEmpty = true)}><Trash2 size={15} />Esvaziar lixeira</button>
-    {:else}
-      <button class="icon-btn" aria-label="Esvaziar lixeira" title="Esvaziar lixeira" onclick={() => (confirmEmpty = true)}><Trash2 size={19} /></button>
-    {/if}
+    <button class="icon-btn" aria-label="Esvaziar lixeira" title="Esvaziar lixeira" onclick={() => (confirmEmpty = true)}><BrushCleaning size={19} /></button>
+    <span class="top-gap" aria-hidden="true"></span>
   {/if}
   <SortMenu heading="Ordenar notas" options={NOTE_SORTS} value={app.sort} onchange={(v) => app.setSort(v)} />
   <LayoutToggle value={app.layout} onchange={(v) => (app.layout = v)} />
