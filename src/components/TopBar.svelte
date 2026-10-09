@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { CloudCheck, LayoutGrid, Menu, Rows3, Search, X } from '@lucide/svelte'
+  import { LayoutGrid, Menu, Rows3, Search, X } from '@lucide/svelte'
+  import SyncIndicator from './SyncIndicator.svelte'
   import { app } from '../lib/app.svelte'
 
   import { viewInfo } from '../lib/views'
@@ -32,7 +33,5 @@
       {#if app.layout === 'grid'}<Rows3 size={19} />{:else}<LayoutGrid size={19} />{/if}
     </button>
   {/if}
-  <button class="sync" aria-label="Sincronização" onclick={() => (app.settingsOpen = true)}>
-    <CloudCheck size={18} />
-  </button>
+  <SyncIndicator />
 </header>

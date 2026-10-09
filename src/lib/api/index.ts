@@ -1,7 +1,7 @@
 // Camada de dados da UI. Na Fase 0 é atendida por um mock em memória;
 // na Fase 1 a mesma interface passa a chamar os comandos Tauri (`invoke`) do núcleo Rust.
 import type {
-  AttachmentRow, Box, Category, Filter, NoteDetail, NoteInput, NotePatch, NoteSummary, Settings, SyncStatus, TagCount, Tone, ViewCounts,
+  AttachmentRow, Box, Category, Filter, NoteDetail, NoteInput, NotePatch, NoteSummary, Settings, SyncState, SyncStatus, TagCount, Tone, ViewCounts,
 } from '../types'
 import { invoke, isTauri } from '@tauri-apps/api/core'
 import { mockApi } from './mock'
@@ -42,6 +42,8 @@ export interface Api {
 
   /** Avisa quando os dados mudam (edição local ou, no futuro, sync). Devolve a função de cancelamento. */
   subscribe(fn: () => void): () => void
+  /** Avisa mudanças no estado da sincronização (sincronizando, sem conexão, erro, ok). */
+  subscribeSync(fn: (s: SyncState) => void): () => void
 }
 
 export const api: Api = mockApi

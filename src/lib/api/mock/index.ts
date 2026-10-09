@@ -4,7 +4,7 @@
 import type { Api } from '..'
 import { fold, hashTags } from '../../format'
 import type {
-  Attachment, AttachmentRow, Box, Category, Filter, NoteInput, NotePatch, NoteSummary, PreviewBlock, RichDoc, RichNode, Settings, TagCount,
+  Attachment, AttachmentRow, Box, Category, Filter, NoteInput, NotePatch, NoteSummary, PreviewBlock, RichDoc, RichNode, Settings, SyncState, TagCount,
 } from '../../types'
 import { uuidv7 } from '../../uuid'
 import { fakeImageSrc } from './fake-images'
@@ -220,6 +220,18 @@ const sameContent = (a: NoteInput, b: NoteInput) => INPUT_KEYS.every((k) => JSON
 
 function changed() {
   for (const fn of listeners) fn()
+  scheduleSync()
+}
+
+// Simula o ciclo do sync (SPEC §6): alguns instantes depois da última edição, sobe e volta a 'ok'.
+const syncListeners = new Set<(s: SyncState) => void>()
+let syncTimer: ReturnType<typeof setTimeout> | undefined
+function scheduleSync() {
+  clearTimeout(syncTimer)
+  syncTimer = setTimeout(() => {
+    syncListeners.forEach((fn) => fn('syncing'))
+    syncTimer = setTimeout(() => syncListeners.forEach((fn) => fn('ok')), 1200)
+  }, 1500)
 }
 
 const done = <T>(v: T) => Promise.resolve(v)
@@ -360,5 +372,10 @@ export const mockApi: Api = {
   subscribe(fn) {
     listeners.add(fn)
     return () => listeners.delete(fn)
+  },
+
+  subscribeSync(fn) {
+    syncListeners.add(fn)
+    return () => syncListeners.delete(fn)
   },
 }

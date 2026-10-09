@@ -10,7 +10,6 @@
     <Dialog.Content class="drawer" aria-describedby={undefined}>
       <div class="drawer-head">
         <Dialog.Title class="brand">Ideario</Dialog.Title>
-        <span class="meta">Sincronizado · Drive</span>
       </div>
       <NavList />
     </Dialog.Content>
