@@ -68,8 +68,23 @@ button { cursor: pointer; }
 .main { position: relative; flex: 1; min-width: 0; height: 100%; display: flex; flex-direction: column; --content-max: 1480px; }
 .main.view-reminders, .main.list { --content-max: 720px; }
 .main.view-files { --content-max: 920px; }
-.sidebar { flex: none; width: 272px; height: 100%; display: flex; flex-direction: column; border-right: 1px solid var(--line); background: var(--bg); }
-.sidebar .drawer-head { padding: 20px 24px 12px; }
+/* Barra lateral recolhível. O ☰ fica sempre no canto superior esquerdo: no cabeçalho da barra quando
+   aberta, no topo quando fechada (mesma posição), como a gaveta do celular. */
+.sidebar {
+  --side-w: 272px;
+  flex: none; width: var(--side-w); height: 100%; overflow: hidden; border-right: 1px solid var(--line); background: var(--bg);
+  transition: width .24s cubic-bezier(.2, .8, .2, 1), border-color .24s;
+}
+.sidebar-inner {
+  width: var(--side-w); height: 100%; display: flex; flex-direction: column;
+  transition: opacity .18s ease, transform .24s cubic-bezier(.2, .8, .2, 1);
+}
+.side-closed .sidebar { width: 0; border-right-width: 0; }
+.side-closed .sidebar-inner { opacity: 0; transform: translateX(-16px); }
+.side-head { display: grid; grid-template-columns: 40px 1fr; column-gap: 6px; align-items: center; padding: 16px 16px 12px 12px; }
+.side-head .brand { line-height: 40px; }
+.side-head .meta { grid-column: 2; margin-top: -6px; }
+.shell.wide .nav-btn { margin-left: -12px; animation: fade .2s ease; }
 
 /* topo */
 .topbar { display: flex; align-items: center; gap: 6px; padding: 10px 10px 8px 6px; }

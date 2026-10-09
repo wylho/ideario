@@ -10,7 +10,11 @@
 
 <header class="topbar">
   {#if !app.wide}
-    <button class="icon-btn" aria-label="Abrir menu" onclick={() => (app.drawerOpen = true)}><Menu size={20} /></button>
+    <button class="icon-btn nav-btn" aria-label="Abrir menu" onclick={() => app.toggleNav()}><Menu size={20} /></button>
+  {:else if !app.sidebarOpen}
+    <button class="icon-btn nav-btn" aria-label="Mostrar barra lateral" aria-expanded="false" title="Mostrar barra lateral (Ctrl+\)" onclick={() => app.toggleSidebar()}>
+      <Menu size={20} />
+    </button>
   {/if}
   <label class="search">
     <Search size={16} aria-hidden="true" />
