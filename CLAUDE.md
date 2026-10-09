@@ -34,7 +34,7 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
 - Princípio de design: só mostrar o que tem motivo para aparecer (ex.: nuvem do sync só ao sincronizar, sem
   conexão ou com erro; nada de controles que ainda não funcionam).
 - Navegação (proposta A): `app.view` (como ver) e `app.filter` (categoria + tags, o que ver) são independentes; `app.box`
-  = active/archive/trash só na visão Notas. Seletor de visão: no desktop centralizado na barra superior (busca vira ícone à direita), no celular abas embaixo; número só em Lembretes (`app.counts`).
+  = active/archive/trash só na visão Notas. Seletor de visão: no desktop centralizado na barra superior (busca vira ícone à direita), no celular barra flutuante (pílula) embaixo; número só em Lembretes (`app.counts`).
 - Menus de contexto: `ContextMenu.svelte` (clique direito, Shift+F10, toque longo) + itens em `src/lib/menus.ts`.
   O menu do navegador é bloqueado fora de campos de texto (`main.ts`). Ações com "Desfazer" no toast.
 - Prévia dos cards: a projeção entrega `preview` (blocos na ordem do documento) e `label`; a UI não parseia o corpo.
