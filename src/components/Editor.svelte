@@ -163,6 +163,7 @@
 {#if meta}
   <Dialog.Root open onOpenChange={(o) => !o && close()}>
     <Dialog.Portal>
+      <Dialog.Overlay class="overlay ed-overlay" />
       <Dialog.Content class="editor c-{meta.color}" aria-describedby={undefined} onOpenAutoFocus={(e) => e.preventDefault()}>
         <div class="ed-top">
           <button class="icon-btn" aria-label="Voltar e salvar" onclick={() => close()}><ArrowLeft size={20} /></button>

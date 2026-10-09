@@ -178,3 +178,51 @@ test('sem erros no console ao navegar pelas abas', async ({ page }) => {
   await expect(page.locator('.sheet-title')).toHaveText('Configurações')
   expect(errors).toEqual([])
 })
+
+test.describe('responsivo', () => {
+  const cols = (page: Page) => page.locator('.masonry').last().locator('.m-col')
+
+  test('celular: gaveta, abas embaixo e 2 colunas', async ({ page }) => {
+    await page.setViewportSize({ width: 400, height: 820 })
+    await expect(page.locator('.tabbar')).toBeVisible()
+    await expect(page.locator('.sidebar')).toHaveCount(0)
+    await expect(cols(page)).toHaveCount(2)
+  })
+
+  test('janela média: abas embaixo e mais colunas', async ({ page }) => {
+    await page.setViewportSize({ width: 800, height: 900 })
+    await expect(page.locator('.tabbar')).toBeVisible()
+    await expect(cols(page)).toHaveCount(3)
+  })
+
+  test('desktop: barra lateral fixa, sem abas, editor e configurações centrais', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 })
+    await expect(page.locator('.sidebar')).toBeVisible()
+    await expect(page.locator('.tabbar')).toHaveCount(0)
+    await expect(page.getByLabel('Abrir menu')).toHaveCount(0)
+    await expect(cols(page)).toHaveCount(4)
+
+    await page.locator('.sidebar').getByRole('button', { name: 'Hospital 1' }).click()
+    await expect(cards(page)).toHaveCount(1)
+
+    await cards(page).first().click()
+    const box = (await page.locator('.editor').boundingBox())!
+    expect(box.width).toBeLessThanOrEqual(720)
+    expect(Math.abs(box.x + box.width / 2 - 640)).toBeLessThan(2)
+    await back(page)
+
+    await page.getByLabel('Sincronização').click()
+    const sheet = (await page.locator('.sheet').boundingBox())!
+    expect(sheet.y).toBeGreaterThan(0)
+    expect(sheet.y + sheet.height).toBeLessThan(800)
+  })
+
+  test('redimensionar para desktop fecha a gaveta e mostra a barra lateral', async ({ page }) => {
+    await page.setViewportSize({ width: 600, height: 820 })
+    await page.getByLabel('Abrir menu').click()
+    await expect(page.locator('.drawer')).toBeVisible()
+    await page.setViewportSize({ width: 1200, height: 820 })
+    await expect(page.locator('.drawer')).toHaveCount(0)
+    await expect(page.locator('.sidebar')).toBeVisible()
+  })
+})

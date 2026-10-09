@@ -24,6 +24,9 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
 - A UI só fala com `src/lib/api` (interface `Api`). Hoje ela é atendida por `src/lib/api/mock`, que faz o papel do núcleo
   Rust (projeção de trecho/checklist/capa, busca sem acento, escopos). Na Fase 1 a interface passa a chamar `invoke`,
   e o mock continua servindo o modo navegador (`npm run dev`) e os testes e2e.
+- Layout responsivo (pedido do usuário: desktop primeiro): < 640 px = protótipo de celular; 640–959 px = gaveta + abas,
+  largura total; ≥ 960 px = barra lateral fixa (`NavList`), sem abas, editor e configurações como diálogo central.
+  Masonry é JS (`Masonry.svelte` + `estimateCard`), porque a WebKitGTK não equilibra `columns:` do CSS.
 - Tags: `tags` na nota guarda só as manuais; as `#tags` do corpo são derivadas na projeção (evita gravar tags pela metade
   durante o salvamento contínuo).
 - Verificação: `npm run check`, `npm run test:e2e`, `npm run tauri build`.

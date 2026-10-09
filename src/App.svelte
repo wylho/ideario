@@ -4,6 +4,7 @@
   import TopBar from './components/TopBar.svelte'
   import TabBar from './components/TabBar.svelte'
   import Drawer from './components/Drawer.svelte'
+  import NavList from './components/NavList.svelte'
   import NotesView from './components/NotesView.svelte'
   import RemindersView from './components/RemindersView.svelte'
   import FilesView from './components/FilesView.svelte'
@@ -32,8 +33,18 @@
 
 <svelte:window onkeydown={onKeydown} />
 
-<div class="stage">
-  <div class="shell">
+<div class="shell" class:wide={app.wide}>
+  {#if app.wide}
+    <aside class="sidebar" aria-label="Navegação">
+      <div class="drawer-head">
+        <span class="brand">Ideário</span>
+        <span class="meta">Sincronizado · Drive</span>
+      </div>
+      <NavList />
+    </aside>
+  {/if}
+
+  <div class="main view-{app.view}" class:list={app.view === 'notes' && app.layout === 'list'}>
     <TopBar />
 
     {#if app.scopeLabel && app.view !== 'reminders'}
@@ -59,21 +70,22 @@
     </main>
 
     {#if app.view !== 'moodboard' && app.scope.kind !== 'trash'}
-      <button class="fab" onclick={() => app.openNew()} aria-label="Nova nota"><Plus size={26} strokeWidth={2.2} /></button>
+      <button class="fab" onclick={() => app.openNew()} aria-label="Nova nota" title="Nova nota (Ctrl+N)"><Plus size={26} strokeWidth={2.2} /></button>
     {/if}
 
-    <TabBar />
-    <Drawer />
-    <SettingsSheet />
-    {#if app.editor}
-      {#await editorModule then { default: Editor }}
-        {#key app.editor.id}
-          <Editor target={app.editor} />
-        {/key}
-      {/await}
-    {/if}
-    <Lightbox />
+    {#if !app.wide}<TabBar />{/if}
 
     <div class="toast" class:show={!!app.toast} role="status" aria-live="polite">{app.toast}</div>
   </div>
+
+  {#if !app.wide}<Drawer />{/if}
+  <SettingsSheet />
+  {#if app.editor}
+    {#await editorModule then { default: Editor }}
+      {#key app.editor.id}
+        <Editor target={app.editor} />
+      {/key}
+    {/await}
+  {/if}
+  <Lightbox />
 </div>

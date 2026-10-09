@@ -6,7 +6,9 @@ Especificação: [`docs/SPEC.md`](docs/SPEC.md). Protótipo de design: [`prototy
 ## Estado
 
 **Fase 0 (esqueleto):** pronta. As quatro abas, a gaveta, o editor e as configurações reproduzem o protótipo
-com dados de exemplo em memória (`src/lib/api/mock`). O editor já é TipTap. Nada é gravado em disco ainda;
+com dados de exemplo em memória (`src/lib/api/mock`). O editor já é TipTap.
+O layout é responsivo: celular (< 640 px) igual ao protótipo; janela média com gaveta e abas embaixo;
+desktop (≥ 960 px) com barra lateral fixa, grade de várias colunas e editor/configurações em janela central. Nada é gravado em disco ainda;
 o SQLite chega na Fase 1.
 
 ## Requisitos

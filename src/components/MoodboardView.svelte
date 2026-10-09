@@ -3,6 +3,7 @@
   import { api } from '../lib/api'
   import { app, live } from '../lib/app.svelte'
   import Empty from './Empty.svelte'
+  import Masonry from './Masonry.svelte'
   import type { AttachmentRow, Tone } from '../lib/types'
 
   const TONES: { id: Tone; label: string; sw: string }[] = [
@@ -29,12 +30,19 @@
   <Empty icon={Images} title="Nenhuma imagem" text="Imagens coladas nas notas aparecem aqui automaticamente." />
 {/if}
 
-<div class="mood">
-  {#each items.current as r (r.noteId + r.hash)}
-    <button class="mood-tile" onclick={() => (app.lightbox = r)}>
-      <img src={api.imageUrl(r.hash, 'thumb')} alt={r.name} style:aspect-ratio="{r.width}/{r.height}" decoding="async" />
-      {#if r.palette}<span class="mood-pal">{#each r.palette as p (p)}<i style:background={p}></i>{/each}</span>{/if}
-      <span class="mood-cap">{r.noteTitle}</span>
-    </button>
-  {/each}
-</div>
+{#snippet tile(r: AttachmentRow)}
+  <button class="mood-tile" onclick={() => (app.lightbox = r)}>
+    <img src={api.imageUrl(r.hash, 'thumb')} alt={r.name} style:aspect-ratio="{r.width}/{r.height}" decoding="async" />
+    {#if r.palette}<span class="mood-pal">{#each r.palette as p (p)}<i style:background={p}></i>{/each}</span>{/if}
+    <span class="mood-cap">{r.noteTitle}</span>
+  </button>
+{/snippet}
+
+<Masonry
+  items={items.current}
+  key={(r) => r.noteId + r.hash}
+  estimate={(r, w) => (w * (r.height ?? 3)) / (r.width ?? 4)}
+  item={tile}
+  minWidth={app.wide ? 220 : 180}
+  gap={6}
+/>

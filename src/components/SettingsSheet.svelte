@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Dialog, Slider, Switch } from 'bits-ui'
   import { CloudCheck, StickyNote, X } from '@lucide/svelte'
-  import { api } from '../lib/api'
+  import { api, coreVersion } from '../lib/api'
   import { app } from '../lib/app.svelte'
   import { ago } from '../lib/format'
   import Picker from './Picker.svelte'
@@ -9,6 +9,8 @@
 
   let settings = $state<Settings | null>(null)
   let status = $state.raw<SyncStatus | null>(null)
+  let version = $state<string | null>(null)
+  coreVersion().then((v) => (version = v))
 
   $effect(() => {
     if (!app.settingsOpen) return
@@ -92,7 +94,7 @@
               <span><b>Trazer notas do Google Keep</b><small>Marcadores viram categorias. Fotos são otimizadas no caminho.</small></span>
             </button>
           </section>
-          <p class="footnote">Fase 0 · dados de exemplo.</p>
+          <p class="footnote">Fase 0 · dados de exemplo{version ? ` · núcleo v${version}` : ''}</p>
         </div>
       {/if}
     </Dialog.Content>

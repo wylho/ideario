@@ -15,17 +15,19 @@
       {
         "label": "main",
         "title": "Ideário",
-        "width": 460,
-        "height": 820,
+        "width": 1180,
+        "height": 760,
         "minWidth": 360,
-        "minHeight": 560,
+        "minHeight": 520,
         "center": true,
         "backgroundColor": "#eef1ef"
       }
     ],
     "security": {
       "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: asset: http://asset.localhost; font-src 'self' data:; connect-src 'self' ipc: http://ipc.localhost",
-      "dangerousDisableAssetCspModification": ["style-src"]
+      "dangerousDisableAssetCspModification": [
+        "style-src"
+      ]
     }
   },
   "bundle": {
@@ -33,6 +35,12 @@
     "targets": "all",
     "category": "Productivity",
     "shortDescription": "Notas e ideias, local-first",
-    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.icns", "icons/icon.ico"]
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ]
   }
 }
