@@ -20,8 +20,8 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
 - **D2:** desktop primeiro (Windows, macOS, Linux); Android depois.
 - **D4:** nome **Ideario** (sem acento).
 - **Ícone oficial:** quadrado arredondado com degradê amarelo→laranja (`src-tauri/icons/source/ideario.svg`; também
-  `BrandMark.svelte` e `public/favicon.svg`). Android: adaptativo (frente/fundo), redondo com folga e quadrado sem
-  arredondamento para quando o sistema aplica a máscara; macOS: versão com margem da grade da Apple (`macos.svg`).
+  `BrandMark.svelte` e `public/favicon.svg`). Android: adaptativo (frente/fundo) e o quadrado sem arredondamento
+  (`ideario-full-bleed.svg`), que o sistema corta no formato dele (o redondo é esse quadrado cortado em círculo, sem margem); macOS: versão com margem da grade da Apple (`macos.svg`).
   Para regenerar: `npx tauri icon src-tauri/icons/source/icon-manifest.json` (e o `.icns` a partir de `macos.svg`).
 - **Tipografia:** fonte do sistema em toda a UI, para parecer nativo (substitui Bricolage/Figtree/JetBrains Mono do protótipo).
   No Linux o núcleo lê a fonte do GNOME/KDE (`src-tauri/src/system_fonts.rs`); nos demais, `system-ui`.
