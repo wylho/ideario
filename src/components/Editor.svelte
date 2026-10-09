@@ -105,6 +105,8 @@
     return api.saveNote(input)
   }
   const schedule = () => {
+    // Fechada, a nota já foi salva: um salvamento atrasado desfaria o "Desfazer" do aviso (ex.: arquivaria de novo).
+    if (closed) return
     clearTimeout(timer)
     timer = setTimeout(save, SAVE_DELAY)
   }
@@ -192,6 +194,7 @@
       return () => {
         if (app.dropIntoEditor === drop) app.dropIntoEditor = null
         if (!closed) save()
+        clearTimeout(timer)
         ed.destroy()
       }
     })
