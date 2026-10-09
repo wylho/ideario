@@ -2,6 +2,7 @@
   import { Dialog } from 'bits-ui'
   import { app } from '../lib/app.svelte'
   import NavList from './NavList.svelte'
+  import BrandMark from './BrandMark.svelte'
 </script>
 
 <Dialog.Root bind:open={app.drawerOpen}>
@@ -9,6 +10,7 @@
     <Dialog.Overlay class="overlay" />
     <Dialog.Content class="drawer" aria-describedby={undefined}>
       <div class="drawer-head">
+        <BrandMark />
         <Dialog.Title class="brand">Ideario</Dialog.Title>
       </div>
       <NavList />

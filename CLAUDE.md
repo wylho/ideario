@@ -19,6 +19,10 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
 - **D1:** frontend em **Svelte 5 + Bits UI** (ícones `@lucide/svelte`, editor TipTap v3).
 - **D2:** desktop primeiro (Windows, macOS, Linux); Android depois.
 - **D4:** nome **Ideario** (sem acento).
+- **Ícone oficial:** quadrado arredondado com degradê amarelo→laranja (`src-tauri/icons/source/ideario.svg`; também
+  `BrandMark.svelte` e `public/favicon.svg`). Android: adaptativo (frente/fundo), redondo com folga e quadrado sem
+  arredondamento para quando o sistema aplica a máscara; macOS: versão com margem da grade da Apple (`macos.svg`).
+  Para regenerar: `npx tauri icon src-tauri/icons/source/icon-manifest.json` (e o `.icns` a partir de `macos.svg`).
 - **Tipografia:** fonte do sistema em toda a UI, para parecer nativo (substitui Bricolage/Figtree/JetBrains Mono do protótipo).
   No Linux o núcleo lê a fonte do GNOME/KDE (`src-tauri/src/system_fonts.rs`); nos demais, `system-ui`.
 - D3 e D5 continuam em aberto (SPEC §11).
