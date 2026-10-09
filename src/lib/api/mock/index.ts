@@ -2,7 +2,7 @@
 // Faz o papel do núcleo Rust: guarda as notas, projeta as colunas derivadas
 // (prévia estruturada, capa, rótulo) e responde às consultas das abas.
 import type { Api } from '..'
-import { fold, hashTags } from '../../format'
+import { fold, hashTags, normalizeTag } from '../../format'
 import type {
   Attachment, AttachmentKind, AttachmentRow, Box, Category, Filter, NoteInput, NotePatch, NoteSort, NoteSummary, PreviewBlock, RichDoc, RichNode, Settings, SyncState, TagCount,
 } from '../../types'
@@ -50,6 +50,9 @@ const imageSrc = new Map<string, string>()
 const blobSrc = new Map<string, string>()
 const listeners = new Set<() => void>()
 const projections = new WeakMap<RichDoc, Projection>()
+/** Categorias (as de exemplo, e as que se criam na sessão). */
+const categories = SEED_CATEGORIES.map((c) => ({ ...c, deleted: false }))
+const liveCategories = () => categories.filter((c) => !c.deleted)
 let settings: Settings = { wifiOnly: true, photoQuality: 'balanced', cacheLimitGb: 2 }
 
 // ---------- seed ----------
@@ -278,7 +281,7 @@ const byRecent = (a: StoredNote, b: StoredNote) => b.updatedAt - a.updatedAt
 /** Comparador de cada ordem. Categoria segue a ordem das categorias; sem categoria vai para o fim. */
 function compareFor(sort: NoteSort) {
   const catIndex = (n: StoredNote) => {
-    const i = SEED_CATEGORIES.findIndex((c) => c.id === n.categoryId)
+    const i = liveCategories().findIndex((c) => c.id === n.categoryId)
     return i < 0 ? Infinity : i
   }
   switch (sort) {
@@ -396,7 +399,68 @@ export const mockApi: Api = {
 
   listCategories() {
     const live = [...notes.values()].filter(isLive)
-    return done(SEED_CATEGORIES.map<Category>((c) => ({ ...c, icon: null, noteCount: live.filter((n) => n.categoryId === c.id).length })))
+    return done(liveCategories().map<Category>((c) => ({ id: c.id, name: c.name, color: c.color, icon: null, noteCount: live.filter((n) => n.categoryId === c.id).length })))
+  },
+
+  createCategory(name, color) {
+    const c = { id: uuidv7(), name: name.trim(), color, deleted: false }
+    categories.push(c)
+    changed()
+    return done({ id: c.id, name: c.name, color, icon: null, noteCount: 0 })
+  },
+
+  updateCategory(id, p) {
+    const c = categories.find((x) => x.id === id)
+    if (c) {
+      if (p.name?.trim()) c.name = p.name.trim()
+      if (p.color) c.color = p.color
+      changed()
+    }
+    return done(undefined)
+  },
+
+  deleteCategory(id) {
+    const c = categories.find((x) => x.id === id)
+    const ids: string[] = []
+    if (c) {
+      c.deleted = true
+      for (const n of notes.values()) if (n.categoryId === id) (n.categoryId = null), ids.push(n.id)
+      changed()
+    }
+    return done(ids)
+  },
+
+  restoreCategory(id, noteIds) {
+    const c = categories.find((x) => x.id === id)
+    if (c) {
+      c.deleted = false
+      for (const nid of noteIds) {
+        const n = notes.get(nid)
+        if (n) n.categoryId = id
+      }
+      changed()
+    }
+    return done(undefined)
+  },
+
+  renameTag(from, to) {
+    const next = to ? normalizeTag(to) : null
+    let count = 0
+    const re = new RegExp(`(^|[^\\p{L}\\d_])#${from.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\p{L}\\d_-])`, 'giu')
+    const rewrite = (node: RichNode) => {
+      if (node.type === 'text' && node.text) node.text = node.text.replace(re, (_m, pre: string) => `${pre}${next ? `#${next}` : from}`)
+      node.content?.forEach(rewrite)
+    }
+    for (const n of notes.values()) {
+      if (!tagsOf(n).includes(from)) continue
+      count++
+      n.tags = [...new Set(n.tags.flatMap((t) => (t === from ? (next ? [next] : []) : [t])))]
+      const body = structuredClone(n.body)
+      rewrite(body)
+      n.body = body
+    }
+    if (count) changed()
+    return done(count)
   },
 
   listTags() {
@@ -538,13 +602,14 @@ export const mockApi: Api = {
     const real = blobSrc.get(a.hash)
     if (real) {
       Object.assign(document.createElement('a'), { href: real, download: a.name }).click()
-      return
+      return null
     }
     const src = imageSrc.get(a.hash)
     const url = src || URL.createObjectURL(new Blob([`Arquivo de exemplo do Ideario: ${a.name}\n`], { type: 'text/plain' }))
     const link = Object.assign(document.createElement('a'), { href: url, download: src ? a.name.replace(/\.\w+$/, '') + '.svg' : a.name })
     link.click()
     if (!src) setTimeout(() => URL.revokeObjectURL(url), 1000)
+    return null
   },
   subscribe(fn) {
     listeners.add(fn)

@@ -1,10 +1,11 @@
-// Camada de dados da UI. Na Fase 0 é atendida por um mock em memória;
-// na Fase 1 a mesma interface passa a chamar os comandos Tauri (`invoke`) do núcleo Rust.
+// Camada de dados da UI. No app, os comandos Tauri (`invoke`) do núcleo Rust (SQLite local, Fase 1);
+// no navegador (`npm run dev`, prévia) e nos testes e2e, um mock em memória com dados de exemplo.
 import type {
   Attachment, AttachmentRow, Box, Category, Filter, NoteDetail, NoteInput, NotePatch, NoteSort, NoteSummary, Settings, SyncState, SyncStatus, TagCount, Tone, ViewCounts,
 } from '../types'
 import { invoke, isTauri } from '@tauri-apps/api/core'
 import { mockApi } from './mock'
+import { tauriApi } from './tauri'
 
 export interface Api {
   listNotes(p: { filter: Filter; box: Box; query: string; sort: NoteSort }): Promise<NoteSummary[]>
@@ -16,7 +17,14 @@ export interface Api {
   /** Contagem por visão para o filtro e a busca atuais (notas ativas). */
   viewCounts(p: { filter: Filter; query: string }): Promise<ViewCounts>
   listCategories(): Promise<Category[]>
+  createCategory(name: string, color: string): Promise<Category>
+  updateCategory(id: string, p: { name?: string; color?: string }): Promise<void>
+  /** Apaga a categoria (as notas ficam sem categoria). Devolve as notas que estavam nela, para o Desfazer. */
+  deleteCategory(id: string): Promise<string[]>
+  restoreCategory(id: string, noteIds: string[]): Promise<void>
   listTags(): Promise<TagCount[]>
+  /** Renomeia a tag em todas as notas (manuais e #tags do texto); com `to` null, tira a tag (a palavra fica no texto). */
+  renameTag(from: string, to: string | null): Promise<number>
 
   getNote(id: string): Promise<NoteDetail | null>
   /** Cria ou atualiza. `tags` são as manuais; as `#palavra` do corpo entram na projeção. */
@@ -51,8 +59,8 @@ export interface Api {
   mediaUrl(hash: string): string
   /** Importa um arquivo do computador (ou uma gravação) e devolve o anexo pronto para entrar na nota. */
   importFile(file: Blob, name: string): Promise<Attachment>
-  /** Salva uma cópia do anexo onde o usuário escolher (no app: diálogo "Salvar como"; no navegador: download). */
-  downloadAttachment(a: Pick<AttachmentRow, 'hash' | 'name' | 'mime'>): Promise<void>
+  /** Salva uma cópia do anexo (no app: na pasta Downloads, e devolve o caminho; no navegador: download, e devolve null). */
+  downloadAttachment(a: Pick<AttachmentRow, 'hash' | 'name' | 'mime'>): Promise<string | null>
 
   /** Avisa quando os dados mudam (edição local ou, no futuro, sync). Devolve a função de cancelamento. */
   subscribe(fn: () => void): () => void
@@ -60,7 +68,7 @@ export interface Api {
   subscribeSync(fn: (s: SyncState) => void): () => void
 }
 
-export const api: Api = mockApi
+export const api: Api = isTauri() ? tauriApi : mockApi
 
 /** Versão do núcleo Rust; `null` quando a UI roda fora do Tauri (navegador). */
 export const coreVersion = (): Promise<string | null> => (isTauri() ? invoke<string>('app_version') : Promise.resolve(null))
