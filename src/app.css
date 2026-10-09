@@ -74,29 +74,23 @@ button { cursor: pointer; }
 .body { flex: 1; min-height: 0; display: flex; position: relative; }
 .shell { flex-direction: column; }
 .topbar.appbar {
-  /* Três grupos (marca | visões | ações) com folgas iguais entre eles: o espaço livre entre o fim de "Ideario"
-     e as visões é o mesmo que entre as visões e os ícones da direita. */
-  display: flex; justify-content: space-between; align-items: center; gap: 16px;
+  /* ☰ e marca à esquerda; ações e visões ancoradas à direita. A folga livre fica no meio e é ali que
+     crescem a busca e a nuvem, sem mover nada que já estava na barra. */
+  display: flex; align-items: center; gap: 8px;
   height: 64px; padding: 0 14px; border-bottom: 1px solid var(--line); flex: none;
 }
 .top-left { display: flex; align-items: center; gap: 6px; min-width: 0; flex: none; }
 .topbar:not(.appbar) .top-left { flex: 1; }
 .topbar:not(.appbar) { gap: 6px; }
-/* campo de busca do desktop: sobreposto, ancorado na borda direita da lupa e crescendo para a esquerda */
-.search-slot { position: relative; width: 40px; height: 40px; flex: none; }
-.search.inline {
-  position: absolute; right: 0; top: 0; z-index: 2; width: var(--search-w, 300px); height: 40px;
-  box-shadow: 0 0 0 6px var(--bg); animation: search-in .18s cubic-bezier(.2, .8, .2, 1);
-}
+.search.inline { flex: 0 1 280px; min-width: 180px; height: 40px; animation: search-in .18s cubic-bezier(.2, .8, .2, 1); }
 @keyframes search-in { from { opacity: 0; transform: scaleX(.85); transform-origin: right; } }
 :root { --side-w: 272px; --rail-w: 72px; }
 .brand-area { display: flex; align-items: center; gap: 10px; min-width: 0; margin-left: 2px; }
 .brand-mark { width: 30px; height: 30px; flex: none; }
 .appbar .brand { font-size: 22px; }
 .top-actions { display: flex; align-items: center; justify-content: flex-end; gap: 4px; min-width: 0; flex: none; }
-/* desktop: nuvem | busca | ordenar | grade — sempre a mesma largura (os espaços ficam reservados) */
-.appbar .top-actions { width: 172px; }
-.sync-slot { width: 36px; height: 36px; flex: none; margin-right: auto; }
+.appbar .top-actions { flex: 1; }
+.top-sep { width: 1px; height: 24px; background: var(--line); flex: none; margin: 0 4px; }
 .sidebar {
   flex: none; width: var(--side-w); height: 100%; overflow-x: hidden; overflow-y: auto; background: var(--bg);
   transition: width .24s cubic-bezier(.2, .8, .2, 1);
@@ -525,7 +519,7 @@ button { cursor: pointer; }
 .filter-bar .link, .filter-row .link { white-space: nowrap; padding: 0 6px; }
 
 /* visão (como ver): barra centralizada no desktop */
-.view-switch { display: flex; align-items: center; gap: 2px; }
+.view-switch { display: flex; align-items: center; gap: 2px; flex: none; }
 .lens {
   position: relative; display: inline-flex; align-items: center; gap: 7px; height: 40px; padding: 0 14px; border-radius: 999px;
   font-size: 14px; font-weight: 600; color: var(--muted); white-space: nowrap;
