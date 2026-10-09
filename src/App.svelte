@@ -28,6 +28,7 @@
       app.openNew()
     } else if (e.key.toLowerCase() === 'f') {
       e.preventDefault()
+      if (app.wide) app.searchOpen = true
       document.getElementById('busca')?.focus()
     }
   }

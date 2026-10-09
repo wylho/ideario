@@ -73,14 +73,20 @@ button { cursor: pointer; }
 .body { flex: 1; min-height: 0; display: flex; position: relative; }
 .shell { flex-direction: column; }
 .topbar.appbar {
-  display: grid; grid-template-columns: 40px calc(var(--side-w) - 72px) minmax(180px, 640px) auto 1fr; column-gap: 8px;
-  height: 64px; padding: 0 16px 0 12px; border-bottom: 1px solid var(--line); flex: none;
+  /* 1fr | auto | 1fr: as visões ficam no centro exato da janela, qualquer que seja o lado esquerdo ou direito. */
+  display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; column-gap: 16px;
+  height: 64px; padding: 0 14px; border-bottom: 1px solid var(--line); flex: none;
 }
+.top-left { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.topbar:not(.appbar) .top-left { flex: 1; }
+.topbar:not(.appbar) { gap: 6px; }
+.search.inline { flex: 0 1 300px; min-width: 160px; height: 40px; animation: search-in .18s cubic-bezier(.2, .8, .2, 1); }
+@keyframes search-in { from { opacity: 0; transform: scaleX(.85); transform-origin: right; } }
 :root { --side-w: 272px; --rail-w: 72px; }
-.brand-area { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.brand-area { display: flex; align-items: center; gap: 10px; min-width: 0; margin-left: 2px; }
 .brand-mark { width: 30px; height: 30px; flex: none; }
 .appbar .brand { font-size: 22px; }
-.top-actions { display: flex; align-items: center; justify-content: flex-end; gap: 4px; }
+.top-actions { display: flex; align-items: center; justify-content: flex-end; gap: 4px; min-width: 0; }
 .sidebar {
   flex: none; width: var(--side-w); height: 100%; overflow-x: hidden; overflow-y: auto; background: var(--bg);
   transition: width .24s cubic-bezier(.2, .8, .2, 1);
@@ -517,7 +523,7 @@ button { cursor: pointer; }
 .lens .n { font-family: var(--font-mono); font-size: 11.5px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .lens .n.late { color: var(--late); }
 /* janelas mais estreitas: só ícones (o nome fica na dica); o número vira um selo no canto */
-@media (max-width: 1199px) {
+@media (max-width: 1039px) {
   .lens { padding: 0 11px; }
   .lens-label { display: none; }
   .lens .n { position: absolute; top: 3px; right: 2px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 999px; display: grid; place-items: center; font-size: 10px; background: var(--bg); }

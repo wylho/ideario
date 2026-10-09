@@ -330,12 +330,12 @@ test.describe('visão × filtro', () => {
 test('desktop: barra superior fixa; lateral recolhe para trilho de ícones e lembra a escolha', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 })
   const menu = await page.getByLabel('Recolher barra lateral').boundingBox()
-  const busca = await page.locator('#busca').boundingBox()
+  const visoes = await page.locator('.view-switch').boundingBox()
   await page.getByLabel('Recolher barra lateral').click()
   await expect.poll(async () => (await page.locator('.sidebar').boundingBox())!.width).toBe(72)
   // O topo não se move.
   expect(await page.getByLabel('Expandir barra lateral').boundingBox()).toEqual(menu)
-  expect(await page.locator('#busca').boundingBox()).toEqual(busca)
+  expect(await page.locator('.view-switch').boundingBox()).toEqual(visoes)
   // No trilho, as categorias continuam clicáveis (bolinhas com dica).
   await page.locator('.sidebar').getByRole('button', { name: 'Hospital 2' }).click()
   await expect(cards(page)).toHaveCount(2)
@@ -558,4 +558,22 @@ test('lateral: chevron mostra e oculta as tags e lembra a escolha', async ({ pag
   await expect(toggle).toHaveAttribute('aria-expanded', 'false')
   await page.reload()
   await expect(page.locator('.sidebar .tag-cloud')).toHaveCount(0)
+})
+
+test('desktop: visões centralizadas; busca é um ícone que abre o campo e fecha vazio', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 })
+  const v = (await page.locator('.view-switch').boundingBox())!
+  expect(Math.abs(v.x + v.width / 2 - 640)).toBeLessThan(2)
+  await expect(page.locator('#busca')).toHaveCount(0)
+  await page.getByRole('button', { name: 'Buscar', exact: true }).click()
+  await expect(page.locator('#busca')).toBeFocused()
+  await page.keyboard.type('paraty')
+  await expect(cards(page)).toHaveCount(1)
+  await page.locator('.card').first().focus()
+  await expect(page.locator('#busca')).toHaveValue('paraty')
+  await page.locator('#busca').fill('')
+  await page.locator('#busca').press('Escape')
+  await expect(page.locator('#busca')).toHaveCount(0)
+  await page.keyboard.press('Control+f')
+  await expect(page.locator('#busca')).toBeFocused()
 })
