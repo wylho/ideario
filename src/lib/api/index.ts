@@ -1,19 +1,20 @@
 // Camada de dados da UI. Na Fase 0 é atendida por um mock em memória;
 // na Fase 1 a mesma interface passa a chamar os comandos Tauri (`invoke`) do núcleo Rust.
 import type {
-  AttachmentRow, Category, NoteDetail, NoteInput, NoteSummary, Scope, Settings, SyncStatus, TagCount, Tone,
+  AttachmentRow, Box, Category, Filter, NoteDetail, NoteInput, NoteSummary, Settings, SyncStatus, TagCount, Tone, ViewCounts,
 } from '../types'
 import { invoke, isTauri } from '@tauri-apps/api/core'
 import { mockApi } from './mock'
 
 export interface Api {
-  listNotes(p: { scope: Scope; query: string }): Promise<NoteSummary[]>
-  listReminders(p: { query: string; includeDone: boolean }): Promise<NoteSummary[]>
-  overdueCount(): Promise<number>
-  /** Todos os anexos (fotos e arquivos) das notas visíveis no escopo. */
-  listAttachments(p: { scope: Scope; query: string }): Promise<AttachmentRow[]>
-  /** Imagens das notas visíveis no escopo, para o Moodboard. */
-  listImages(p: { scope: Scope; query: string; tone: Tone | null }): Promise<AttachmentRow[]>
+  listNotes(p: { filter: Filter; box: Box; query: string }): Promise<NoteSummary[]>
+  listReminders(p: { filter: Filter; query: string; includeDone: boolean }): Promise<NoteSummary[]>
+  /** Todos os anexos (fotos e arquivos) das notas ativas que passam no filtro. */
+  listAttachments(p: { filter: Filter; query: string }): Promise<AttachmentRow[]>
+  /** Imagens das notas ativas que passam no filtro, para o Moodboard. */
+  listImages(p: { filter: Filter; query: string; tone: Tone | null }): Promise<AttachmentRow[]>
+  /** Contagem por visão para o filtro e a busca atuais (notas ativas). */
+  viewCounts(p: { filter: Filter; query: string }): Promise<ViewCounts>
   listCategories(): Promise<Category[]>
   listTags(): Promise<TagCount[]>
 

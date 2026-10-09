@@ -1,7 +1,7 @@
-// Estado da interface (aba, filtro, busca, painéis abertos) e dados compartilhados
-// entre as telas (categorias, tags, atrasados).
+// Estado da interface e dados compartilhados entre as telas.
+// Visão (como ver) e filtro (o que ver) são independentes: trocar um nunca desfaz o outro.
 import { api } from './api'
-import type { AttachmentRow, Category, Scope, TagCount, View } from './types'
+import type { AttachmentRow, Box, Category, Filter, TagCount, View, ViewCounts } from './types'
 import { uuidv7 } from './uuid'
 
 export interface EditorTarget {
@@ -16,7 +16,9 @@ export const WIDE_MIN = 960
 
 class AppState {
   view = $state<View>('notes')
-  scope = $state<Scope>({ kind: 'all' })
+  filter = $state<Filter>({ categoryId: null, tags: [] })
+  /** Arquivo e Lixeira: só na visão Notas. */
+  box = $state<Box>('active')
   query = $state('')
   layout = $state<'grid' | 'list'>('grid')
   drawerOpen = $state(false)
@@ -31,7 +33,8 @@ class AppState {
   revision = $state(0)
   categories = $state.raw<Category[]>([])
   tags = $state.raw<TagCount[]>([])
-  overdue = $state(0)
+  /** Contagem por visão para o filtro e a busca atuais. */
+  counts = $state.raw<ViewCounts>({ notes: 0, reminders: 0, overdue: 0, files: 0, moodboard: 0 })
 
   #toastTimer: ReturnType<typeof setTimeout> | undefined
 
@@ -47,46 +50,68 @@ class AppState {
       void this.loadShared()
     })
     void this.loadShared()
+    // As contagens acompanham filtro, busca e dados.
+    $effect.root(() => {
+      $effect(() => {
+        void this.revision
+        const p = { filter: $state.snapshot(this.filter), query: this.query }
+        let stale = false
+        api.viewCounts(p).then((c) => !stale && (this.counts = c))
+        return () => (stale = true)
+      })
+    })
   }
 
   async loadShared() {
-    const [categories, tags, overdue] = await Promise.all([api.listCategories(), api.listTags(), api.overdueCount()])
+    const [categories, tags] = await Promise.all([api.listCategories(), api.listTags()])
     this.categories = categories
     this.tags = tags
-    this.overdue = overdue
   }
 
   category = (id: string | null | undefined) => (id ? this.categories.find((c) => c.id === id) : undefined)
 
-  get scopeLabel(): string | null {
-    const s = this.scope
-    if (s.kind === 'category') return this.category(s.id)?.name ?? null
-    if (s.kind === 'tag') return `#${s.tag}`
-    if (s.kind === 'archive') return 'Arquivo'
-    if (s.kind === 'trash') return 'Lixeira'
-    return null
+  get hasFilter() {
+    return !!this.filter.categoryId || this.filter.tags.length > 0
+  }
+
+  /** "Linvo · #campanha", ou null sem filtro. */
+  get filterLabel(): string | null {
+    const parts = [this.category(this.filter.categoryId)?.name, ...this.filter.tags.map((t) => `#${t}`)].filter(Boolean)
+    return parts.length ? parts.join(' · ') : null
   }
 
   setView(v: View) {
-    // Arquivos e Moodboard só olham notas visíveis.
-    if ((v === 'files' || v === 'moodboard') && (this.scope.kind === 'archive' || this.scope.kind === 'trash')) {
-      this.scope = { kind: 'all' }
-    }
+    if (v !== 'notes') this.box = 'active'
     this.view = v
   }
 
-  go(v: View, scope?: Scope) {
-    if (scope) this.scope = scope
-    this.setView(v)
+  /** Escolhe a categoria (ou nenhuma, com null). Tocar na já escolhida tira o filtro de categoria. */
+  setCategory(id: string | null) {
+    this.filter.categoryId = this.filter.categoryId === id ? null : id
+    this.box = 'active'
+  }
+
+  toggleTag(tag: string) {
+    const t = this.filter.tags
+    this.filter.tags = t.includes(tag) ? t.filter((x) => x !== tag) : [...t, tag]
+    this.box = 'active'
+  }
+
+  clearFilter() {
+    this.filter = { categoryId: null, tags: [] }
+  }
+
+  openBox(box: Box) {
+    this.box = box
+    this.view = 'notes'
     this.drawerOpen = false
   }
 
   openNew() {
-    const s = this.scope
     this.editor = {
       id: uuidv7(),
       isNew: true,
-      defaults: { categoryId: s.kind === 'category' ? s.id : null, tags: s.kind === 'tag' ? [s.tag] : [] },
+      defaults: { categoryId: this.filter.categoryId, tags: [...this.filter.tags] },
     }
   }
 
@@ -103,7 +128,6 @@ class AppState {
 }
 
 export const app = new AppState()
-
 /**
  * Consulta que se refaz quando os argumentos lidos em `fn` ou os dados mudam.
  * Mantém o resultado anterior até o novo chegar, para a tela nunca piscar vazia.

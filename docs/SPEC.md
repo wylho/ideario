@@ -265,6 +265,14 @@ O protótipo foi feito em **React + Radix UI** só para validar o design. O cód
 **O que não vale:** dados de exemplo, imagens SVG geradas, `contentEditable` com `execCommand` (substituir por TipTap) e parse de HTML no front.
 
 ### 9.1 Estrutura de navegação
+
+> **Revisado após o protótipo (proposta A, escolhida pelo usuário).** Visão (como ver: Notas, Lembretes, Arquivos, Moodboard)
+> e filtro (o que ver: uma categoria + várias tags) são eixos independentes: trocar um nunca desfaz o outro, e todas as visões,
+> inclusive Lembretes, respeitam o filtro. A visão fica embaixo (barra centralizada no desktop, abas no celular), com a contagem
+> de cada visão para o filtro atual. A lateral/gaveta e os chips de categoria só filtram. Visão vazia no filtro mostra
+> "Nenhum lembrete em X" com "Nova nota em X" e "Ver lembretes de tudo". Arquivo e Lixeira são caixas da visão Notas.
+> O texto abaixo descreve o protótipo original.
+
 - **Topo**: menu (gaveta), busca em pílula, alternar grade/lista (só em Notas), ícone de status do sync.
 - **Barra de abas inferior** com 4 abas: Notas, Lembretes, Arquivos, Moodboard. A aba ativa tem o ícone dentro de uma pílula de destaque.
 - **Gaveta lateral**: marca "Ideario" e status do sync. Contém as 4 seções, **Categorias** (bolinha de cor, nome, contagem, "Editar", "Nova categoria"), **Tags** (nuvem de chips com contagem), Arquivo, Lixeira e Configurações.

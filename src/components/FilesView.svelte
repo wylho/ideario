@@ -5,6 +5,7 @@
   import { app, live } from '../lib/app.svelte'
   import { daysAgo, fmtBytes } from '../lib/format'
   import Empty from './Empty.svelte'
+  import ViewEmpty from './ViewEmpty.svelte'
   import Picker from './Picker.svelte'
   import type { AttachmentKind, AttachmentRow, FileFilter, FileSort } from '../lib/types'
 
@@ -12,7 +13,7 @@
   let sort = $state<FileSort>('recent')
   let mode = $state<'list' | 'grid'>('list')
 
-  const rows = live(() => api.listAttachments({ scope: app.scope, query: app.query }), [] as AttachmentRow[])
+  const rows = live(() => api.listAttachments({ filter: $state.snapshot(app.filter), query: app.query }), [] as AttachmentRow[])
 
   const FILTERS: [FileFilter, string][] = [
     ['all', 'Tudo'], ['image', 'Fotos'], ['pdf', 'PDFs'], ['doc', 'Documentos'], ['sheet', 'Planilhas'], ['audio', 'Áudio'],
@@ -51,8 +52,10 @@
   </ToggleGroup.Root>
 </div>
 
-{#if rows.ready && !list.length}
-  <Empty icon={Paperclip} title="Nenhum arquivo" text="Mude o filtro ou anexe algo a uma nota." />
+{#if rows.ready && !rows.current.length}
+  <ViewEmpty view="files" />
+{:else if rows.ready && !list.length}
+  <Empty icon={Paperclip} title="Nenhum arquivo deste tipo" text="Escolha outro tipo acima." />
 {/if}
 
 {#snippet fileIcon(r: AttachmentRow, big = false)}
