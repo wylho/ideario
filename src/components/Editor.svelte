@@ -3,7 +3,7 @@
   import { Editor as TipTap } from '@tiptap/core'
   import { Dialog, DropdownMenu, Popover, Select } from 'bits-ui'
   import {
-    Archive, ArchiveRestore, ArrowLeft, Bold, Check, ChevronDown, Heading, ImagePlus, Italic, List, ListChecks, MoreVertical, Palette, Paperclip, Pin, PinOff, Tag, Trash2, X,
+    Archive, ArchiveRestore, ArrowLeft, Bold, Check, ChevronDown, Heading, ImagePlus, Italic, List, ListChecks, MoreVertical, Palette, Paperclip, Pin, PinOff, Redo2, Tag, Trash2, Undo2, X,
   } from '@lucide/svelte'
   import { api } from '../lib/api'
   import { app, type EditorTarget } from '../lib/app.svelte'
@@ -69,6 +69,7 @@
     return {
       bold: !!e?.isActive('bold'), italic: !!e?.isActive('italic'), heading: !!e?.isActive('heading', { level: 3 }),
       list: !!e?.isActive('bulletList'), check: !!e?.isActive('taskList'),
+      undo: !!editor?.can().undo(), redo: !!editor?.can().redo(),
     }
   })
 
@@ -99,6 +100,8 @@
   async function close(patch?: Partial<Meta>, msg?: string) {
     if (closed) return
     closed = true
+    // O que muda ao sair (arquivar, lixeira, restaurar) pode ser desfeito pelo aviso.
+    const before = meta && patch ? (Object.fromEntries(Object.keys(patch).map((k) => [k, meta![k as keyof Meta]])) as Partial<Meta>) : null
     if (meta && patch) Object.assign(meta, patch)
     if (isNew && isEmpty()) {
       clearTimeout(timer)
@@ -107,7 +110,7 @@
       await save()
     }
     app.editor = null
-    if (msg) app.say(msg)
+    if (msg) app.say(msg, before ? { label: 'Desfazer', run: () => void api.updateNote(id, before) } : undefined)
   }
 
   async function deleteForever() {
@@ -318,6 +321,9 @@
               </Popover.Content>
             </Popover.Portal>
           </Popover.Root>
+          <span class="ed-tools-sep" aria-hidden="true"></span>
+          <button onmousedown={(e) => e.preventDefault()} onclick={() => run((c) => c.undo())} aria-label="Desfazer" title="Desfazer (Ctrl+Z)" disabled={!active.undo}><Undo2 size={18} /></button>
+          <button onmousedown={(e) => e.preventDefault()} onclick={() => run((c) => c.redo())} aria-label="Refazer" title="Refazer (Ctrl+Shift+Z)" disabled={!active.redo}><Redo2 size={18} /></button>
         </div>
       </Dialog.Content>
     </Dialog.Portal>

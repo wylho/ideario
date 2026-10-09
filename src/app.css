@@ -401,6 +401,8 @@ button { cursor: pointer; }
 .ed-tools { display: flex; justify-content: space-around; padding: 6px 8px 8px; border-top: 1px solid var(--line); background: color-mix(in oklab, var(--fg) 3%, transparent); }
 .ed-tools > button { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 12px; color: var(--fg); }
 .ed-tools > button:hover, .ed-tools > button[data-state="open"] { background: rgb(127 140 135 / .16); }
+.ed-tools-sep { width: 1px; align-self: center; height: 22px; background: var(--line); }
+.ed-tools > button:disabled { opacity: .35; background: none; }
 .ed-tools > button[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); }
 
 /* menus e popovers (Bits UI) */
