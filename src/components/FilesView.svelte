@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { File as FileIcon, FileAudio, FileSpreadsheet, FileText, Paperclip } from '@lucide/svelte'
+  import { File as FileIcon, FileAudio, FileSpreadsheet, FileText, FileVideoCamera, Paperclip } from '@lucide/svelte'
   import { api } from '../lib/api'
   import { app, live } from '../lib/app.svelte'
   import { daysAgo, fmtBytes } from '../lib/format'
@@ -7,7 +7,7 @@
   import ViewEmpty from './ViewEmpty.svelte'
   import ContextMenu from './ContextMenu.svelte'
   import { attachmentMenu } from '../lib/menus'
-  import type { AttachmentKind, AttachmentRow } from '../lib/types'
+  import { fileGroup, type AttachmentKind, type AttachmentRow } from '../lib/types'
 
   // Tipo, ordem e lista/grade ficam na barra superior (ViewActions).
   const sort = $derived(app.filesSort)
@@ -17,13 +17,13 @@
 
   const list = $derived(
     rows.current
-      .filter((r) => !app.filesKind || r.kind === app.filesKind)
+      .filter((r) => !app.filesKind || fileGroup(r.kind) === app.filesKind)
       .sort((a, b) => (sort === 'name' ? a.name.localeCompare(b.name, 'pt-BR') : sort === 'size' ? b.bytes - a.bytes : b.addedAt - a.addedAt)),
   )
   const total = $derived(rows.current.reduce((s, r) => s + r.bytes, 0))
   const saved = $derived(rows.current.reduce((s, r) => s + (r.origBytes ? r.origBytes - r.bytes : 0), 0))
 
-  const icons: Partial<Record<AttachmentKind, typeof FileIcon>> = { pdf: FileText, sheet: FileSpreadsheet, audio: FileAudio }
+  const icons: Partial<Record<AttachmentKind, typeof FileIcon>> = { pdf: FileText, sheet: FileSpreadsheet, audio: FileAudio, video: FileVideoCamera }
   const open = (r: AttachmentRow) => (r.kind === 'image' ? (app.lightbox = r) : app.openNote(r.noteId))
 </script>
 

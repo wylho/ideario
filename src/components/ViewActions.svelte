@@ -1,12 +1,12 @@
 <script lang="ts">
-  import { CheckCheck, File as FileIcon, FileAudio, FileSpreadsheet, FileText, Image, Trash2 } from '@lucide/svelte'
+  import { CheckCheck, File as FileIcon, FileAudio, FileText, FileVideoCamera, Image, Trash2 } from '@lucide/svelte'
   import SortMenu from './SortMenu.svelte'
   import LayoutToggle from './LayoutToggle.svelte'
   import FilterGroup from './FilterGroup.svelte'
   import ConfirmDialog from './ConfirmDialog.svelte'
   import { api } from '../lib/api'
   import { app, live } from '../lib/app.svelte'
-  import type { AttachmentKind, FileSort, NoteSort, Tone } from '../lib/types'
+  import type { FileGroup, FileSort, NoteSort, Tone } from '../lib/types'
 
   // Menu dinâmico: as ações da visão atual, sempre no mesmo lugar e com os mesmos botões
   // (filtro da visão → ordenar → lista/grade). Nada disso fica no meio do conteúdo.
@@ -22,13 +22,13 @@
     { id: 'name', label: 'Nome (A–Z)' },
     { id: 'size', label: 'Tamanho' },
   ]
-  // Os ícones são os mesmos da lista de arquivos.
-  const KINDS: { id: AttachmentKind; label: string; icon: typeof FileIcon }[] = [
-    { id: 'image', label: 'Fotos', icon: Image },
+  // Os ícones são os mesmos da lista de arquivos; planilhas e afins entram em "Outros documentos".
+  const KINDS: { id: FileGroup; label: string; icon: typeof FileIcon }[] = [
     { id: 'pdf', label: 'PDFs', icon: FileText },
-    { id: 'doc', label: 'Documentos', icon: FileIcon },
-    { id: 'sheet', label: 'Planilhas', icon: FileSpreadsheet },
+    { id: 'doc', label: 'Outros documentos', icon: FileIcon },
+    { id: 'image', label: 'Imagens', icon: Image },
     { id: 'audio', label: 'Áudio', icon: FileAudio },
+    { id: 'video', label: 'Vídeo', icon: FileVideoCamera },
   ]
   const TONES: { id: Tone; label: string; swatch: string }[] = [
     { id: 'quente', label: 'Quentes', swatch: '#D98E4A' },
