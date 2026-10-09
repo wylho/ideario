@@ -1,0 +1,326 @@
+# Ideário — Especificação do projeto
+
+> Documento de passagem. Reúne todas as decisões tomadas na fase de conceito e no protótipo de design.
+> Leitor principal: Claude Code. Idioma do app e da UI: **português do Brasil**. Identificadores de código em inglês.
+> "Ideário" é nome provisório.
+
+---
+
+## 1. Visão
+
+Um app de notas no estilo Google Keep, com duas metas simultâneas:
+
+1. **Velocidade de bloco de notas.** Abrir e começar a digitar tem que ser imediato. O app nunca pode parecer um site carregando.
+2. **Hub de ideias.** Notas, fotos, arquivos, lembretes, moodboards, categorias e tags num só lugar, com busca instantânea.
+
+Usuário principal: o próprio autor (designer), uso pessoal em vários aparelhos. Não é um produto multiusuário e não tem servidor próprio.
+
+### Princípios que decidem empates
+
+- **Local-first.** O SQLite local é a fonte da verdade. A UI nunca espera a rede. O Google Drive é um espelho sincronizado em segundo plano.
+- **Uma fonte de dados, várias visões.** Notas, Lembretes, Arquivos e Moodboard são consultas diferentes sobre o mesmo banco, nunca dados duplicados.
+- **Design é requisito.** O protótipo (seção 9) é a referência visual. Fidelidade ao protótipo importa tanto quanto a funcionalidade.
+- **Privacidade por padrão.** Remover EXIF e GPS das fotos e usar o escopo mínimo do Drive.
+
+---
+
+## 2. Stack decidida
+
+| Camada | Escolha | Motivo |
+|---|---|---|
+| Shell multiplataforma | **Tauri 2** | Núcleo em Rust, UI web, roda em Windows, macOS, Linux, Android e iOS |
+| Núcleo | **Rust** | Banco, sync, pipeline de imagem e agendamento |
+| Banco local | **SQLite** (via `rusqlite` ou `sqlx`) + **FTS5** | Abertura instantânea, busca full-text offline |
+| Frontend | **Svelte 5** *(ver decisão pendente D1)* | Leve, sintaxe próxima de HTML/CSS |
+| Componentes headless | **Bits UI** (equivalente ao Radix para Svelte) ou **Radix**, se for React | O protótipo usa Radix |
+| Editor rico | **TipTap** | Formatação, checklist, imagem inline |
+| Conflitos/merge | **Yjs** no front + **yrs** no Rust | Integração pronta com o TipTap e merge de edições feitas em aparelhos diferentes |
+| Sync | **Google Drive API v3** | Sem servidor próprio |
+| Imagens | crates `image`, `fast_image_resize`, `webp`, `kamadak-exif` | Otimização na importação |
+
+O Automerge foi considerado e **descartado** em favor do Yjs por causa do editor rico.
+
+---
+
+## 3. Funcionalidades
+
+### 3.1 Notas
+- Grade masonry com 2 colunas no celular e alternância para lista. Seção "Fixadas" no topo.
+- Campos: título, corpo rico, cor (7 opções: padrão, areia, sálvia, céu, rosa, lilás, manteiga), fixada, categoria, tags, lembrete, anexos.
+- Card mostra: primeira imagem como capa (com "+N" se houver mais), título, trecho, até 4 itens de checklist, e pílulas de lembrete, categoria, contagem de anexos e tags.
+- **Arquivo** e **Lixeira** como no Keep. A lixeira apaga definitivamente após **30 dias**.
+- Botão flutuante "+" cria nota já com a categoria ou tag do filtro ativo.
+
+### 3.2 Editor
+- Negrito, itálico, título (h3), lista, **checklist** clicável e **imagem no meio do texto**.
+- Digitar `#palavra` no corpo cria a tag automaticamente. Tags também podem ser adicionadas num campo próprio.
+- Barra superior: voltar (salva), fixar, lembrete (popover com atalhos "Hoje à noite", "Amanhã de manhã", "Segunda que vem" e campo de data e hora), menu com arquivar e mover para a lixeira.
+- Barra inferior: ferramentas de formatação, inserir imagem e cor da nota.
+- Salvamento contínuo, sem botão "salvar". Nota vazia ao sair não é criada.
+
+### 3.3 Categorias e tags
+- **Categorias** substituem os "marcadores" do Keep. Cada nota tem **no máximo uma**. Cada categoria tem nome, cor e (futuramente) ícone. Ficam listadas no menu lateral com contagem.
+- **Tags** são livres e várias por nota. Cruzam categorias. Aparecem como nuvem no menu lateral.
+- Todas as abas aceitam filtro por categoria ou tag. Quando há filtro ativo, ele aparece como pílula removível sob a busca.
+
+### 3.4 Lembretes
+- O lembrete é **um campo da nota** (`reminder_at`, `reminder_done`). A aba Lembretes é um **filtro salvo** com visual próprio.
+- Grupos: **Atrasados**, Hoje, Amanhã, Próximos e Concluídos (os concluídos aparecem pelo switch "Concluídos").
+- Concluir pela própria lista. A aba mostra um ponto vermelho quando há atrasados.
+- Notificações precisam disparar com o app fechado. No celular, usar o agendador do sistema. No desktop, o app residente na bandeja agenda. Recorrência está fora do MVP.
+
+### 3.5 Arquivos
+- Lista **todos os anexos** (fotos e arquivos) das notas visíveis.
+- Filtros por tipo: Tudo, Fotos, PDFs, Documentos, Planilhas, Áudio (com contagem). Também respeita categoria, tag e busca.
+- Ordenação por mais recentes, nome ou tamanho. Visualização em lista ou grade.
+- Resumo no topo: número de arquivos, total no Drive e **espaço economizado** pela otimização das fotos.
+- Tocar numa foto abre o visualizador. Tocar num arquivo abre a nota de origem.
+
+### 3.6 Moodboard
+- Todas as imagens das notas visíveis numa grade masonry com miniaturas do cache.
+- Cada imagem mostra sua **paleta extraída** (5 cores) como faixa sobre a miniatura.
+- **Filtro por tom**: Quentes, Frios, Verdes, Rosas, Neutros. O tom é calculado na importação.
+- Moodboard por projeto = filtro por categoria ou tag. Não existe entidade "moodboard" separada.
+- O visualizador em tela cheia mostra a imagem, a paleta com códigos hex copiáveis, o tamanho original contra o otimizado e os botões "Original" e "Abrir nota".
+- Futuro: ordem manual por arrastar, salva por escopo (`moodboard_order`).
+
+### 3.7 Busca
+- Barra de busca global no topo de todas as abas. O placeholder muda conforme a aba e o filtro.
+- FTS5 sobre título, texto e tags. Precisa ignorar acentos (`tokenize = 'unicode61 remove_diacritics 2'`), porque o conteúdo é em português.
+
+### 3.8 Captura rápida
+- **Desktop**: app residente na bandeja e **atalho global** (sugestão: Ctrl/Cmd+Shift+N) que abre direto numa nota nova com o cursor no corpo.
+- **Android**: receber conteúdo pelo "Compartilhar com" (texto, links, fotos) e, numa fase posterior, um widget de captura rápida (nativo, Kotlin).
+
+### 3.9 Importação do Google Keep
+- Lê o `.zip` do **Google Takeout** (pasta `Keep/`, um JSON por nota mais as mídias).
+- Mapeamento: marcadores viram categorias (o primeiro marcador vira a categoria e os demais viram tags), `listContent` vira checklist, `color` vai para a paleta mais próxima, e `isPinned`, `isArchived`, `isTrashed` e os timestamps são preservados.
+- As imagens passam pelo mesmo pipeline de otimização.
+- **Validar os nomes de campos contra uma exportação real** antes de implementar. O usuário tem as categorias atuais: Arómate, Fluency, Gestão de Pessoas, Hospital, Linvo e MBA em Finanças e Análise de Dados.
+
+### 3.10 Configurações
+- Sincronização: status do Drive, última sincronização, "Sincronizar agora" e "Sincronizar só no Wi-Fi" (o texto sempre sincroniza; os anexos grandes esperam o Wi-Fi).
+- Fotos: qualidade (Econômica 1280px, Equilibrada 2048px como padrão, Alta 3072px) e "Manter originais".
+- Cache: barra de uso e slider de limite (0,5 a 5 GB).
+- Importar do Google Keep.
+
+---
+
+## 4. Arquitetura
+
+```
+┌──────────── Frontend (WebView) ────────────┐
+│ Svelte/React · TipTap + Yjs · UI do protót.│
+│ Lê/escreve só via comandos Tauri (invoke)  │
+└───────────────┬────────────────────────────┘
+                │ commands + events
+┌───────────────▼────────────────────────────┐
+│ Núcleo Rust                                │
+│  db/        SQLite, migrações, FTS5        │
+│  notes/     CRUD, Y.Doc por nota (yrs)     │
+│  media/     pipeline de imagem, cache LRU  │
+│  sync/      Drive API, outbox, changes     │
+│  reminders/ agendamento + notificações     │
+│  import/    Google Takeout (Keep)          │
+└───────────────┬────────────────────────────┘
+                │ HTTPS (em segundo plano)
+         Google Drive (appDataFolder)
+```
+
+### 4.1 Regras de desempenho (metas)
+- Inicialização a frio no desktop: lista visível em **< 300 ms**. No Android, uma primeira abertura a frio perto de ~0,5 s é aceitável; as seguintes devem ser imperceptíveis.
+- Consulta da lista (5 mil notas): **< 16 ms**. Busca FTS: **< 30 ms**.
+- Lista virtualizada. Miniaturas sempre locais. Nenhuma chamada de rede no caminho da renderização.
+- Fontes **empacotadas no app**, sem Google Fonts em runtime.
+- O frontend recebe dados prontos para exibir (trecho, capa, contagens), calculados no Rust ou em colunas derivadas, e não parseia HTML na lista. *(O protótipo faz parse no front; isso é aceitável só no protótipo.)*
+
+---
+
+## 5. Modelo de dados (SQLite)
+
+Esboço inicial, a ajustar na implementação:
+
+```sql
+CREATE TABLE categories (
+  id TEXT PRIMARY KEY,            -- UUID v7
+  name TEXT NOT NULL,
+  color TEXT NOT NULL,            -- hex
+  icon TEXT,
+  sort INTEGER NOT NULL DEFAULT 0,
+  updated_at INTEGER NOT NULL,
+  deleted INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE notes (
+  id TEXT PRIMARY KEY,            -- UUID v7
+  ydoc BLOB NOT NULL,             -- estado Yjs completo (fonte da verdade da nota)
+  -- colunas derivadas do ydoc, para listar/filtrar rápido:
+  title TEXT NOT NULL DEFAULT '',
+  body_text TEXT NOT NULL DEFAULT '',   -- texto puro para FTS e trecho
+  excerpt TEXT NOT NULL DEFAULT '',
+  checklist_json TEXT,                  -- preview: [{text, done}] (até 4)
+  cover_hash TEXT,                      -- 1ª imagem
+  category_id TEXT REFERENCES categories(id),
+  color TEXT NOT NULL DEFAULT 'none',
+  pinned INTEGER NOT NULL DEFAULT 0,
+  archived INTEGER NOT NULL DEFAULT 0,
+  trashed_at INTEGER,                   -- NULL = não está na lixeira
+  reminder_at INTEGER,
+  reminder_done INTEGER NOT NULL DEFAULT 0,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL,
+  dirty INTEGER NOT NULL DEFAULT 1      -- precisa subir pro Drive
+);
+
+CREATE TABLE tags (id TEXT PRIMARY KEY, name TEXT NOT NULL UNIQUE);
+CREATE TABLE note_tags (note_id TEXT, tag_id TEXT, PRIMARY KEY (note_id, tag_id));
+
+CREATE TABLE attachments (
+  hash TEXT PRIMARY KEY,          -- blake3/sha256 do arquivo otimizado (endereçamento por conteúdo)
+  kind TEXT NOT NULL,             -- image | pdf | doc | sheet | audio | other
+  mime TEXT NOT NULL,
+  name TEXT NOT NULL,
+  bytes INTEGER NOT NULL,
+  orig_bytes INTEGER,             -- tamanho antes da otimização
+  width INTEGER, height INTEGER,
+  palette TEXT,                   -- JSON: 5 hex
+  tone TEXT,                      -- quente|frio|verde|rosa|neutro
+  has_original INTEGER NOT NULL DEFAULT 0,
+  local_state TEXT NOT NULL,      -- full | thumb_only | missing
+  last_access INTEGER,
+  drive_file_id TEXT,
+  uploaded INTEGER NOT NULL DEFAULT 0
+);
+CREATE TABLE note_attachments (note_id TEXT, hash TEXT, position INTEGER, PRIMARY KEY (note_id, hash));
+
+CREATE TABLE moodboard_order (scope_key TEXT, hash TEXT, position INTEGER, PRIMARY KEY (scope_key, hash));
+CREATE TABLE sync_state (key TEXT PRIMARY KEY, value TEXT);   -- ex.: drive_page_token
+
+CREATE VIRTUAL TABLE notes_fts USING fts5(
+  title, body_text, tags,
+  content='', tokenize='unicode61 remove_diacritics 2'
+);
+```
+
+**Nota como Y.Doc:** cada nota é um documento Yjs com `Y.Map("meta")` (título, cor, categoria, pinned, archived, trashed_at, reminder, tags) e `Y.XmlFragment("body")` (conteúdo do TipTap). Assim, metadados **e** corpo fazem merge sem conflito. As colunas SQL são uma projeção atualizada a cada mudança.
+
+Imagens no corpo referenciam o anexo por hash (`<img data-hash="…">`). O front resolve o caminho local via protocolo de assets do Tauri.
+
+---
+
+## 6. Sincronização com o Google Drive
+
+- **Escopo**: `drive.appdata`, a pasta oculta do app. Evita a auditoria pesada de escopos restritos. *(Alternativa em aberto: pasta visível com Markdown, ver D3.)*
+- **Layout no Drive**:
+  ```
+  appDataFolder/
+    notes/<note_id>.ydoc        # estado Yjs binário
+    categories.ydoc
+    attachments/<hash>.<ext>    # arquivos otimizados
+    originals/<hash>.<ext>      # só se "Manter originais"
+  ```
+  Usar `appProperties` nos arquivos (ex.: `noteId`) para mapear sem baixar conteúdo. Miniaturas **não** sobem, porque são regeneradas localmente.
+- **Nunca sincronizar o arquivo SQLite.** Ele é por aparelho.
+- **Ciclo**:
+  1. `changes.list` com o `pageToken` salvo traz só o que mudou.
+  2. Para cada nota alterada: baixar, `apply_update` no Y.Doc local, reprojetar as colunas e manter `dirty=1` se o estado local tiver algo que o remoto não tem.
+  3. Subir notas `dirty` (sempre baixar e mesclar antes de sobrescrever).
+  4. Subir anexos pendentes (respeitando "só no Wi-Fi") e baixar sob demanda.
+  - Mesmo que dois aparelhos sobrescrevam ao mesmo tempo, o CRDT garante convergência no ciclo seguinte, porque cada lado reenvia o que o outro não tem.
+- **Frequência**: ao abrir, ao voltar ao primeiro plano, alguns segundos depois de uma edição (debounce) e por polling periódico. Não é tempo real, e não precisa ser.
+- **Exclusão**: a nota vai para a lixeira (`trashed_at` no meta e sincroniza). Após 30 dias, o arquivo é apagado no Drive. Anexos sem referência são coletados depois.
+- **OAuth**: no desktop, fluxo loopback com PKCE. No Android e no iOS, login Google nativo via plugin (provavelmente um plugin Tauri com código Kotlin/Swift). Guardar o refresh token no keystore do sistema.
+
+---
+
+## 7. Pipeline de mídia e cache
+
+Na importação de uma imagem (Rust, fora da thread de UI):
+1. Ler e aplicar a **orientação EXIF**, depois **remover todos os metadados** (inclusive GPS).
+2. Redimensionar para o lado maior conforme a qualidade escolhida (padrão **2048 px**).
+3. Codificar em **WebP** (padrão; AVIF é opcional, porque a codificação é lenta no celular). Meta: foto de 4 MB virar ~200–400 KB.
+4. Gerar a **miniatura** (~400 px, WebP), que fica sempre no cache.
+5. Extrair a **paleta** (5 cores dominantes, por k-means ou median-cut) e classificar o **tom**.
+6. Calcular o hash, gravar em `attachments`, guardar o original só se "Manter originais".
+7. HEIC (iPhone) precisa de decodificador próprio. Tratar na fase mobile.
+
+**Cache**: texto e miniaturas ficam sempre locais. Arquivos grandes e fotos em tamanho cheio obedecem ao limite configurado com despejo **LRU** (`last_access`). Arquivos despejados viram `thumb_only` e são baixados de novo ao abrir.
+
+---
+
+## 8. Plataformas
+
+- **Ordem sugerida** *(ver D2)*: Desktop primeiro para desenvolver rápido, Android logo depois (é o aparelho principal do usuário, que hoje usa o Keep no Android), iOS e Linux por último.
+- Recursos específicos por plataforma:
+  - Desktop: bandeja, atalho global e notificações agendadas pelo processo residente.
+  - Android: compartilhar com o app (intent filter), notificações agendadas (cuidado com a permissão de alarmes exatos no Android 12+), widget nativo numa fase posterior.
+
+---
+
+## 9. Protótipo de design (referência visual)
+
+O protótipo foi feito em **React + Radix UI** só para validar o design. O código-fonte está em `prototype/` (`App.tsx`, `data.ts`, `index.css`). O HTML exportado é o mesmo protótipo empacotado.
+
+**O que vale do protótipo:** layout, hierarquia, tokens, textos da UI, comportamento das telas e as interações listadas na seção 3.
+**O que não vale:** dados de exemplo, imagens SVG geradas, `contentEditable` com `execCommand` (substituir por TipTap) e parse de HTML no front.
+
+### 9.1 Estrutura de navegação
+- **Topo**: menu (gaveta), busca em pílula, alternar grade/lista (só em Notas), ícone de status do sync.
+- **Barra de abas inferior** com 4 abas: Notas, Lembretes, Arquivos, Moodboard. A aba ativa tem o ícone dentro de uma pílula de destaque.
+- **Gaveta lateral**: marca "Ideário" e status do sync. Contém as 4 seções, **Categorias** (bolinha de cor, nome, contagem, "Editar", "Nova categoria"), **Tags** (nuvem de chips com contagem), Arquivo, Lixeira e Configurações.
+- **Editor** em tela cheia sobre a lista, com fundo da cor da nota.
+- **Configurações** em bottom sheet.
+
+### 9.2 Tokens (claro / escuro)
+```
+Layout: coluna de celular (máx. 440px) com busca no topo, conteúdo em masonry e abas embaixo.
+
+--bg        #eef1ef / #101513     --fg       #16201c / #e5ebe8
+--surface   #ffffff / #19211e     --muted    #5d6a65 / #93a19b
+--raised    #f7f9f8 / #1f2825     --line     #d6ddd9 / #2b3632
+--accent    #2547c9 / #8ea4ff     --accent-soft #e2e8fb / #232c4d
+--late      #c03b2b / #ff8a78     --good     #217a4b / #6fd09a
+
+Cores de nota (claro / escuro):
+sand #f6e9d6/#3a3125  sage #e1eedd/#26352a  sky #dde8f8/#22304a
+rose #f8e0e4/#3d262c  lilac #e9e2f6/#2f2842 butter #f8f0c8/#39351e
+
+Cores das categorias atuais:
+Arómate #C26A3D · Fluency #3E8E7E · Gestão de Pessoas #8A6BC4
+Hospital #C25478 · Linvo #3D63D6 · MBA #B08A1E
+```
+- **Tipografia**: *Bricolage Grotesque* (títulos, marca, 500–700), *Figtree* (corpo, 15–16 px), *JetBrains Mono* (números, tamanhos, horários, hex, com `tabular-nums`).
+- Raios: cards 16 px, pílulas 999 px, FAB 20 px, sheets 24 px. Rótulos de seção em caixa alta 11 px com espaçamento 0,09em.
+- Tema segue o sistema (claro/escuro). Respeitar `prefers-reduced-motion`.
+
+---
+
+## 10. Fases de implementação
+
+Cada fase termina com o app rodando e algo verificável.
+
+| Fase | Entrega | Pronto quando |
+|---|---|---|
+| **0. Esqueleto** | Projeto Tauri 2 + frontend + porte visual do protótipo com dados falsos | O app no desktop reproduz as 4 abas, a gaveta, o editor e as configurações com fidelidade ao protótipo |
+| **1. Núcleo local** | SQLite, migrações, comandos de CRUD, categorias, tags, arquivo/lixeira, FTS | Criar, editar, filtrar e buscar notas reais. Reabrir o app mostra tudo instantaneamente |
+| **2. Editor** | TipTap + Yjs (Y.Doc por nota, persistido via yrs), checklist, `#tag` automática | Formatação e checklist persistem. A projeção (título, trecho, checklist) se atualiza na lista |
+| **3. Mídia** | Pipeline de imagem, anexos, imagem inline, abas Arquivos e Moodboard, paleta e tom | Foto grande entra reduzida, sem EXIF. O Moodboard filtra por tom. Os números de economia são reais |
+| **4. Lembretes e captura** | Agendamento, notificações, bandeja e atalho global (desktop) | O lembrete dispara com a janela fechada. O atalho abre uma nota nova em < 300 ms |
+| **5. Sync Drive** | OAuth, layout no appDataFolder, changes + outbox, merge Yjs, anexos sob demanda | Editar a mesma nota offline em dois aparelhos e sincronizar resulta nas duas edições preservadas |
+| **6. Importar Keep** | Leitor do Takeout | Uma exportação real entra com categorias, cores, checklists e fotos otimizadas |
+| **7. Android** | Build, OAuth nativo, compartilhar com o app, notificações | Uso diário no celular. O widget fica para depois |
+
+---
+
+## 11. Decisões pendentes (perguntar ao usuário antes da fase correspondente)
+
+- **D1 — Frontend: Svelte ou React?** A recomendação original foi Svelte. Porém o protótipo está em React + Radix, e manter React permite reaproveitar componentes e estilos quase diretamente. A diferença de desempenho na prática é imperceptível. *Decidir antes da Fase 0.*
+- **D2 — Ordem das plataformas.** Confirmar desktop → Android.
+- **D3 — Notas visíveis no Drive?** A opção `appDataFolder` (oculta) é a recomendada. A alternativa é uma pasta visível com Markdown legível sem o app, que exige o escopo `drive.file` e uma conversão Yjs↔Markdown. Uma opção intermediária é exportar Markdown sob demanda.
+- **D4 — Nome definitivo do app.**
+- **D5 — Ícones das categorias.** Usar um conjunto fixo (ex.: Lucide) ou emoji?
+
+---
+
+## 12. Fora do escopo (por enquanto)
+Colaboração em tempo real com outras pessoas, compartilhamento de notas, IA nas notas, criptografia ponta a ponta, versão web pública e lembretes recorrentes.
