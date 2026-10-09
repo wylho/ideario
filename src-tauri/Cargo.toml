@@ -33,6 +33,8 @@ strip = true
 # Linux: lê a fonte e o destaque da área de trabalho (GNOME, KDE…) para a UI parecer nativa.
 [target.'cfg(target_os = "linux")'.dependencies]
 gtk = "0.18"
+# mesma versão da wry: liga a captura de áudio/vídeo (gravador e câmera), que a WebKitGTK traz desligada
+webkit2gtk = { version = "2.0", features = ["v2_40"] }
 
 # Windows: cor de destaque do sistema (registro do DWM), para o tema Sistema.
 [target.'cfg(target_os = "windows")'.dependencies]

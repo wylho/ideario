@@ -1,16 +1,52 @@
 <script lang="ts">
   import { FilePlus2, Paperclip } from '@lucide/svelte'
-  import { app } from '../lib/app.svelte'
+  import { isTauri } from '@tauri-apps/api/core'
+  import { app, type DroppedFile } from '../lib/app.svelte'
 
   // Arquivos arrastados do computador para a janela: com uma nota aberta, entram nela (no ponto do texto
   // onde caírem, ou no fim se caírem fora do texto); sem nota aberta, viram uma nota nova.
-  // Arrastar cards e blocos dentro do app não passa por aqui (não traz "Files").
+  //
+  // No app, quem recebe o arrasto é o Tauri (evento nativo, com o caminho de cada arquivo): o drop do HTML não
+  // chega com os arquivos em todos os sistemas. No navegador (prévia e testes), vale o drop do HTML.
+  // Arrastar cards e blocos dentro do app não passa por aqui (não traz arquivos).
   let over = $state(false)
   let timer = 0
 
-  const hasFiles = (e: DragEvent) => !!e.dataTransfer?.types.includes('Files')
   // Configurações, visualizador ou diálogo por cima: não é lugar de soltar.
   const blocked = () => app.settingsOpen || !!app.lightbox || !!app.dialog
+
+  function deliver(files: DroppedFile[], at?: { x: number; y: number }) {
+    if (!files.length || blocked()) return
+    if (app.editor) app.dropIntoEditor?.(files, at)
+    else app.openNew(undefined, { files })
+  }
+
+  // ---------- app (Tauri) ----------
+  $effect(() => {
+    if (!isTauri()) return
+    let stop: (() => void) | undefined
+    let gone = false
+    void import('@tauri-apps/api/webview').then(({ getCurrentWebview }) =>
+      getCurrentWebview()
+        .onDragDropEvent(({ payload: p }) => {
+          if (p.type === 'enter') over = p.paths.length > 0 && !blocked()
+          else if (p.type === 'leave') over = false
+          else if (p.type === 'drop') {
+            over = false
+            const at = { x: p.position.x / devicePixelRatio, y: p.position.y / devicePixelRatio }
+            deliver(p.paths.map((path) => ({ path })), at)
+          }
+        })
+        .then((un) => (gone ? un() : (stop = un))),
+    )
+    return () => {
+      gone = true
+      stop?.()
+    }
+  })
+
+  // ---------- navegador ----------
+  const hasFiles = (e: DragEvent) => !isTauri() && !!e.dataTransfer?.types.includes('Files')
 
   function dragover(e: DragEvent) {
     if (!hasFiles(e)) return
@@ -34,10 +70,7 @@
     // O texto da nota já tratou (soltou no ponto exato).
     if (e.defaultPrevented) return
     e.preventDefault()
-    const files = [...(e.dataTransfer?.files ?? [])]
-    if (!files.length || blocked()) return
-    if (app.editor) app.dropIntoEditor?.(files)
-    else app.openNew(undefined, { files })
+    deliver([...(e.dataTransfer?.files ?? [])])
   }
 </script>
 

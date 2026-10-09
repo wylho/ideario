@@ -51,6 +51,7 @@ export const tauriApi: Api = {
     const bytes = new Uint8Array(await file.arrayBuffer())
     return invoke('import_file', bytes, { headers: { 'x-name': encodeURIComponent(name), 'x-mime': file.type } })
   },
+  importPath: (path) => invoke('import_path', { path }),
   downloadAttachment: (a) => invoke<string>('download_attachment', { hash: a.hash, name: a.name }),
 
   subscribe(fn) {

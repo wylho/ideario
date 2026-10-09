@@ -56,9 +56,11 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
   macOS em `src-tauri/src/system_theme.rs`), Ideario, Papel, Grafite, Floresta; claro/escuro/automático à parte.
 - Mídia no editor (`src/lib/editor/media.ts`): fotos lado a lado (`imageRow`, 2–4, arrastar como no Gutenberg + botões na foto
   selecionada), anexos inline (`noteFile`: vídeo, áudio com player, documentos), gravador e câmera (`capture.svelte.ts`).
-  A capa do card é a primeira foto ou a primeira linha de fotos. Arquivos arrastados do computador (`FileDrop.svelte`; o
-  handler de arrastar do Tauri fica desligado em `lib.rs` para o drop chegar à página): com nota aberta entram nela (no
-  ponto do texto ou no fim); sem nota aberta viram nota nova. "+" em leque (`FabMenu`) com atalhos.
+  A capa do card é a primeira foto ou a primeira linha de fotos. Arquivos arrastados do computador (`FileDrop.svelte`; no app
+  pelo evento nativo do Tauri, com o caminho, lido no núcleo por `import_path`; no navegador, drop do HTML): com nota
+  aberta entram nela (no ponto do texto ou no fim); sem nota aberta viram nota nova.
+- Linux: a WebKitGTK vem com microfone/câmera desligados; `lib.rs` (`linux_media`) liga e aceita os pedidos de áudio e
+  vídeo. O AppImage leva o GStreamer (`bundleMediaFramework`), senão não há player nem gravador. "+" em leque (`FabMenu`) com atalhos.
 - Blocos (`src/lib/editor/blocks.ts`): cada nó de primeiro nível é um bloco, como no Notion. Alça ⋮⋮ no hover arrasta
   e abre o menu do bloco (`MenuAt`); itens de lista/checklist têm alça própria (reordenar como no Keep). Clique direito
   em foto/anexo abre o mesmo menu. Copiar/colar entre notas leva fotos e anexos. Anexos são sempre blocos do texto.

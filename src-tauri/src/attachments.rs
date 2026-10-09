@@ -35,6 +35,51 @@ pub fn kind_of(mime: &str, name: &str) -> &'static str {
     }
 }
 
+/// Tipo MIME pela extensão, para arquivos que chegam pelo caminho (arrastados do sistema).
+pub fn mime_of(name: &str) -> &'static str {
+    let ext = name.rsplit_once('.').map(|(_, e)| e.to_lowercase()).unwrap_or_default();
+    match ext.as_str() {
+        "jpg" | "jpeg" => "image/jpeg",
+        "png" => "image/png",
+        "gif" => "image/gif",
+        "webp" => "image/webp",
+        "heic" => "image/heic",
+        "heif" => "image/heif",
+        "avif" => "image/avif",
+        "bmp" => "image/bmp",
+        "svg" => "image/svg+xml",
+        "tif" | "tiff" => "image/tiff",
+        "mp4" | "m4v" => "video/mp4",
+        "mov" => "video/quicktime",
+        "webm" => "video/webm",
+        "mkv" => "video/x-matroska",
+        "avi" => "video/x-msvideo",
+        "mp3" => "audio/mpeg",
+        "m4a" => "audio/mp4",
+        "aac" => "audio/aac",
+        "wav" => "audio/wav",
+        "ogg" | "oga" | "opus" => "audio/ogg",
+        "flac" => "audio/flac",
+        "pdf" => "application/pdf",
+        "zip" => "application/zip",
+        "txt" => "text/plain",
+        "md" => "text/markdown",
+        "csv" => "text/csv",
+        "json" => "application/json",
+        "html" | "htm" => "text/html",
+        "doc" => "application/msword",
+        "docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "xls" => "application/vnd.ms-excel",
+        "xlsx" => "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "ppt" => "application/vnd.ms-powerpoint",
+        "pptx" => "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        "odt" => "application/vnd.oasis.opendocument.text",
+        "ods" => "application/vnd.oasis.opendocument.spreadsheet",
+        "rtf" => "application/rtf",
+        _ => "application/octet-stream",
+    }
+}
+
 /// Guarda o arquivo (uma vez por conteúdo) e registra o anexo. Devolve o anexo como ficou no banco.
 pub fn import(store: &Store, data: &Path, bytes: &[u8], name: &str, mime: &str) -> Result<Attachment, String> {
     let hash = format!("{:x}", Sha256::digest(bytes));
@@ -136,6 +181,8 @@ mod tests {
         assert_eq!(kind_of("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "x.xlsx"), "sheet");
         assert_eq!(kind_of("", "notas.md"), "doc");
         assert_eq!(kind_of("application/zip", "a.zip"), "other");
+        assert_eq!(kind_of(mime_of("Foto.JPG"), "Foto.JPG"), "image");
+        assert_eq!(kind_of(mime_of("aula.m4a"), "aula.m4a"), "audio");
     }
 
     #[test]

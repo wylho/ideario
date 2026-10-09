@@ -19,7 +19,7 @@
   import CameraDialog from './CameraDialog.svelte'
   import { api } from '../lib/api'
   import { download, newCategory } from '../lib/menus'
-  import { app, type EditorTarget } from '../lib/app.svelte'
+  import { app, type DroppedFile, type EditorTarget } from '../lib/app.svelte'
   import { noteExtensions } from '../lib/editor/extensions'
   import { ago, fmtBytes, hashTags, normalizeTag } from '../lib/format'
   import ReminderPopover from './ReminderPopover.svelte'
@@ -195,8 +195,12 @@
       if (start && 'files' in start) void addFiles(start.files)
       else if (start && 'record' in start) void recorder.start()
       else if (start && 'camera' in start) cameraOpen = true
-      // Soltos fora do texto (título, margens, fundo): entram no fim da nota.
-      const drop = (files: File[]) => void addFiles(files, ed.state.doc.content.size)
+      // Soltos no texto entram no ponto; fora dele (título, margens, fundo), no fim da nota.
+      const drop = (files: DroppedFile[], at?: { x: number; y: number }) => {
+        const inside = at && ed.view.dom.contains(document.elementFromPoint(at.x, at.y))
+        const pos = inside ? ed.view.posAtCoords({ left: at.x, top: at.y })?.pos : undefined
+        void addFiles(files, pos ?? ed.state.doc.content.size)
+      }
       app.dropIntoEditor = drop
       return () => {
         if (app.dropIntoEditor === drop) app.dropIntoEditor = null
@@ -333,14 +337,21 @@
   }
 
   /** Importa arquivos (do computador, arrastados, colados, da câmera ou do gravador) e põe no texto. */
-  async function addFiles(list: (File | { blob: Blob; name: string })[], pos?: number) {
+  async function addFiles(list: (DroppedFile | { blob: Blob; name: string })[], pos?: number) {
     if (!editor || !list.length) return
     const added: Attachment[] = []
     for (const f of list) {
-      const a = f instanceof File ? await api.importFile(f, f.name) : await api.importFile(f.blob, f.name)
+      let a: Attachment
+      try {
+        a = f instanceof File ? await api.importFile(f, f.name) : 'path' in f ? await api.importPath(f.path) : await api.importFile(f.blob, f.name)
+      } catch (e) {
+        app.say(`Não foi possível anexar: ${e}`)
+        continue
+      }
       media.set(a.hash, a)
       added.push(a)
     }
+    if (!added.length) return
     // Várias fotos de uma vez entram lado a lado (até 4 por linha); o resto, um bloco cada.
     const photos = added.filter((a) => a.kind === 'image')
     const nodes: RichNode[] = []
