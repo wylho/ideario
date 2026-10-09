@@ -3,13 +3,12 @@
   import { Editor as TipTap } from '@tiptap/core'
   import { Dialog, DropdownMenu, Popover, Select } from 'bits-ui'
   import {
-    Archive, ArchiveRestore, ArrowLeft, Bell, Bold, Check, ChevronDown, Heading, ImagePlus, Italic, List, ListChecks,
-    MoreVertical, Palette, Paperclip, Pin, PinOff, Tag, Trash2, X,
+    Archive, ArchiveRestore, ArrowLeft, Bold, Check, ChevronDown, Heading, ImagePlus, Italic, List, ListChecks, MoreVertical, Palette, Paperclip, Pin, PinOff, Tag, Trash2, X,
   } from '@lucide/svelte'
   import { api } from '../lib/api'
   import { app, type EditorTarget } from '../lib/app.svelte'
   import { noteExtensions } from '../lib/editor/extensions'
-  import { ago, fmtBytes, fmtReminder, hashTags, isOverdue, normalizeTag } from '../lib/format'
+  import { ago, fmtBytes, hashTags, normalizeTag } from '../lib/format'
   import ReminderPopover from './ReminderPopover.svelte'
   import type { Attachment, AttachmentRow, NoteColor, NoteInput, RichDoc } from '../lib/types'
 
@@ -244,10 +243,13 @@
               </Select.Portal>
             </Select.Root>
             {#if meta.reminderAt != null}
-              <span class="pill" class:late={isOverdue(meta)}>
-                <Bell size={11} />{fmtReminder(meta.reminderAt)}
-                <button aria-label="Remover lembrete" onclick={() => meta && (meta.reminderAt = null)}><X size={12} /></button>
-              </span>
+              <ReminderPopover
+                variant="pill"
+                value={meta.reminderAt}
+                done={meta.reminderDone}
+                onchange={(v) => meta && ((meta.reminderAt = v), (meta.reminderDone = false))}
+                ondone={(d) => meta && (meta.reminderDone = d)}
+              />
             {/if}
           </div>
 

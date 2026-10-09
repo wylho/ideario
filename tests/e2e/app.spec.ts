@@ -42,9 +42,10 @@ test('criar nota com #tag e checklist; o card mostra a projeção', async ({ pag
 
   const card = cards(page).filter({ hasText: 'Lista do ateliê' })
   await expect(card).toHaveCount(1)
-  await expect(card.locator('.excerpt')).toContainText('Comprar tinta')
-  await expect(card.locator('.mini-check li')).toHaveCount(2)
-  await expect(card.locator('.mini-check li.done')).toHaveText('pincel chato')
+  // Prévia na ordem do documento: o parágrafo, depois as duas tarefas.
+  await expect(card.locator('.preview > p')).toHaveText([/Comprar tinta/, 'pincel chato', 'tela 30x40'])
+  await expect(card.locator('.pv-task.done')).toHaveText('pincel chato')
+  await expect(card.locator('.preview .hashtag')).toHaveText('#ateliê')
   await expect(card.locator('.pill.tag')).toHaveText('#ateliê')
 })
 
@@ -331,4 +332,37 @@ test('desktop: barra lateral recolhe e volta pelo ☰, no mesmo lugar, e lembra 
   await page.keyboard.press('Control+\\')
   await expect(page.getByLabel('Ocultar barra lateral')).toBeVisible()
   await expect(page.locator('.sidebar')).not.toHaveAttribute('inert', '')
+})
+
+test('prévia do card mantém títulos, tópicos e a ordem do documento', async ({ page }) => {
+  const card = cards(page).filter({ hasText: 'Pão de fermentação natural' })
+  await expect(card.locator('.pv-h')).toHaveText('Ingredientes')
+  await expect(card.locator('.pv-li')).toHaveText(['500 g de farinha', '350 ml de água', '100 g de levain', '10 g de sal'])
+  await expect(card.locator('.preview > p').last()).toContainText('Dobras a cada 30 min')
+  const mercado = cards(page).filter({ hasText: 'Mercado da semana' })
+  await expect(mercado.locator('.preview > p').first()).toHaveText('O que está faltando:')
+  await expect(mercado.locator('.pv-task')).toHaveCount(4)
+  await expect(mercado.locator('.pv-more')).toHaveText('+3 itens')
+})
+
+test('nota sem título aparece pela primeira linha em Lembretes e Arquivos', async ({ page }) => {
+  await tab(page, 'Lembretes')
+  await expect(page.locator('.r-title', { hasText: 'Comprar pilha AA' })).toHaveCount(1)
+  await expect(page.locator('.r-title', { hasText: 'Sem título' })).toHaveCount(0)
+})
+
+test('pílula de categoria no card filtra pela categoria', async ({ page }) => {
+  await cards(page).filter({ hasText: 'Horários e estacionamento' }).locator('.pill.cat').click()
+  await expect(page.locator('.filter-row .chip.on', { hasText: 'Hospital' })).toHaveCount(1)
+  await expect(cards(page)).toHaveCount(2)
+})
+
+test('clicar na pílula do lembrete abre o menu do lembrete; o X remove', async ({ page }) => {
+  await cards(page).filter({ hasText: 'Comprar pilha' }).click()
+  await page.getByRole('button', { name: /Alterar lembrete/ }).click()
+  await expect(page.locator('.pop-title')).toHaveText('Lembrar de mim')
+  await page.getByRole('button', { name: 'Concluir' }).click()
+  await expect(page.locator('.rem-pill.done')).toHaveCount(1)
+  await page.getByLabel('Remover lembrete').click()
+  await expect(page.locator('.rem-pill')).toHaveCount(0)
 })

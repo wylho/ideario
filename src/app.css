@@ -153,13 +153,6 @@ button { cursor: pointer; }
 }
 .card-body { padding: 12px 13px 12px; display: flex; flex-direction: column; gap: 6px; }
 .card h3 { font-family: var(--font-display); font-weight: 600; font-size: 16px; line-height: 1.25; letter-spacing: -.01em; text-wrap: balance; }
-.excerpt { font-size: 13.5px; line-height: 1.45; color: var(--fg); opacity: .82; display: -webkit-box; -webkit-line-clamp: 6; -webkit-box-orient: vertical; overflow: hidden; }
-.excerpt.big { font-size: 16px; opacity: 1; }
-.mini-check { display: flex; flex-direction: column; gap: 4px; font-size: 13.5px; }
-.mini-check li { display: flex; align-items: center; gap: 8px; }
-.mini-check li.done { color: var(--muted); text-decoration: line-through; }
-.mini-check .box { width: 14px; height: 14px; border-radius: 4px; border: 1.5px solid currentColor; display: grid; place-items: center; flex: none; opacity: .8; }
-.mini-check .more-items { color: var(--muted); font-size: 12px; padding-left: 22px; }
 .card-meta { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 2px; }
 .card-meta > * { flex-shrink: 0; overflow: hidden; text-overflow: ellipsis; }
 .pill {
@@ -404,7 +397,7 @@ button { cursor: pointer; }
 .menu-item.danger { color: var(--late); }
 .menu-check { margin-left: auto; color: var(--accent); display: grid; }
 .menu-sep { height: 1px; background: var(--line); margin: 4px 6px; }
-.pop { padding: 14px; width: 300px; display: flex; flex-direction: column; gap: 10px; }
+.pop { padding: 14px; width: 344px; display: flex; flex-direction: column; gap: 10px; }
 .pop-title { font-family: var(--font-display); font-weight: 600; font-size: 15px; }
 .pop-hint { font-size: 12px; color: var(--muted); margin-top: -6px; }
 .pick-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
@@ -533,3 +526,34 @@ button { cursor: pointer; }
 .empty .btn.primary { flex: none; }
 .sheet-actions { display: flex; gap: 8px; justify-content: flex-end; }
 .sheet .tag-cloud { padding: 0; }
+
+/* prévia estruturada do card */
+.preview { display: flex; flex-direction: column; gap: 3px; font-size: 13.5px; line-height: 1.45; }
+.preview p { margin: 0; overflow-wrap: anywhere; white-space: pre-line; }
+.preview .pv-p { opacity: .85; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+.preview.big .pv-p { font-size: 16px; opacity: 1; -webkit-line-clamp: 6; }
+.preview .pv-h { font-weight: 650; margin-top: 2px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.preview .pv-h:not(:first-child) { margin-top: 5px; }
+.preview .pv-li {
+  position: relative; padding-left: calc(14px + var(--depth, 0) * 12px); opacity: .85;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.preview .pv-li::before { content: attr(data-mark); position: absolute; left: calc(var(--depth, 0) * 12px); color: var(--muted); font-variant-numeric: tabular-nums; }
+.preview .pv-li[data-mark$="."] { padding-left: calc(18px + var(--depth, 0) * 12px); }
+.preview .pv-task { display: flex; align-items: flex-start; gap: 8px; padding-left: calc(var(--depth, 0) * 12px); }
+.preview .pv-task > span:last-child { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.preview .pv-task .box { margin-top: 3px; width: 14px; height: 14px; border-radius: 4px; border: 1.5px solid currentColor; display: grid; place-items: center; flex: none; opacity: .8; }
+.preview .pv-task.done { color: var(--muted); text-decoration: line-through; }
+.preview .pv-more { color: var(--muted); font-size: 12px; padding-left: 22px; }
+.preview .hashtag, .card .hashtag { color: var(--accent); font-weight: 500; }
+.pill.cat:hover { background: rgb(127 140 135 / .26); }
+
+/* pílula de lembrete do editor: o corpo abre o menu do lembrete, o X remove */
+.rem-pill { padding-block: 0; padding-right: 6px; }
+.pill .rem-pill-btn { display: inline-flex; align-items: center; gap: 5px; padding: 3px 0; margin: 0; border-radius: 0; color: inherit; font: inherit; white-space: nowrap; }
+.rem-pill.done .rem-pill-btn { text-decoration: line-through; }
+.rem-pill:hover { filter: brightness(.97); }
+.pop-actions { display: flex; gap: 8px; }
+.pop-actions .btn { flex: 1; }
+
+.quick span, .quick small { white-space: nowrap; }
