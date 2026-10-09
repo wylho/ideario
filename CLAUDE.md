@@ -47,6 +47,9 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
 - Mídia no editor (`src/lib/editor/media.ts`): fotos lado a lado (`imageRow`, 2–4, arrastar como no Gutenberg + botões na foto
   selecionada), anexos inline (`noteFile`: vídeo, áudio com player, documentos), gravador e câmera (`capture.svelte.ts`).
   A capa do card é a primeira foto ou a primeira linha de fotos. "+" em leque (`FabMenu`) com atalhos.
+- Blocos (`src/lib/editor/blocks.ts`): cada nó de primeiro nível é um bloco, como no Notion. Alça ⋮⋮ no hover arrasta
+  e abre o menu do bloco (`MenuAt`); itens de lista/checklist têm alça própria (reordenar como no Keep). Clique direito
+  em foto/anexo abre o mesmo menu. Copiar/colar entre notas leva fotos e anexos. Anexos são sempre blocos do texto.
 - Seleção múltipla (Notas): check no canto (hover), Ctrl/Shift+clique, retângulo com o mouse (`marquee.ts`), Ctrl+A, Esc;
   a barra superior vira `SelectionBar` com ações em lote e Desfazer.
 - CI (`.github/workflows/build.yml`): verificação + instaladores de macOS (universal), Windows e Linux nos Artifacts.

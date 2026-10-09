@@ -189,6 +189,7 @@ button { cursor: pointer; }
 /* com seleção ativa, todos os checks ficam à vista (dá para marcar sem caçar o canto) */
 .selecting-notes .card .card-check { opacity: 1; }
 /* retângulo de seleção com o mouse */
+.menu-anchor { position: fixed; top: 0; left: 0; width: 0; height: 0; pointer-events: none; }
 .marquee { position: fixed; z-index: 8; pointer-events: none; border: 1px solid var(--accent); background: color-mix(in oklab, var(--accent) 12%, transparent); border-radius: 4px; }
 .marquee-active, .marquee-active * { user-select: none !important; }
 /* barra de ações em lote, no lugar da barra superior */
@@ -382,6 +383,7 @@ button { cursor: pointer; }
 .lb-top { display: flex; align-items: center; gap: 8px; padding: 10px 8px; }
 .lb-title { font-size: 12.5px; font-weight: 500; opacity: .8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lb-img { flex: 1; min-height: 0; width: 100%; object-fit: contain; padding: 0 12px; }
+.lb-doc { background: #fff; border-radius: 8px; padding: 0; margin: 0 12px; width: calc(100% - 24px); border: 0; }
 .lb-media { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; padding: 0 24px; color: rgb(255 255 255 / .75); }
 .lb-media-ico { width: 96px; height: 96px; border-radius: 28px; display: grid; place-items: center; background: rgb(255 255 255 / .1); }
 .lb-audio { width: min(460px, 100%); }
@@ -438,6 +440,22 @@ button { cursor: pointer; }
 .ed-title { width: 100%; background: none; border: 0; outline: 0; font-family: var(--font-display); font-size: 26px; font-weight: 600; letter-spacing: -.02em; color: var(--fg); }
 .ed-title::placeholder { color: var(--muted); opacity: .7; }
 .ed-body { min-height: 160px; font-size: 16px; line-height: 1.6; }
+/* blocos: a alça fica na margem esquerda; a área do corpo inclui essa margem para o mouse não "sair" ao ir até ela */
+.ed-blocks { position: relative; }
+.blk-handle, .item-handle {
+  position: absolute; z-index: 3; display: grid; place-items: center; border-radius: 6px; color: var(--muted);
+  cursor: grab; opacity: .75; animation: fade .12s ease;
+}
+.blk-handle { left: 8px; width: 22px; height: 26px; }
+.item-handle { width: 16px; height: 26px; }
+.blk-handle:hover, .item-handle:hover { opacity: 1; background: var(--raised); color: var(--fg); }
+@media (hover: hover) and (pointer: fine) {
+  .ed-scroll { padding-inline: 44px; }
+  .ed-blocks { margin-left: -36px; padding-left: 36px; }
+  /* espaço para a alça de cada item, à esquerda da caixinha ou do marcador */
+  .prose ul[data-type="taskList"] { padding-left: 20px; }
+  .prose ul:not([data-type="taskList"]), .prose ol { padding-left: calc(1.3em + 18px); }
+}
 .ed-body .tiptap { min-height: 160px; outline: 0; }
 .ed-body .tiptap p.is-editor-empty:first-child::before {
   content: attr(data-placeholder); float: left; height: 0; color: var(--muted); pointer-events: none;
@@ -451,6 +469,7 @@ button { cursor: pointer; }
 .prose li > p + p { margin-top: .25em; }
 .prose img { display: block; width: 100%; border-radius: 14px; margin: 10px 0; outline: 1px solid var(--card-edge); outline-offset: -1px; }
 .prose img.ProseMirror-selectednode { outline: 2px solid var(--accent); outline-offset: 2px; }
+.ProseMirror:not(.ProseMirror-focused) .ProseMirror-selectednode { outline: none !important; }
 /* fotos lado a lado: mesma altura, largura pela proporção de cada uma (flex-grow vem do nó) */
 .prose .img-row { display: flex; gap: 6px; margin: 10px 0; }
 .prose .img-row img { margin: 0; width: 0; min-width: 0; flex-basis: 0; height: auto; object-fit: cover; border-radius: 10px; }
@@ -465,6 +484,9 @@ button { cursor: pointer; }
   display: flex; align-items: center; gap: 12px; padding: 10px 10px 10px 12px; border-radius: 14px;
   background: var(--surface); border: 1px solid var(--card-edge); user-select: none;
 }
+.nf-open { flex: none; border-radius: 10px; }
+.nf-link { text-align: left; max-width: 100%; }
+.nf-link:hover { text-decoration: underline; }
 .nf-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .nf-name { font-weight: 600; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .nf-card small { color: var(--muted); font-size: 12.5px; }

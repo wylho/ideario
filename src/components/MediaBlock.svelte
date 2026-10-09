@@ -7,7 +7,7 @@
   import type { Attachment } from '../lib/types'
 
   // Anexo no meio do texto: vídeo com player, áudio com player compacto, documentos como cartão.
-  let { a }: { a: Attachment } = $props()
+  let { a, onopen }: { a: Attachment; onopen?: () => void } = $props()
   const src = $derived(api.mediaUrl(a.hash))
   const Icon = $derived(KIND_ICONS[a.kind])
 </script>
@@ -24,9 +24,13 @@
   </figure>
 {:else}
   <div class="nf-card">
-    <span class="f-ico t-{a.kind}"><Icon size={20} /></span>
+    <button class="nf-open" onclick={onopen} aria-label="Abrir {a.name}" title="Abrir"><span class="f-ico t-{a.kind}"><Icon size={20} /></span></button>
     <div class="nf-text">
-      <span class="nf-name">{a.name}</span>
+      {#if a.kind === 'audio'}
+        <span class="nf-name">{a.name}</span>
+      {:else}
+        <button class="nf-name nf-link" onclick={onopen} title="Abrir">{a.name}</button>
+      {/if}
       {#if a.kind === 'audio'}
         <AudioPlayer {src} label={a.name} />
       {:else}

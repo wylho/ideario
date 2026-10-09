@@ -950,3 +950,75 @@ test('celular: "Selecionar" no menu de contexto inicia a seleção', async ({ pa
   await page.getByRole('button', { name: 'Limpar seleção' }).click()
   await expect(page.locator('.sel-count')).toHaveCount(0)
 })
+
+test.describe('blocos no editor', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 })
+    await page.locator('.card', { hasText: 'Viagem para Paraty' }).first().click()
+    await expect(page.locator('#titulo')).toHaveValue('Viagem para Paraty')
+  })
+  const items = (page: Page) => page.locator('#corpo ul[data-type="taskList"] > li')
+
+  test('alça do item reordena o checklist (como no Keep)', async ({ page }) => {
+    await items(page).nth(2).hover()
+    const h = (await page.locator('.item-handle').boundingBox())!
+    const t = (await items(page).nth(0).boundingBox())!
+    await page.mouse.move(h.x + 8, h.y + 10)
+    await page.mouse.down()
+    await page.mouse.move(h.x + 20, h.y, { steps: 3 })
+    await page.mouse.move(t.x + 60, t.y + 3, { steps: 8 })
+    await page.mouse.up()
+    await expect(items(page).first()).toContainText('Repelente')
+  })
+
+  test('menu do bloco: checklist marca todos; mover o bloco para cima', async ({ page }) => {
+    await items(page).nth(1).hover()
+    await page.locator('.blk-handle').click()
+    await page.getByRole('menuitem', { name: 'Marcar todos', exact: true }).click()
+    await expect(page.locator('#corpo ul[data-type="taskList"] > li[data-checked="false"]')).toHaveCount(0)
+    await items(page).nth(1).hover()
+    await page.locator('.blk-handle').click()
+    await page.getByRole('menuitem', { name: 'Mover para cima' }).click()
+    await expect(page.locator('#corpo > *').first()).toHaveAttribute('data-type', 'taskList')
+  })
+
+  test('arrastar um bloco pela alça', async ({ page }) => {
+    const file = page.locator('#corpo .note-file')
+    await file.hover()
+    const h = (await page.locator('.blk-handle').boundingBox())!
+    const top = (await page.locator('#corpo .img-row').boundingBox())!
+    await page.mouse.move(h.x + 8, h.y + 10)
+    await page.mouse.down()
+    await page.mouse.move(h.x + 20, h.y, { steps: 3 })
+    await page.mouse.move(top.x + 200, top.y + 4, { steps: 10 })
+    await page.mouse.up()
+    await expect(page.locator('#corpo > *').first()).toHaveClass(/note-file/)
+  })
+
+  test('PDF: clique direito abre o menu; abrir mostra o visualizador sem fechar a nota', async ({ page }) => {
+    await page.locator('#corpo .note-file').click({ button: 'right' })
+    await expect(page.getByRole('menuitem', { name: 'Baixar' })).toBeVisible()
+    await page.getByRole('menuitem', { name: 'Abrir' }).click()
+    await expect(page.locator('.lightbox')).toContainText('Roteiro Paraty.pdf')
+    await expect(page.locator('.lightbox').getByRole('button', { name: 'Abrir nota' })).toHaveCount(0)
+    await page.keyboard.press('Escape')
+    await expect(page.locator('.lightbox')).toHaveCount(0)
+    await expect(page.locator('#titulo')).toHaveValue('Viagem para Paraty')
+  })
+
+  test('copiar um bloco e colar em outra nota leva as fotos junto', async ({ page, context }) => {
+    await context.grantPermissions(['clipboard-read', 'clipboard-write'])
+    await page.locator('#corpo .img-row img').first().click({ button: 'right' })
+    await expect(page.getByRole('menuitem', { name: 'Ver', exact: true })).toBeVisible()
+    await page.keyboard.press('Escape')
+    await page.locator('#corpo .img-row').hover()
+    await page.locator('.blk-handle').click()
+    await page.getByRole('menuitem', { name: 'Copiar', exact: true }).click()
+    await back(page)
+    await newNote(page)
+    await page.keyboard.press('Control+v')
+    await expect(page.locator('#corpo .img-row img')).toHaveCount(3)
+    await back(page)
+    await expect(page.locator('.card').filter({ has: page.locator('.card-media.row') })).not.toHaveCount(0)
+  })
+})

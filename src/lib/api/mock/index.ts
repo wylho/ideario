@@ -67,13 +67,15 @@ for (const f of SEED_FILES) {
   })
 }
 for (const s of seedNotes()) {
-  const body = s.body
+  // Anexos são blocos do texto: os que o seed não pôs no meio entram no fim da nota.
+  const loose = SEED_FILES.filter((f) => f.noteId === s.id && !f.inline)
+  const body = loose.length ? { ...s.body, content: [...(s.body.content ?? []), ...loose.map((f) => ({ type: 'noteFile', attrs: { hash: f.hash } }))] } : s.body
   notes.set(s.id, {
     id: s.id, title: s.title, body, categoryId: s.categoryId, color: s.color, pinned: s.pinned,
     archived: !!s.archived, trashedAt: s.trashedDaysAgo != null ? Date.now() - s.trashedDaysAgo * DAY : null,
     reminderAt: s.reminderAt, reminderDone: !!s.reminderDone, tags: s.tags,
     createdAt: s.updatedAt - 2 * DAY, updatedAt: s.updatedAt,
-    files: SEED_FILES.filter((f) => f.noteId === s.id && !f.inline).map((f) => f.hash),
+    files: [],
     position: 0,
   })
   // Imagens herdam a data da nota em que entraram.
@@ -494,6 +496,8 @@ export const mockApi: Api = {
     done({ connected: true, lastSyncAt: Date.now() - 2 * 60_000, noteCount: notes.size, cacheUsedBytes: 310 * 1024 * 1024 }),
 
   imageUrl: (hash) => imageSrc.get(hash) ?? '',
+  getAttachments: (hashes) => done(hashes.flatMap((h) => attachments.get(h) ?? [])),
+
   mediaUrl(hash) {
     const known = imageSrc.get(hash) ?? blobSrc.get(hash)
     if (known) return known

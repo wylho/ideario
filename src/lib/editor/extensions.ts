@@ -39,8 +39,10 @@ const Hashtags = Extension.create({
 /** Esquema do corpo das notas. O mesmo conjunto serve ao editor e à conversão de HTML. */
 export function noteExtensions(opts: {
   media?: (hash: string) => MediaInfo
+  load?: (hash: string) => Promise<MediaInfo | null>
   renderFile?: (hash: string, dom: HTMLElement) => () => void
   onFiles?: (files: File[], pos: number) => void
+  onMenu?: (pos: number, e: MouseEvent) => void
   placeholder?: string
 } = {}): AnyExtension[] {
   return [
@@ -60,10 +62,10 @@ export function noteExtensions(opts: {
       nested: false,
       a11y: { checkboxLabel: (node, checked) => `${checked ? 'Desmarcar' : 'Marcar'} “${node.textContent || 'item vazio'}”` },
     }),
-    NoteImage.configure({ media: opts.media ?? (() => ({ src: '' })) }),
+    NoteImage.configure({ media: opts.media ?? (() => ({ src: '' })), load: opts.load }),
     ImageRow,
     NoteFile.configure({ render: opts.renderFile }),
-    MediaLayout.configure({ onFiles: opts.onFiles }),
+    MediaLayout.configure({ onFiles: opts.onFiles, onMenu: opts.onMenu }),
     Hashtags,
     ...(opts.placeholder ? [Placeholder.configure({ placeholder: opts.placeholder })] : []),
   ]

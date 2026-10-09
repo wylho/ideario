@@ -21,7 +21,7 @@ export interface MediaInfo {
  * Foto no meio do texto. O documento guarda só o hash do anexo (`<img data-hash="…">`, SPEC §5);
  * o caminho local e a proporção vêm do resolvedor na hora de desenhar.
  */
-export const NoteImage = Node.create<{ media: (hash: string) => MediaInfo }>({
+export const NoteImage = Node.create<{ media: (hash: string) => MediaInfo; load?: (hash: string) => Promise<MediaInfo | null> }>({
   name: 'noteImage',
   group: 'block',
   atom: true,
@@ -37,11 +37,32 @@ export const NoteImage = Node.create<{ media: (hash: string) => MediaInfo }>({
   parseHTML: () => [{ tag: 'img[data-hash]' }],
   renderHTML({ node, HTMLAttributes }) {
     const m = this.options.media(node.attrs.hash)
-    // Proporção fixa: reserva o espaço antes de carregar e, numa linha, deixa todas com a mesma altura.
-    const ratio = m.width && m.height ? m.width / m.height : 4 / 3
-    return ['img', mergeAttributes(HTMLAttributes, { src: m.src, alt: '', draggable: 'false', style: `aspect-ratio: ${ratio}; flex-grow: ${ratio}` })]
+    return ['img', mergeAttributes(HTMLAttributes, { src: m.src, alt: '', style: ratioStyle(m) })]
+  },
+  addNodeView() {
+    const { media, load } = this.options
+    return ({ node }) => {
+      const img = document.createElement('img')
+      img.dataset.hash = node.attrs.hash
+      img.alt = ''
+      const apply = (m: MediaInfo) => {
+        img.src = m.src
+        img.setAttribute('style', ratioStyle(m))
+      }
+      const m = media(node.attrs.hash)
+      apply(m)
+      // Colada de outra nota: o editor ainda não conhece a proporção; busca e ajusta.
+      if (!m.width && load) void load(node.attrs.hash).then((x) => x && apply(x))
+      return { dom: img, ignoreMutation: () => true }
+    }
   },
 })
+
+/** Proporção fixa: reserva o espaço antes de carregar e, numa linha, deixa todas com a mesma altura. */
+function ratioStyle(m: MediaInfo) {
+  const ratio = m.width && m.height ? m.width / m.height : 4 / 3
+  return `aspect-ratio: ${ratio}; flex-grow: ${ratio}`
+}
 
 /** Linha de fotos lado a lado (2 a 4). Uma linha que fica com uma foto só volta a ser foto solta. */
 export const ImageRow = Node.create({
@@ -82,7 +103,8 @@ export const NoteFile = Node.create<{ render?: (hash: string, dom: HTMLElement) 
       return {
         dom,
         // Os controles do player e os botões são do anexo, não do editor.
-        stopEvent: (e) => e.type !== 'dragstart' && !!(e.target as Element).closest?.('audio, video, button'),
+        // (o clique direito segue para o editor, que abre o menu do bloco)
+        stopEvent: (e) => e.type !== 'dragstart' && e.type !== 'contextmenu' && !!(e.target as Element).closest?.('audio, video, button'),
         ignoreMutation: () => true,
         destroy,
       }
@@ -231,11 +253,15 @@ function mark(el: HTMLElement | null, side?: 'left' | 'right') {
   if (el && side) el.dataset.drop = side
 }
 
-export const MediaLayout = Extension.create<{ onFiles?: (files: File[], pos: number) => void }>({
+export const MediaLayout = Extension.create<{
+  onFiles?: (files: File[], pos: number) => void
+  /** Clique direito numa foto ou anexo: `pos` é o nó clicado. */
+  onMenu?: (pos: number, e: MouseEvent) => void
+}>({
   name: 'mediaLayout',
   addOptions: () => ({}),
   addProseMirrorPlugins() {
-    const onFiles = this.options.onFiles
+    const { onFiles, onMenu } = this.options
     return [
       new Plugin({
         key,
@@ -253,6 +279,19 @@ export const MediaLayout = Extension.create<{ onFiles?: (files: File[], pos: num
         },
         props: {
           handleDOMEvents: {
+            contextmenu(view, e) {
+              const el = (e.target as Element | null)?.closest?.('img[data-hash], .note-file')
+              if (!el || !onMenu || !view.dom.contains(el)) return false
+              let pos: number | null = null
+              view.state.doc.descendants((n, p) => {
+                if (pos != null) return false
+                if (view.nodeDOM(p) === el) pos = p
+              })
+              if (pos == null) return false
+              e.preventDefault()
+              onMenu(pos, e)
+              return true
+            },
             dragstart(view, e) {
               const el = (e.target as Element | null)?.closest?.('img[data-hash]')
               dragFrom = el ? imagePos(view, el) : null

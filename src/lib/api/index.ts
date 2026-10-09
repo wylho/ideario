@@ -45,6 +45,8 @@ export interface Api {
 
   /** URL local de uma imagem (miniatura ou tamanho cheio). Nunca depende de rede. */
   imageUrl(hash: string, size?: 'thumb' | 'full'): string
+  /** Dados dos anexos (para desenhar fotos e anexos colados de outra nota). */
+  getAttachments(hashes: string[]): Promise<Attachment[]>
   /** URL local para tocar ou mostrar um anexo (vídeo, áudio, imagem). Vazia se o conteúdo não está aqui. */
   mediaUrl(hash: string): string
   /** Importa um arquivo do computador (ou uma gravação) e devolve o anexo pronto para entrar na nota. */

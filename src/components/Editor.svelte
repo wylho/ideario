@@ -6,7 +6,13 @@
   import {
     Archive, ArchiveRestore, ArrowLeft, Bold, Camera, Check, ChevronDown, ChevronLeft, ChevronRight, Columns2, Heading, Image, Italic, List,
     ListChecks, Mic, MoreVertical, SquareCode, Palette, Paperclip, Pin, PinOff, Plus, Redo2, Rows2, Square, Tag, Trash2, Undo2, X,
+    ArrowDown, ArrowUp, Copy, CopyPlus, Download, Eye, GripVertical, ListTodo, Pilcrow, Scissors, SquareCheck, SquareDashed, ExternalLink,
   } from '@lucide/svelte'
+  import {
+    blockAt, canMove, checkAll, clipNode, deleteChecked, deleteNode, duplicateNode, moveNode, startNodeDrag, type BlockHit,
+  } from '../lib/editor/blocks'
+  import { SEP, type MenuEntry } from '../lib/menu'
+  import MenuAt from './MenuAt.svelte'
   import { imageActions, leaveRow, placeBeside } from '../lib/editor/media'
   import { canRecord, fmtSeconds, hasCamera, photoName, Recorder } from '../lib/capture.svelte'
   import MediaBlock from './MediaBlock.svelte'
@@ -140,13 +146,25 @@
         element: el,
         extensions: noteExtensions({
           media: (h) => ({ src: api.imageUrl(h, 'full'), width: media.get(h)?.width, height: media.get(h)?.height }),
+          load: async (h) => {
+            const a = media.get(h) ?? (await loadMedia(h))
+            return a ? { src: api.imageUrl(h, 'full'), width: a.width, height: a.height } : null
+          },
           renderFile: (h, dom) => {
-            const a = media.get(h)
-            if (!a) return () => {}
-            const c = mount(MediaBlock, { target: dom, props: { a } })
-            return () => void unmount(c)
+            let c: ReturnType<typeof mount> | null = null
+            let gone = false
+            const show = (a: Attachment) => !gone && (c = mount(MediaBlock, { target: dom, props: { a, onopen: () => viewAttachment(a) } }))
+            const known = media.get(h)
+            // Colado de outra nota: busca os dados do anexo e desenha quando chegarem.
+            if (known) show(known)
+            else void loadMedia(h).then((a) => a && show(a))
+            return () => {
+              gone = true
+              if (c) void unmount(c)
+            }
           },
           onFiles: (list, pos) => void addFiles(list, pos),
+          onMenu: (pos, e) => openNodeMenu(pos, e.clientX, e.clientY, e.target as Element),
           placeholder: 'Escreva… use #tag para marcar',
         }),
         content: initialBody,
@@ -177,6 +195,128 @@
   const run = (fn: (c: ReturnType<TipTap['chain']>) => ReturnType<TipTap['chain']>) => editor && fn(editor.chain().focus()).run()
 
   // ---------- mídia ----------
+  async function loadMedia(h: string) {
+    const [a] = await api.getAttachments([h])
+    if (a) media.set(h, a)
+    return a
+  }
+
+  /** Abre o anexo no visualizador: foto, vídeo, áudio e PDF; outros documentos mostram a ficha com Baixar. */
+  function viewAttachment(a: Attachment) {
+    app.lightbox = { ...a, noteId: id, noteTitle: meta?.title ?? '', categoryId: meta?.categoryId ?? null }
+  }
+
+  async function copyImage(h: string) {
+    try {
+      const img = new globalThis.Image()
+      img.src = api.imageUrl(h, 'full')
+      await img.decode()
+      const c = document.createElement('canvas')
+      c.width = img.naturalWidth
+      c.height = img.naturalHeight
+      c.getContext('2d')!.drawImage(img, 0, 0)
+      const blob = await new Promise<Blob | null>((r) => c.toBlob(r, 'image/png'))
+      if (!blob) throw new Error('png')
+      await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })])
+      app.say('Imagem copiada')
+    } catch {
+      app.say('Não foi possível copiar a imagem')
+    }
+  }
+
+  // ---------- blocos ----------
+  let blockMenu: MenuAt | undefined = $state()
+  let hover = $state.raw<BlockHit | null>(null)
+  let blocksEl: HTMLElement | undefined = $state()
+  let handleDragging = false
+
+  function onBodyMove(e: PointerEvent) {
+    if (!editor || e.pointerType !== 'mouse' || handleDragging || e.buttons) return
+    if ((e.target as Element).closest('.blk-handle, .item-handle')) return
+    hover = blockAt(editor.view, e.clientY)
+  }
+  const topOf = (dom: HTMLElement) => (blocksEl ? dom.getBoundingClientRect().top - blocksEl.getBoundingClientRect().top : 0)
+
+  function dragFromHandle(e: DragEvent, pos: number, dom: HTMLElement) {
+    if (!editor) return
+    handleDragging = true
+    startNodeDrag(editor.view, pos, e, dom)
+  }
+
+  const TEXTISH = new Set(['paragraph', 'heading', 'bulletList', 'orderedList', 'taskList', 'codeBlock'])
+  type Shape = 'paragraph' | 'heading' | 'bullet' | 'task' | 'code'
+  function transform(pos: number, to: Shape) {
+    const node = editor?.state.doc.nodeAt(pos)
+    if (!editor || !node) return
+    const c = editor.chain().focus().setTextSelection({ from: pos + 1, to: pos + node.nodeSize - 1 }).clearNodes()
+    ;(to === 'heading' ? c.setHeading({ level: 3 }) : to === 'bullet' ? c.toggleBulletList() : to === 'task' ? c.toggleTaskList() : to === 'code' ? c.setCodeBlock() : c).run()
+  }
+  const shapeOf = (name: string): Shape | null =>
+    ({ paragraph: 'paragraph', heading: 'heading', bulletList: 'bullet', taskList: 'task', codeBlock: 'code' })[name] as Shape | null
+
+  /** Menu de um bloco (ou de um item de lista), com as ações gerais e as do tipo. */
+  function nodeEntries(pos: number, clicked?: Element): MenuEntry[] {
+    const view = editor?.view
+    const node = view?.state.doc.nodeAt(pos)
+    if (!view || !node) return []
+    const name = node.type.name
+    const isItem = name === 'taskItem' || name === 'listItem'
+    const out: MenuEntry[] = []
+    // foto clicada (sozinha ou dentro de uma linha)
+    const imgEl = clicked?.closest('img[data-hash]')
+    const imgHash = imgEl?.getAttribute('data-hash') ?? (name === 'noteImage' ? node.attrs.hash : null)
+    if (imgHash) {
+      const a = media.get(imgHash)
+      out.push(
+        { label: 'Ver', icon: Eye, onSelect: () => a && viewAttachment(a) },
+        { label: 'Baixar', icon: Download, onSelect: () => a && void api.downloadAttachment(a) },
+        { label: 'Copiar imagem', icon: Copy, onSelect: () => void copyImage(imgHash) },
+        SEP,
+      )
+    }
+    if (name === 'noteFile') {
+      const a = media.get(node.attrs.hash)
+      out.push(
+        { label: 'Abrir', icon: ExternalLink, onSelect: () => a && viewAttachment(a) },
+        { label: 'Baixar', icon: Download, onSelect: () => a && void api.downloadAttachment(a) },
+        { label: 'Copiar nome', icon: Copy, onSelect: () => a && void navigator.clipboard.writeText(a.name).then(() => app.say('Nome copiado')) },
+        SEP,
+      )
+    }
+    if (name === 'taskList') {
+      let checked = 0
+      node.forEach((i) => void (i.attrs.checked && checked++))
+      out.push(
+        { label: 'Marcar todos', icon: SquareCheck, disabled: checked === node.childCount, onSelect: () => checkAll(view, pos, true) },
+        { label: 'Desmarcar todos', icon: SquareDashed, disabled: checked === 0, onSelect: () => checkAll(view, pos, false) },
+        { label: 'Apagar itens marcados', icon: Trash2, disabled: checked === 0, onSelect: () => deleteChecked(view, pos) },
+        SEP,
+      )
+    }
+    out.push(
+      { label: 'Copiar', icon: Copy, onSelect: () => clipNode(view, pos, 'copy') },
+      { label: 'Recortar', icon: Scissors, onSelect: () => clipNode(view, pos, 'cut') },
+      { label: 'Duplicar', icon: CopyPlus, onSelect: () => duplicateNode(view, pos) },
+      SEP,
+      { label: 'Mover para cima', icon: ArrowUp, disabled: !canMove(view, pos, -1), onSelect: () => moveNode(view, pos, -1) },
+      { label: 'Mover para baixo', icon: ArrowDown, disabled: !canMove(view, pos, 1), onSelect: () => moveNode(view, pos, 1) },
+    )
+    if (TEXTISH.has(name)) {
+      const cur = shapeOf(name)
+      const opt = (label: string, icon: typeof Pilcrow, to: Shape): MenuEntry => ({ label, icon, checked: cur === to, onSelect: () => transform(pos, to) })
+      out.push({
+        label: 'Transformar em', icon: Pilcrow,
+        sub: [opt('Texto', Pilcrow, 'paragraph'), opt('Título', Heading, 'heading'), opt('Lista', List, 'bullet'), opt('Checklist', ListTodo, 'task'), opt('Código', SquareCode, 'code')],
+      })
+    }
+    out.push(SEP, { label: isItem ? 'Apagar item' : 'Apagar', icon: Trash2, danger: true, onSelect: () => deleteNode(view, pos) })
+    return out
+  }
+
+  function openNodeMenu(pos: number, x: number, y: number, clicked?: Element) {
+    blockMenu?.openAt(x, y, nodeEntries(pos, clicked))
+  }
+
   /** Importa arquivos (do computador, arrastados, colados, da câmera ou do gravador) e põe no texto. */
   async function addFiles(list: (File | { blob: Blob; name: string })[], pos?: number) {
     if (!editor || !list.length) return
@@ -214,7 +354,8 @@
   const selectedImage = $derived.by(() => {
     void tick
     const sel = editor?.state.selection
-    if (!editor || !(sel instanceof NodeSelection) || sel.node.type.name !== 'noteImage') return null
+    // Só com o editor em foco: ao abrir uma nota que começa com foto, a seleção inicial cai nela sem ninguém clicar.
+    if (!editor?.isFocused || !(sel instanceof NodeSelection) || sel.node.type.name !== 'noteImage') return null
     const dom = editor.view.nodeDOM(sel.from) as HTMLElement | null
     const acts = imageActions(editor.state, sel.from)
     if (!dom || !acts) return null
@@ -284,12 +425,52 @@
               />
             {/snippet}
           </Dialog.Title>
-          <div class="ed-body prose" {@attach mountEditor}></div>
+          <!-- Blocos: com o mouse por cima, a alça ⋮⋮ à esquerda arrasta o bloco e abre o menu dele.
+               Em listas e checklists, cada item tem a própria alça (reordenar como no Keep). -->
+          <div
+            class="ed-blocks"
+            role="presentation"
+            bind:this={blocksEl}
+            onpointermove={onBodyMove}
+            onpointerleave={() => !handleDragging && (hover = null)}
+            onkeydowncapture={() => (hover = null)}
+          >
+            <div class="ed-body prose" {@attach mountEditor}></div>
+            {#if hover}
+              {@const b = hover.block}
+              <button
+                class="blk-handle"
+                style:top="{topOf(b.dom)}px"
+                draggable="true"
+                aria-label="Bloco: arraste para mover ou clique para o menu"
+                title="Arraste para mover · clique para o menu"
+                ondragstart={(e) => dragFromHandle(e, b.pos, b.dom)}
+                ondragend={() => ((handleDragging = false), (hover = null))}
+                onclick={(e) => openNodeMenu(b.pos, e.clientX, e.clientY)}
+              ><GripVertical size={16} /></button>
+              {#if hover.item}
+                {@const it = hover.item}
+                <button
+                  class="item-handle"
+                  style:top="{topOf(it.dom)}px"
+                  style:left="{it.dom.getBoundingClientRect().left - (blocksEl?.getBoundingClientRect().left ?? 0) - 18}px"
+                  draggable="true"
+                  aria-label="Item: arraste para reordenar ou clique para o menu"
+                  title="Arraste para reordenar · clique para o menu"
+                  ondragstart={(e) => dragFromHandle(e, it.pos, it.dom)}
+                  ondragend={() => ((handleDragging = false), (hover = null))}
+                  onclick={(e) => openNodeMenu(it.pos, e.clientX, e.clientY)}
+                ><GripVertical size={14} /></button>
+              {/if}
+            {/if}
+          </div>
+          <MenuAt bind:this={blockMenu} />
 
           {#if files.length}
+            <!-- Anexos antigos, fora do corpo: mesmo cartão dos anexos do texto. -->
             <div class="ed-files">
               {#each files as f (f.hash)}
-                <span class="ed-file"><Paperclip size={14} /><span>{f.name}</span><small>{fmtBytes(f.bytes)}</small></span>
+                <MediaBlock a={f} onopen={() => viewAttachment(f)} />
               {/each}
             </div>
           {/if}
