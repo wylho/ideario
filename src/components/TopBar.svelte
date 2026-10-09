@@ -3,6 +3,7 @@
   import { Menu, Search, X } from '@lucide/svelte'
   import SyncIndicator from './SyncIndicator.svelte'
   import ViewActions from './ViewActions.svelte'
+  import BrandMark from './BrandMark.svelte'
   import SelectionBar from './SelectionBar.svelte'
   import ViewSwitch from './ViewSwitch.svelte'
   import { app } from '../lib/app.svelte'
@@ -67,14 +68,7 @@
     </button>
     {#if app.wide}
       <span class="brand-area">
-        <svg class="brand-mark" viewBox="0 0 1024 1024" aria-hidden="true">
-          <rect width="1024" height="1024" rx="228" fill="#2547c9" />
-          <path d="M300 236h332l156 156v356a40 40 0 0 1-40 40H300a40 40 0 0 1-40-40V276a40 40 0 0 1 40-40z" fill="#fff" />
-          <path d="M632 236v116a40 40 0 0 0 40 40h116z" fill="#a9bcf5" />
-          <rect x="340" y="460" width="300" height="40" rx="20" fill="#2547c9" />
-          <rect x="340" y="560" width="220" height="40" rx="20" fill="#2547c9" opacity=".55" />
-          <circle cx="380" cy="356" r="44" fill="#e86a3a" />
-        </svg>
+        <BrandMark />
         <span class="brand">Ideario</span>
       </span>
     {:else}
