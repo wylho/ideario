@@ -634,6 +634,7 @@ test('desktop: visões no canto direito e ações ao lado, paradas; busca e nuve
   await expect(cards(page)).toHaveCount(1)
   await still()
   // o campo cresce para a esquerda, a partir de onde estava a lupa
+  await page.locator('.search.inline').evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)))
   const field = await box('.search.inline')
   expect(field.x + field.width).toBeCloseTo(lupa.x + lupa.width, 0)
   await page.locator('.card').first().focus()

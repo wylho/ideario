@@ -84,8 +84,8 @@ button { cursor: pointer; }
 .top-left { display: flex; align-items: center; gap: 6px; min-width: 0; flex: none; }
 .topbar:not(.appbar) .top-left { flex: 1; }
 .topbar:not(.appbar) { gap: 6px; }
-.search.inline { flex: 0 1 280px; min-width: 180px; height: 40px; animation: search-in .18s cubic-bezier(.2, .8, .2, 1); }
-@keyframes search-in { from { opacity: 0; transform: scaleX(.85); transform-origin: right; } }
+.search.inline { flex: 0 1 280px; min-width: 180px; height: 40px; transform-origin: right; animation: search-in .18s cubic-bezier(.2, .8, .2, 1); }
+@keyframes search-in { from { opacity: 0; transform: scaleX(.85); } }
 :root { --side-w: 272px; --rail-w: 72px; }
 .brand-area { display: flex; align-items: center; gap: 10px; min-width: 0; margin-left: 2px; }
 .brand-mark { width: 30px; height: 30px; flex: none; }
@@ -172,6 +172,8 @@ button { cursor: pointer; }
 .c-sky { background: var(--n-sky); } .c-rose { background: var(--n-rose); } .c-lilac { background: var(--n-lilac); } .c-butter { background: var(--n-butter); }
 .card-media { position: relative; }
 .card-media img { display: block; width: 100%; height: auto; max-height: 260px; object-fit: cover; }
+.card-media.row { display: flex; gap: 2px; }
+.card-media.row img { width: 0; flex-basis: 0; min-width: 0; }
 .card-media .more {
   position: absolute; right: 8px; bottom: 8px; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 600;
   background: rgb(0 0 0 / .55); color: #fff;
