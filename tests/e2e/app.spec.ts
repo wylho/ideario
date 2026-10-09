@@ -836,6 +836,17 @@ test.describe('mídia no editor', () => {
     await expect(page.locator('.card .pv-file', { hasText: 'contrato.pdf' })).toHaveCount(1)
   })
 
+  test('nota que é só um anexo vira miniatura quadrada no card', async ({ page }) => {
+    await dropFiles(page, '.content', [{ name: 'Aula de inglês 03.m4a', type: 'audio/mp4', text: 'x' }])
+    await expect(page.locator('#corpo .nf-card')).toHaveCount(1)
+    await back(page)
+    const card = cards(page).filter({ hasText: 'Aula de inglês 03.m4a' })
+    await expect(card.locator('.card-file.t-audio')).toBeVisible()
+    const box = (await card.locator('.card-file').boundingBox())!
+    expect(Math.abs(box.width - box.height)).toBeLessThan(2)
+    await expect(card.locator('.pill', { hasText: '1' })).toHaveCount(0)
+  })
+
   test('arrastar arquivo com a nota aberta anexa nela (fora do texto vai para o fim)', async ({ page }) => {
     await newNote(page)
     await page.keyboard.type('Primeira linha')
