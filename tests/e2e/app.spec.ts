@@ -560,15 +560,24 @@ test('lateral: chevron mostra e oculta as tags e lembra a escolha', async ({ pag
   await expect(page.locator('.sidebar .tag-cloud')).toHaveCount(0)
 })
 
-test('desktop: visões centralizadas; busca é um ícone que abre o campo e fecha vazio', async ({ page }) => {
+test('desktop: marca, visões e ações com folgas iguais; busca é um ícone que abre o campo e fecha vazio', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 })
-  const v = (await page.locator('.view-switch').boundingBox())!
-  expect(Math.abs(v.x + v.width / 2 - 640)).toBeLessThan(2)
+  // Folgas iguais: fim da marca → visões e visões → ícones da direita.
+  const gaps = async () => {
+    const brand = (await page.locator('.brand-area').boundingBox())!
+    const v = (await page.locator('.view-switch').boundingBox())!
+    const actions = (await page.locator('.top-actions').boundingBox())!
+    return [v.x - (brand.x + brand.width), actions.x - (v.x + v.width)]
+  }
+  const [l, r] = await gaps()
+  expect(Math.abs(l - r)).toBeLessThan(1.5)
   await expect(page.locator('#busca')).toHaveCount(0)
   await page.getByRole('button', { name: 'Buscar', exact: true }).click()
   await expect(page.locator('#busca')).toBeFocused()
   await page.keyboard.type('paraty')
   await expect(cards(page)).toHaveCount(1)
+  const [l2, r2] = await gaps()
+  expect(Math.abs(l2 - r2)).toBeLessThan(1.5)
   await page.locator('.card').first().focus()
   await expect(page.locator('#busca')).toHaveValue('paraty')
   await page.locator('#busca').fill('')
