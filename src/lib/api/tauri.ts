@@ -45,7 +45,8 @@ export const tauriApi: Api = {
   syncStatus: () => invoke('sync_status'),
 
   // Fase 1: o arquivo é o próprio original; miniatura e versão otimizada chegam com o pipeline (Fase 3).
-  imageUrl: (hash) => convertFileSrc(hash, 'att'),
+  // Miniatura (WebP ~400 px) para cards, Arquivos e Moodboard; a foto inteira no editor e no visualizador.
+  imageUrl: (hash, size) => convertFileSrc(hash, 'att') + (size === 'thumb' ? '?thumb' : ''),
   mediaUrl: (hash) => convertFileSrc(hash, 'att'),
   getAttachments: (hashes) => invoke('get_attachments', { hashes }),
   async importFile(file, name) {

@@ -8,6 +8,7 @@ use std::path::{Path, PathBuf};
 use sha2::{Digest, Sha256};
 use tauri::http::{header, Request, Response, StatusCode};
 
+use crate::media::{self, Quality};
 use crate::store::{now, Attachment, Store};
 
 pub fn dir(data: &Path) -> PathBuf {
@@ -80,38 +81,113 @@ pub fn mime_of(name: &str) -> &'static str {
     }
 }
 
-/// Guarda o arquivo (uma vez por conteúdo) e registra o anexo. Devolve o anexo como ficou no banco.
-pub fn import(store: &Store, data: &Path, bytes: &[u8], name: &str, mime: &str) -> Result<Attachment, String> {
-    let hash = format!("{:x}", Sha256::digest(bytes));
-    let dir = dir(data);
-    std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
-    let path = dir.join(&hash);
-    if !path.exists() {
-        // grava ao lado e renomeia: um arquivo pela metade nunca fica com o nome final
-        let tmp = dir.join(format!("{hash}.part"));
-        std::fs::write(&tmp, bytes).map_err(|e| e.to_string())?;
-        std::fs::rename(&tmp, &path).map_err(|e| e.to_string())?;
-    }
+/// Anexo pronto para gravar: já passou pelo pipeline (fotos) e tem o hash do conteúdo final.
+pub struct Prepared {
+    pub bytes: Vec<u8>,
+    pub thumb: Option<Vec<u8>>,
+    pub att: Attachment,
+}
+
+/// Trabalho pesado, sem tocar no banco (roda fora da trava e da thread da janela): fotos passam pelo pipeline
+/// (SPEC §7); o resto fica exatamente como veio.
+pub fn prepare(bytes: Vec<u8>, name: &str, mime: &str, quality: Quality) -> Prepared {
+    let mime = if mime.is_empty() { mime_of(name) } else { mime };
     let kind = kind_of(mime, name);
-    let (width, height) = match (kind, imagesize::blob_size(bytes)) {
-        ("image", Ok(s)) => (Some(s.width as i64), Some(s.height as i64)),
-        _ => (None, None),
+    let orig_len = bytes.len() as i64;
+    let processed = if kind == "image" { media::process(&bytes, mime, quality).ok() } else { None };
+    let (bytes, thumb, att) = match processed {
+        Some(p) => {
+            let converted = p.mime != mime;
+            let smaller = (p.bytes.len() as i64) < orig_len;
+            // Virou WebP: o nome acompanha, para o arquivo baixado abrir no programa certo.
+            let name = if converted { with_extension(name, "webp") } else { name.to_string() };
+            let att = Attachment {
+                hash: String::new(),
+                kind: kind.into(),
+                mime: p.mime,
+                name,
+                bytes: p.bytes.len() as i64,
+                // Economia só quando houve: a interface soma `orig_bytes - bytes`.
+                orig_bytes: (converted && smaller).then_some(orig_len),
+                width: Some(p.width as i64),
+                height: Some(p.height as i64),
+                palette: Some(p.palette),
+                tone: Some(p.tone.as_str().into()),
+                added_at: now(),
+            };
+            (p.bytes, Some(p.thumb), att)
+        }
+        None => {
+            // Não é foto, ou a foto não pôde ser lida (HEIC, SVG…): guarda como veio.
+            let (width, height) = match (kind, imagesize::blob_size(&bytes)) {
+                ("image", Ok(s)) => (Some(s.width as i64), Some(s.height as i64)),
+                _ => (None, None),
+            };
+            let att = Attachment {
+                hash: String::new(),
+                kind: kind.into(),
+                mime: mime.into(),
+                name: name.into(),
+                bytes: orig_len,
+                orig_bytes: None,
+                width,
+                height,
+                palette: None,
+                tone: None,
+                added_at: now(),
+            };
+            (bytes, None, att)
+        }
     };
-    let mime = if mime.is_empty() { "application/octet-stream" } else { mime };
-    store.insert_attachment(&Attachment {
-        hash: hash.clone(),
-        kind: kind.into(),
-        mime: mime.into(),
-        name: name.into(),
-        bytes: bytes.len() as i64,
-        orig_bytes: None,
-        width,
-        height,
-        palette: None,
-        tone: None,
-        added_at: now(),
-    })?;
-    store.get_attachments(&[hash])?.pop().ok_or_else(|| "anexo não gravado".into())
+    let hash = format!("{:x}", Sha256::digest(&bytes));
+    Prepared { bytes, thumb, att: Attachment { hash, ..att } }
+}
+
+fn with_extension(name: &str, ext: &str) -> String {
+    match name.rsplit_once('.') {
+        Some((stem, _)) if !stem.is_empty() => format!("{stem}.{ext}"),
+        _ => format!("{name}.{ext}"),
+    }
+}
+
+/// Grava o arquivo (uma vez por conteúdo) e a miniatura, e registra o anexo. Devolve o anexo como ficou no banco.
+pub fn save(store: &Store, data: &Path, p: Prepared) -> Result<Attachment, String> {
+    write_once(&dir(data).join(&p.att.hash), &p.bytes)?;
+    if let Some(t) = &p.thumb {
+        write_once(&thumb_path(data, &p.att.hash), t)?;
+    }
+    store.insert_attachment(&p.att)?;
+    store.get_attachments(std::slice::from_ref(&p.att.hash))?.pop().ok_or_else(|| "anexo não gravado".into())
+}
+
+/// Grava ao lado e renomeia: um arquivo pela metade nunca fica com o nome final.
+fn write_once(path: &Path, bytes: &[u8]) -> Result<(), String> {
+    if path.exists() {
+        return Ok(());
+    }
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+    let tmp = path.with_extension("part");
+    std::fs::write(&tmp, bytes).map_err(|e| e.to_string())?;
+    std::fs::rename(&tmp, path).map_err(|e| e.to_string())
+}
+
+pub fn thumb_path(data: &Path, hash: &str) -> PathBuf {
+    data.join("thumbs").join(format!("{hash}.webp"))
+}
+
+/// Importa de uma vez (pipeline + gravação), com a qualidade das configurações.
+#[cfg(test)]
+pub fn import(store: &Store, data: &Path, bytes: &[u8], name: &str, mime: &str) -> Result<Attachment, String> {
+    let p = prepare(bytes.to_vec(), name, mime, quality(store));
+    save(store, data, p)
+}
+
+/// Qualidade das fotos escolhida nas Configurações.
+pub fn quality(store: &Store) -> Quality {
+    let s = store.get_settings().unwrap_or_default();
+    Quality::from_setting(s.get("photoQuality").and_then(|v| v.as_str()).unwrap_or("balanced"))
 }
 
 /// Copia o anexo para a pasta Downloads, sem sobrescrever nada ("nome (1).pdf"). Devolve o caminho salvo.
@@ -135,11 +211,21 @@ pub fn save_copy(data: &Path, downloads: &Path, hash: &str, name: &str) -> Resul
 }
 
 /// Responde a `att://localhost/<hash>` com o arquivo, inteiro ou só o trecho pedido (Range).
+/// `?thumb` pede a miniatura (WebP); sem miniatura (não é foto, ou ainda não gerada), vai o arquivo.
 pub fn serve(store: &Store, data: &Path, req: &Request<Vec<u8>>) -> Response<Vec<u8>> {
     let hash: String = req.uri().path().trim_start_matches('/').chars().filter(|c| c.is_ascii_hexdigit()).collect();
     let not_found = || status_only(StatusCode::NOT_FOUND);
     if hash.is_empty() {
         return not_found();
+    }
+    if req.uri().query() == Some("thumb") {
+        if let Ok(bytes) = std::fs::read(thumb_path(data, &hash)) {
+            return Response::builder()
+                .header(header::CONTENT_TYPE, "image/webp")
+                .header(header::CACHE_CONTROL, "max-age=31536000, immutable")
+                .body(bytes)
+                .unwrap_or_else(|_| status_only(StatusCode::INTERNAL_SERVER_ERROR));
+        }
     }
     let Ok(bytes) = std::fs::read(dir(data).join(&hash)) else { return not_found() };
     // Tipo vindo do banco: se não servir de cabeçalho (caractere inválido), vai como binário genérico.
@@ -196,6 +282,31 @@ mod tests {
         assert_eq!(kind_of("application/zip", "a.zip"), "other");
         assert_eq!(kind_of(mime_of("Foto.JPG"), "Foto.JPG"), "image");
         assert_eq!(kind_of(mime_of("aula.m4a"), "aula.m4a"), "audio");
+    }
+
+    #[test]
+    fn photos_go_through_the_pipeline_and_serve_a_thumbnail() {
+        let tmp = std::env::temp_dir().join(format!("ideario-test-{}", uuid::Uuid::now_v7()));
+        let store = Store::memory();
+        let jpg = crate::media::tests::camera_jpeg(2400, 1800, 1);
+        let a = import(&store, &tmp, &jpg, "IMG_0042.JPG", "image/jpeg").unwrap();
+        assert_eq!((a.mime.as_str(), a.name.as_str()), ("image/webp", "IMG_0042.webp"));
+        assert_eq!((a.width, a.height), (Some(2048), Some(1536)), "Equilibrada: lado maior 2048");
+        assert_eq!(a.orig_bytes, Some(jpg.len() as i64));
+        assert!(a.bytes < jpg.len() as i64);
+        assert_eq!(a.palette.as_ref().map(Vec::len), Some(5));
+        assert!(a.tone.is_some());
+        let get = |q: &str| serve(&store, &tmp, &Request::builder().uri(format!("att://localhost/{}{q}", a.hash)).body(Vec::new()).unwrap());
+        let thumb = get("?thumb");
+        assert_eq!(thumb.headers()[header::CONTENT_TYPE], "image/webp");
+        assert_eq!(image::load_from_memory(thumb.body()).unwrap().width(), 400);
+        assert_eq!(get("").body().len() as i64, a.bytes);
+        // Original: fica como veio, mas ganha miniatura e paleta.
+        store.save_settings(&serde_json::json!({ "photoQuality": "original" })).unwrap();
+        let b = import(&store, &tmp, &jpg, "IMG_0042.JPG", "image/jpeg").unwrap();
+        assert_eq!((b.mime.as_str(), b.bytes, b.orig_bytes), ("image/jpeg", jpg.len() as i64, None));
+        assert!(thumb_path(&tmp, &b.hash).exists());
+        let _ = std::fs::remove_dir_all(&tmp);
     }
 
     #[test]

@@ -54,6 +54,10 @@ class Session {
   exec(script, ...args) {
     return wd('POST', this.p('/execute/sync'), { script, args })
   }
+  /** Script assíncrono: o último argumento é a função que devolve o resultado. */
+  execAsync(script, ...args) {
+    return wd('POST', this.p('/execute/async'), { script, args })
+  }
   async waitFor(script, label, timeout = 8000, ...args) {
     const end = Date.now() + timeout
     while (Date.now() < end) {
@@ -126,6 +130,43 @@ function png() {
   ihdr.set([8, 6, 0, 0, 0], 8)
   const row = Buffer.concat([Buffer.from([0]), Buffer.from(Array(4).fill([238, 135, 0, 255]).flat())])
   const raw = Buffer.concat([row, row])
+  return Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), chunk('IHDR', ihdr), chunk('IDAT', zlib.deflateSync(raw)), chunk('IEND', Buffer.alloc(0))])
+}
+
+// PNG grande com ruído (não comprime a nada), azulado: vira WebP bem menor.
+function noisyPng(w, h) {
+  const crc = (b) => {
+    let c = ~0
+    for (const x of b) {
+      c ^= x
+      for (let k = 0; k < 8; k++) c = (c >>> 1) ^ (0xedb88320 & -(c & 1))
+    }
+    return ~c >>> 0
+  }
+  const chunk = (t, d) => {
+    const len = Buffer.alloc(4)
+    len.writeUInt32BE(d.length)
+    const body = Buffer.concat([Buffer.from(t), d])
+    const c = Buffer.alloc(4)
+    c.writeUInt32BE(crc(body))
+    return Buffer.concat([len, body, c])
+  }
+  const ihdr = Buffer.alloc(13)
+  ihdr.writeUInt32BE(w, 0)
+  ihdr.writeUInt32BE(h, 4)
+  ihdr.set([8, 2, 0, 0, 0], 8)
+  const raw = Buffer.alloc((w * 3 + 1) * h)
+  let seed = 1
+  for (let y = 0; y < h; y++) {
+    const o = y * (w * 3 + 1)
+    for (let x = 0; x < w; x++) {
+      seed = (Math.imul(seed, 1103515245) + 12345) >>> 0 // imul: a multiplicação comum perde os bits baixos
+      const n = seed >>> 26 // 6 bits de ruído: como o grão de uma foto
+      raw[o + 1 + x * 3] = 20 + n
+      raw[o + 2 + x * 3] = 70 + n
+      raw[o + 3 + x * 3] = 180 + n
+    }
+  }
   return Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), chunk('IHDR', ihdr), chunk('IDAT', zlib.deflateSync(raw)), chunk('IEND', Buffer.alloc(0))])
 }
 
@@ -210,6 +251,17 @@ try {
     await sleep(700)
     await s.exec(`document.querySelector('[aria-label="Voltar e salvar"]').click(); return true`)
     await s.waitFor(`return [...document.querySelectorAll('.card')].some((c) => c.getAttribute('aria-label') === 'Bem-vindo ao Ideario' && c.querySelector('.pv-task.done'))`, 'card com o item feito')
+  })
+
+  await test('Fase 3: foto grande entra reduzida em WebP, com miniatura, paleta e tom', async () => {
+    const file = join(DATA, 'praia.png')
+    writeFileSync(file, noisyPng(2600, 1700))
+    const a = await s.execAsync(`window.__TAURI_INTERNALS__.invoke('import_path', { path: arguments[0] }).then(arguments[1], (e) => arguments[1]({ error: String(e) }))`, file)
+    if (a.error) throw new Error(a.error)
+    if (a.mime !== 'image/webp' || a.width !== 2048 || !a.origBytes || a.bytes >= a.origBytes) throw new Error(JSON.stringify({ ...a, palette: undefined }))
+    if (a.palette?.length !== 5 || !a.tone) throw new Error(`paleta ${a.palette} tom ${a.tone}`)
+    const w = await s.execAsync(`const i = new Image(); i.onload = () => arguments[1](i.naturalWidth); i.onerror = () => arguments[1](0); i.src = window.__TAURI_INTERNALS__.convertFileSrc(arguments[0], 'att') + '?thumb'`, a.hash)
+    if (w !== 400) throw new Error(`miniatura com ${w} px`)
   })
 
   await test('fechar e reabrir: tudo continua lá, na hora', async () => {

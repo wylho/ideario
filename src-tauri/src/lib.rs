@@ -4,6 +4,7 @@
 mod attachments;
 mod background;
 mod commands;
+mod media;
 mod projection;
 mod store;
 mod system_fonts;
@@ -36,6 +37,9 @@ pub fn run() {
             // Banco local (SQLite) na pasta de dados do app; abre antes da janela, para a lista vir na hora.
             let data = app.path().app_data_dir()?;
             app.manage(Core::open(data).map_err(|e| format!("não foi possível abrir o banco: {e}"))?);
+            // Fotos antigas (sem miniatura e paleta): em segundo plano, sem atrasar a lista.
+            let handle = app.handle().clone();
+            std::thread::spawn(move || handle.state::<Core>().backfill_media());
 
             // A janela é criada aqui (e não pelo tauri.conf.json) para receber as fontes e as cores do
             // sistema antes de a página carregar, sem troca visível de fonte ou de cor.
