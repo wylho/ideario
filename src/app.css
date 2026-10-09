@@ -20,6 +20,8 @@ b, strong { font-weight: bolder; }
   --fg: #16201c;
   --muted: #5d6a65;
   --line: #d6ddd9;
+  /* contorno de todos os cards: translúcido, então acompanha a cor de cada um */
+  --card-edge: rgb(22 32 28 / .09);
   --accent: #2547c9;
   --accent-soft: #e2e8fb;
   --on-accent: #ffffff;
@@ -43,7 +45,7 @@ b, strong { font-weight: bolder; }
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #101513; --stage: #0a0e0d; --surface: #19211e; --raised: #1f2825; --fg: #e5ebe8; --muted: #93a19b; --line: #2b3632;
+    --bg: #101513; --stage: #0a0e0d; --surface: #19211e; --raised: #1f2825; --fg: #e5ebe8; --muted: #93a19b; --line: #2b3632; --card-edge: rgb(255 255 255 / .07);
     --accent: #8ea4ff; --accent-soft: #232c4d; --on-accent: #0d1430; --late: #ff8a78; --late-soft: #3a1f1b; --good: #6fd09a;
     --shadow: 0 1px 2px rgb(0 0 0 / .4); --float-shadow: 0 12px 32px rgb(0 0 0 / .55), 0 1px 3px rgb(0 0 0 / .4);
     --n-sand: #3a3125; --n-sage: #26352a; --n-sky: #22304a; --n-rose: #3d262c; --n-lilac: #2f2842; --n-butter: #39351e;
@@ -51,7 +53,7 @@ b, strong { font-weight: bolder; }
   }
 }
 :root[data-theme="dark"] {
-  --bg: #101513; --stage: #0a0e0d; --surface: #19211e; --raised: #1f2825; --fg: #e5ebe8; --muted: #93a19b; --line: #2b3632;
+  --bg: #101513; --stage: #0a0e0d; --surface: #19211e; --raised: #1f2825; --fg: #e5ebe8; --muted: #93a19b; --line: #2b3632; --card-edge: rgb(255 255 255 / .07);
   --accent: #8ea4ff; --accent-soft: #232c4d; --on-accent: #0d1430; --late: #ff8a78; --late-soft: #3a1f1b; --good: #6fd09a;
   --shadow: 0 1px 2px rgb(0 0 0 / .4); --float-shadow: 0 12px 32px rgb(0 0 0 / .55), 0 1px 3px rgb(0 0 0 / .4);
   --n-sand: #3a3125; --n-sage: #26352a; --n-sky: #22304a; --n-rose: #3d262c; --n-lilac: #2f2842; --n-butter: #39351e;
@@ -155,9 +157,8 @@ button { cursor: pointer; }
 .card {
   container-type: inline-size;
   display: block; width: 100%; border-radius: 16px; overflow: hidden; background: var(--n-none);
-  border: 1px solid var(--line); cursor: pointer; transition: transform .12s ease, box-shadow .12s ease;
+  border: 1px solid var(--card-edge); cursor: pointer; transition: transform .12s ease, box-shadow .12s ease;
 }
-.card:not(.c-none) { border-color: transparent; }
 .card:hover { box-shadow: var(--shadow); }
 .card:active { transform: scale(.985); }
 .c-none { background: var(--n-none); } .c-sand { background: var(--n-sand); } .c-sage { background: var(--n-sage); }
