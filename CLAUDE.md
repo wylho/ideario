@@ -28,7 +28,7 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
   Rust (projeção de trecho/checklist/capa, busca sem acento, escopos). Na Fase 1 a interface passa a chamar `invoke`,
   e o mock continua servindo o modo navegador (`npm run dev`) e os testes e2e.
 - Layout responsivo (pedido do usuário: desktop primeiro): < 640 px = protótipo de celular; 640–959 px = gaveta + abas,
-  largura total; ≥ 960 px = como o Google Keep: barra superior fixa (☰, marca, busca) e, abaixo, lateral (`NavList`)
+  largura total; ≥ 960 px = como o Google Keep: barra superior fixa (☰ e marca à esquerda; ações e visões ancoradas à direita, visões no canto; nuvem e campo de busca só crescem na folga, sem mover nada) e, abaixo, lateral (`NavList`)
   que recolhe para um trilho de ícones (o topo não se move), editor e configurações como diálogo central.
   Masonry é JS (`Masonry.svelte` + `estimateCard`), porque a WebKitGTK não equilibra `columns:` do CSS.
 - Princípio de design: só mostrar o que tem motivo para aparecer (ex.: nuvem do sync só ao sincronizar, sem
