@@ -7,7 +7,7 @@
   import ViewEmpty from './ViewEmpty.svelte'
   import ContextMenu from './ContextMenu.svelte'
   import { attachmentMenu } from '../lib/menus'
-  import { fileGroup, type AttachmentKind, type AttachmentRow } from '../lib/types'
+  import { FILE_GROUPS, fileGroup, type AttachmentKind, type AttachmentRow } from '../lib/types'
 
   // Tipo, ordem e lista/grade ficam na barra superior (ViewActions).
   const sort = $derived(app.filesSort)
@@ -15,10 +15,15 @@
   const rows = live(() => api.listAttachments({ filter: $state.snapshot(app.filter), query: app.query }), [] as AttachmentRow[])
 
 
+  const byName = (a: AttachmentRow, b: AttachmentRow) => a.name.localeCompare(b.name, 'pt-BR')
   const list = $derived(
     rows.current
       .filter((r) => !app.filesKind || fileGroup(r.kind) === app.filesKind)
-      .sort((a, b) => (sort === 'name' ? a.name.localeCompare(b.name, 'pt-BR') : sort === 'size' ? b.bytes - a.bytes : b.addedAt - a.addedAt)),
+      .sort((a, b) =>
+        sort === 'name' ? byName(a, b)
+        : sort === 'size' ? b.bytes - a.bytes
+        : sort === 'kind' ? FILE_GROUPS.indexOf(fileGroup(a.kind)) - FILE_GROUPS.indexOf(fileGroup(b.kind)) || byName(a, b)
+        : b.addedAt - a.addedAt),
   )
   const total = $derived(rows.current.reduce((s, r) => s + r.bytes, 0))
   const saved = $derived(rows.current.reduce((s, r) => s + (r.origBytes ? r.origBytes - r.bytes : 0), 0))

@@ -187,6 +187,11 @@ test('arquivos: tipos, ordenação, grade e nota de origem', async ({ page }) =>
   await page.getByRole('button', { name: /^Ordenar/ }).click()
   await page.getByRole('menuitemradio', { name: 'Tamanho' }).click()
   await expect(page.locator('.f-row .f-name').first()).toHaveText('Manual de marca Linvo v3.pdf')
+  await page.getByRole('button', { name: /^Ordenar/ }).click()
+  await page.getByRole('menuitemradio', { name: 'Tipo' }).click()
+  // por tipo: PDFs primeiro (por nome), vídeo por último
+  await expect(page.locator('.f-row .f-name').first()).toHaveText('Aula 07 - Fluxo de caixa descontado.pdf')
+  await expect(page.locator('.f-row .f-name').last()).toHaveText('Gravação da reunião de pauta.mp4')
   await page.getByRole('button', { name: 'Ver em grade' }).click()
   await page.locator('.f-tile', { hasText: 'Aula 07' }).click()
   await expect(page.locator('#titulo')).toHaveValue('Valuation: fluxo de caixa descontado')

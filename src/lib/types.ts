@@ -7,6 +7,8 @@ export type Tone = 'quente' | 'frio' | 'verde' | 'rosa' | 'neutro'
 export type AttachmentKind = 'image' | 'pdf' | 'doc' | 'sheet' | 'audio' | 'video' | 'other'
 /** Grupos do filtro de Arquivos: planilhas e o resto entram em "Outros documentos". */
 export type FileGroup = 'pdf' | 'doc' | 'image' | 'audio' | 'video'
+/** Ordem dos grupos (a mesma do filtro na barra superior). */
+export const FILE_GROUPS: FileGroup[] = ['pdf', 'doc', 'image', 'audio', 'video']
 export const fileGroup = (k: AttachmentKind): FileGroup => (k === 'sheet' || k === 'other' ? 'doc' : k)
 
 /** Epoch em milissegundos. */
@@ -164,7 +166,7 @@ export type View = 'notes' | 'reminders' | 'files' | 'moodboard'
 /** Ordem das notas. 'custom' é a ordem livre, montada arrastando os cards. */
 export type NoteSort = 'custom' | 'updated' | 'created' | 'category' | 'title'
 
-export type FileSort = 'recent' | 'name' | 'size'
+export type FileSort = 'recent' | 'name' | 'size' | 'kind'
 
 /** 'original': a foto fica como veio (sem redimensionar nem recomprimir). */
 export type PhotoQuality = 'economy' | 'balanced' | 'high' | 'original'
