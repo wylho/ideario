@@ -1,9 +1,10 @@
 <script lang="ts">
-  import { Dialog, Slider, Switch } from 'bits-ui'
-  import { CloudCheck, StickyNote, X } from '@lucide/svelte'
+  import { Dialog, Slider, Switch, ToggleGroup } from 'bits-ui'
+  import { CloudCheck, Monitor, Moon, StickyNote, Sun, X } from '@lucide/svelte'
   import { api, coreVersion } from '../lib/api'
   import { app } from '../lib/app.svelte'
   import { ago } from '../lib/format'
+  import { theme, type ThemePref } from '../lib/theme.svelte'
   import Picker from './Picker.svelte'
   import type { PhotoQuality, Settings, SyncStatus } from '../lib/types'
 
@@ -40,6 +41,24 @@
       </div>
       {#if settings}
         <div class="sheet-scroll">
+          <section class="set-group">
+            <h3>Aparência</h3>
+            <div class="set-row">
+              <span><b>Tema</b></span>
+              <ToggleGroup.Root
+                type="single"
+                value={theme.pref}
+                onValueChange={(v) => v && theme.set(v as ThemePref)}
+                class="seg tight"
+                aria-label="Tema"
+              >
+                <ToggleGroup.Item value="light" class="seg-item"><Sun size={15} />Claro</ToggleGroup.Item>
+                <ToggleGroup.Item value="dark" class="seg-item"><Moon size={15} />Escuro</ToggleGroup.Item>
+                <ToggleGroup.Item value="system" class="seg-item"><Monitor size={15} />Sistema</ToggleGroup.Item>
+              </ToggleGroup.Root>
+            </div>
+          </section>
+
           <section class="set-group">
             <h3>Sincronização</h3>
             <div class="sync-card">
