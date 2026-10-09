@@ -21,6 +21,7 @@
     { id: 'recent', label: 'Mais recentes' },
     { id: 'name', label: 'Nome (A–Z)' },
     { id: 'size', label: 'Tamanho' },
+    { id: 'kind', label: 'Tipo' },
   ]
   // Os ícones são os mesmos da lista de arquivos; planilhas e afins entram em "Outros documentos".
   const KINDS: { id: FileGroup; label: string; icon: typeof FileIcon }[] = [
