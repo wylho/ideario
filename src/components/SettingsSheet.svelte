@@ -89,13 +89,6 @@
                 options={[['economy', 'Econômica · 1280px'], ['balanced', 'Equilibrada · 2048px'], ['high', 'Alta · 3072px'], ['original', 'Original · sem compressão']] as [PhotoQuality, string][]}
               />
             </div>
-            <!-- Com a qualidade Original não há versão otimizada, então guardar o original à parte não faz sentido. -->
-            {#if settings.photoQuality !== 'original'}
-              <label class="set-row" for="originais">
-                <span><b>Manter originais</b><small>Guarda a foto sem compressão no Drive, além da versão otimizada.</small></span>
-                <Switch.Root id="originais" class="switch" bind:checked={settings.keepOriginals}><Switch.Thumb class="thumb" /></Switch.Root>
-              </label>
-            {/if}
           </section>
 
           <section class="set-group">

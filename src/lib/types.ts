@@ -169,7 +169,6 @@ export type PhotoQuality = 'economy' | 'balanced' | 'high' | 'original'
 
 export interface Settings {
   wifiOnly: boolean
-  keepOriginals: boolean
   photoQuality: PhotoQuality
   /** Limite do cache em GB (0,5 a 5). */
   cacheLimitGb: number

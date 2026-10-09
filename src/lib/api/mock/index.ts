@@ -43,7 +43,7 @@ const attachments = new Map<string, Attachment>()
 const imageSrc = new Map<string, string>()
 const listeners = new Set<() => void>()
 const projections = new WeakMap<RichDoc, Projection>()
-let settings: Settings = { wifiOnly: true, keepOriginals: false, photoQuality: 'balanced', cacheLimitGb: 2 }
+let settings: Settings = { wifiOnly: true, photoQuality: 'balanced', cacheLimitGb: 2 }
 
 // ---------- seed ----------
 for (const i of SEED_IMAGES) {

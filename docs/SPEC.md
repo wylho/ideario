@@ -100,7 +100,7 @@ O Automerge foi considerado e **descartado** em favor do Yjs por causa do editor
 
 ### 3.10 Configurações
 - Sincronização: status do Drive, última sincronização, "Sincronizar agora" e "Sincronizar só no Wi-Fi" (o texto sempre sincroniza; os anexos grandes esperam o Wi-Fi).
-- Fotos: qualidade (Econômica 1280px, Equilibrada 2048px como padrão, Alta 3072px, Original sem compressão) e "Manter originais" (some com Original). Só fotos são comprimidas; PDFs, documentos, áudio e vídeo ficam como foram anexados.
+- Fotos: qualidade (Econômica 1280px, Equilibrada 2048px como padrão, Alta 3072px, Original sem compressão) — quem quer a foto intacta escolhe Original. Só fotos são comprimidas; PDFs, documentos, áudio e vídeo ficam como foram anexados.
 - Cache: barra de uso e slider de limite (0,5 a 5 GB).
 - Importar do Google Keep.
 
@@ -217,7 +217,6 @@ Imagens no corpo referenciam o anexo por hash (`<img data-hash="…">`). O front
     notes/<note_id>.ydoc        # estado Yjs binário
     categories.ydoc
     attachments/<hash>.<ext>    # arquivos otimizados
-    originals/<hash>.<ext>      # só se "Manter originais"
   ```
   Usar `appProperties` nos arquivos (ex.: `noteId`) para mapear sem baixar conteúdo. Miniaturas **não** sobem, porque são regeneradas localmente.
 - **Nunca sincronizar o arquivo SQLite.** Ele é por aparelho.
@@ -241,7 +240,7 @@ Na importação de uma imagem (Rust, fora da thread de UI):
 3. Codificar em **WebP** (padrão; AVIF é opcional, porque a codificação é lenta no celular). Meta: foto de 4 MB virar ~200–400 KB.
 4. Gerar a **miniatura** (~400 px, WebP), que fica sempre no cache.
 5. Extrair a **paleta** (5 cores dominantes, por k-means ou median-cut) e classificar o **tom**.
-6. Calcular o hash, gravar em `attachments`, guardar o original só se "Manter originais".
+6. Calcular o hash e gravar em `attachments`. Não há cópia extra do original: quem quer a foto intacta escolhe a qualidade Original.
 7. HEIC (iPhone) precisa de decodificador próprio. Tratar na fase mobile.
 
 Na qualidade **Original** os passos 2 e 3 não acontecem: o arquivo fica com os bytes de imagem como vieram. Os metadados (GPS etc.) saem sem recodificar, mantendo só a orientação. Miniatura, paleta e tom são gerados normalmente.
