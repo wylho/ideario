@@ -4,6 +4,7 @@
 mod attachments;
 mod background;
 mod commands;
+mod keep;
 mod media;
 mod projection;
 mod store;
@@ -19,6 +20,8 @@ use commands::Core;
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        // Janela nativa de abrir arquivo (Importar do Google Keep).
+        .plugin(tauri_plugin_dialog::init())
         .manage(background::Background::default())
         .on_window_event(background::on_window_event)
         // Fotos, vídeos, áudios e documentos das notas: `att://localhost/<hash>` (convertFileSrc(hash, 'att')).
@@ -61,6 +64,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::import_path,
             commands::pending_previews,
+            commands::inspect_takeout,
+            commands::import_keep,
             commands::set_preview,
             app_version,
             background::set_background,

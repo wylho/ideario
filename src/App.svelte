@@ -87,6 +87,12 @@
 
     {#if !app.wide}<TabBar />{/if}
 
+    {#if app.task}
+      <div class="task-bar" role="status" aria-live="polite">
+        <span>{app.task.label}{app.task.total ? ` · ${app.task.done} de ${app.task.total}` : ''}</span>
+        <i style:width="{app.task.total ? (app.task.done / app.task.total) * 100 : 0}%"></i>
+      </div>
+    {/if}
     <div class="toast" class:show={!!app.toast} class:has-action={!!app.toastAction} role="status" aria-live="polite">
       <span>{app.toast}</span>
       {#if app.toastAction}

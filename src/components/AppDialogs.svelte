@@ -59,3 +59,20 @@
 {#if d?.kind === 'confirm'}
   <ConfirmDialog bind:open={() => true, (v) => !v && (app.dialog = null)} title={d.title} text={d.text} confirm={d.confirm} onconfirm={d.onconfirm} />
 {/if}
+
+<Dialog.Root open={d?.kind === 'info'} onOpenChange={(o) => !o && (app.dialog = null)}>
+  <Dialog.Portal>
+    <Dialog.Overlay class="overlay" />
+    <Dialog.Content class="confirm" aria-describedby={undefined}>
+      {#if d?.kind === 'info'}
+        <Dialog.Title class="confirm-title">{d.title}</Dialog.Title>
+        <ul class="info-lines">
+          {#each d.lines as l (l)}<li>{l}</li>{/each}
+        </ul>
+        <div class="confirm-actions">
+          <button class="btn primary" onclick={() => (app.dialog = null)}>OK</button>
+        </div>
+      {/if}
+    </Dialog.Content>
+  </Dialog.Portal>
+</Dialog.Root>

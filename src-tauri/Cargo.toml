@@ -19,7 +19,7 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 # Núcleo local (Fase 1): SQLite com FTS5 embutido, ids UUID v7, hash dos anexos, dimensões das imagens.
 rusqlite = { version = "0.32", features = ["bundled"] }
-uuid = { version = "1", features = ["v7"] }
+uuid = { version = "1", features = ["v5", "v7"] }
 sha2 = "0.10"
 imagesize = "0.13"
 unicode-normalization = "0.1"
@@ -27,6 +27,8 @@ yrs = "0.28"
 image = { version = "0.25", default-features = false, features = ["jpeg", "png", "gif", "webp", "bmp", "tiff"] }
 fast_image_resize = { version = "5", features = ["image"] }
 webp = "0.3"
+zip = { version = "2", default-features = false, features = ["deflate"] }
+tauri-plugin-dialog = "2.8"
 
 [profile.release]
 codegen-units = 1

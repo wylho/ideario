@@ -599,6 +599,10 @@ export const mockApi: Api = {
     return ''
   },
 
+  // Importar do Keep lê o zip pelo caminho: só no app.
+  inspectTakeout: () => done(null),
+  importKeep: () => Promise.reject(new Error('importar do Keep só existe no app')),
+
   // Prévias de PDF e vídeo são feitas só no app (o mock não guarda o conteúdo dos exemplos).
   pendingPreviews: () => done([]),
   setPreview: () => done(undefined),

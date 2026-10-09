@@ -1,14 +1,17 @@
 //! Comandos que a UI chama (`invoke`). Um para cada método da interface `Api` (src/lib/api/index.ts).
 //! Todos rodam no núcleo, só com o banco local: nenhum espera a rede.
 
-use std::path::PathBuf;
+use std::fs::File;
+use std::io::BufReader;
+use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
 use serde_json::{json, Map, Value};
 use tauri::ipc::{InvokeBody, Request, Response};
-use tauri::{AppHandle, Manager, State};
+use serde::Serialize;
+use tauri::{AppHandle, Emitter, Manager, State};
 
-use crate::{attachments, media};
+use crate::{attachments, keep, media};
 use crate::store::{
     Attachment, AttachmentRow, Category, Filter, NoteDetail, NoteInput, NoteSummary, Result, Store, SyncStatus, TagCount, ViewCounts,
 };
@@ -295,6 +298,125 @@ pub async fn set_preview(core: Core_<'_>, request: Request<'_>) -> Result<()> {
     tauri::async_runtime::spawn_blocking(move || attachments::save_preview(&data, &hash, &png)).await.map_err(|e| e.to_string())?
 }
 
+// ---------- importar do Google Keep ----------
+
+/// O que entrou numa importação do Keep (o resumo que a interface mostra).
+#[derive(Debug, Default, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct KeepReport {
+    pub notes: usize,
+    /// Já tinham entrado numa importação anterior.
+    pub skipped: usize,
+    pub photos: usize,
+    /// Citadas nas notas mas fora do zip (apagadas, por exemplo).
+    pub missing_media: usize,
+    /// Marcadores que viraram categorias novas.
+    pub categories: Vec<String>,
+    pub archived: usize,
+    pub trashed: usize,
+}
+
+fn open_takeout(path: &Path) -> Result<Option<keep::Takeout<BufReader<File>>>> {
+    let file = File::open(path).map_err(|e| e.to_string())?;
+    keep::Takeout::open(BufReader::new(file))
+}
+
+/// É um Takeout do Keep? Quantas notas e mídias. `None` = um zip qualquer (vira anexo).
+#[tauri::command]
+pub async fn inspect_takeout(path: String) -> Result<Option<Value>> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let Ok(Some(t)) = open_takeout(Path::new(&path)) else { return Ok(None) };
+        let media: usize = t.notes.iter().map(|n| n.attachments.len()).sum();
+        Ok(Some(json!({ "notes": t.notes.len(), "media": media })))
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+/// Importa o Takeout em segundo plano, avisando o progresso pelo evento `keep-progress` (`[feitas, total]`).
+#[tauri::command]
+pub async fn import_keep(app: AppHandle, path: String) -> Result<KeepReport> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let core = app.state::<Core>();
+        core.import_keep(Path::new(&path), |done, total| {
+            let _ = app.emit("keep-progress", (done, total));
+        })
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+impl Core {
+    /// Uma nota de cada vez, da mais antiga para a mais nova (as mais novas ficam no topo). As fotos passam pelo
+    /// pipeline fora da trava do banco; cada nota é gravada com as datas originais. Notas já importadas são puladas.
+    pub fn import_keep(&self, path: &Path, progress: impl Fn(usize, usize)) -> Result<KeepReport> {
+        let mut t = open_takeout(path)?.ok_or("este zip não é uma exportação do Google Keep")?;
+        let quality = self.with(|s| Ok(attachments::quality(s)))?;
+        let mut notes = std::mem::take(&mut t.notes);
+        notes.sort_by_key(keep::edited_ms);
+        let total = notes.len();
+        let mut r = KeepReport::default();
+        for (i, n) in notes.iter().enumerate() {
+            progress(i, total);
+            let id = keep::note_id(n);
+            if self.with(|s| s.note_exists(&id))? {
+                r.skipped += 1;
+                continue;
+            }
+            let (mut images, mut files) = (Vec::new(), Vec::new());
+            for a in &n.attachments {
+                let Some(bytes) = t.media(&a.file_path) else {
+                    r.missing_media += 1;
+                    continue;
+                };
+                let name = a.file_path.rsplit('/').next().unwrap_or(&a.file_path);
+                let prepared = attachments::prepare(bytes, name, &a.mimetype, quality);
+                let att = self.with(|s| attachments::save(s, &self.data, prepared))?;
+                if att.kind == "image" {
+                    r.photos += 1;
+                    images.push(att.hash);
+                } else {
+                    files.push(att.hash);
+                }
+            }
+            let (category, tags) = keep::category_and_tags(n);
+            let category_id = match category {
+                Some(name) => {
+                    let (cid, created) = self.with(|s| s.category_by_name_or_create(&name))?;
+                    if created {
+                        r.categories.push(name);
+                    }
+                    Some(cid)
+                }
+                None => None,
+            };
+            let input = NoteInput {
+                id: id.clone(),
+                title: n.title.trim().to_string(),
+                body: keep::body(n, &images, &files),
+                category_id,
+                color: keep::color(&n.color).into(),
+                pinned: n.is_pinned,
+                archived: n.is_archived,
+                // Na lixeira desde agora: os 30 dias contam a partir da importação.
+                trashed_at: n.is_trashed.then(crate::store::now),
+                reminder_at: None,
+                reminder_done: false,
+                tags,
+            };
+            self.with(|s| {
+                s.save_note(&input)?;
+                s.set_times(&id, keep::created_ms(n), keep::edited_ms(n))
+            })?;
+            r.notes += 1;
+            r.archived += usize::from(n.is_archived);
+            r.trashed += usize::from(n.is_trashed);
+        }
+        progress(total, total);
+        Ok(r)
+    }
+}
+
 /// Salva uma cópia do anexo na pasta Downloads e devolve onde ficou.
 #[tauri::command]
 pub fn download_attachment(app: AppHandle, core: Core_, hash: String, name: String) -> Result<String> {
@@ -358,6 +480,71 @@ mod tests {
         assert_eq!(atts.iter().find(|a| a.hash == "abc2").unwrap().palette, Some(vec![]));
         assert!(core.with(|s| s.images_without_palette()).unwrap().is_empty());
         let _ = std::fs::remove_dir_all(&tmp);
+    }
+
+    #[test]
+    fn importing_a_keep_takeout_twice_does_not_duplicate() {
+        let tmp = std::env::temp_dir().join(format!("ideario-keep-{}", uuid::Uuid::now_v7()));
+        let core = Core::open(tmp.clone()).unwrap();
+        let zip = tmp.join("takeout.zip");
+        std::fs::write(&zip, crate::keep::tests::fake_takeout()).unwrap();
+        let steps = std::cell::RefCell::new(Vec::new());
+        let r = core.import_keep(&zip, |d, t| steps.borrow_mut().push((d, t))).unwrap();
+        assert_eq!((r.notes, r.skipped, r.photos, r.missing_media, r.archived, r.trashed), (3, 0, 1, 1, 1, 1));
+        assert_eq!(r.categories, vec!["Casa"]);
+        assert_eq!(steps.borrow().last(), Some(&(3, 3)));
+        // (sem a nota de boas-vindas do primeiro uso)
+        let all = |b: &str| {
+            let mut v = core.with(|s| s.list_notes(&Filter::default(), b, "", "updated")).unwrap();
+            v.retain(|n| n.title != "Bem-vindo ao Ideario");
+            v
+        };
+        let active = all("active");
+        // ativas: Mercado (fixada, na categoria Casa, com a tag do segundo marcador) e a da lixeira não aparece
+        assert_eq!(active.iter().map(|n| n.title.as_str()).collect::<Vec<_>>(), vec!["Mercado"]);
+        assert!(active[0].pinned && active[0].category_id.is_some() && active[0].tags.contains(&"compras-mensais".to_string()));
+        assert_eq!(active[0].updated_at, 1_700_000_500_000, "data original da última edição");
+        assert_eq!(all("archive")[0].title, "☎️ Senha");
+        let trash = all("trash");
+        assert_eq!(trash[0].image_count, 1, "a foto que estava no zip, pelo pipeline");
+        assert!(trash[0].tags.contains(&"praia".to_string()), "#tag do texto");
+        // de novo: nada duplica
+        let again = core.import_keep(&zip, |_, _| {}).unwrap();
+        assert_eq!((again.notes, again.skipped), (0, 3));
+        assert_eq!(core.with(|s| s.list_categories()).unwrap().len(), 1);
+        let _ = std::fs::remove_dir_all(&tmp);
+    }
+
+    /// Takeout real, só nesta máquina: `IDEARIO_TAKEOUT=/caminho.zip cargo test --release real_takeout -- --ignored --nocapture`.
+    /// Mostra só contagens (nada do conteúdo das notas) e confere que toda nota passa pelo Y.Doc sem perda.
+    #[test]
+    #[ignore]
+    fn real_takeout() {
+        let Ok(path) = std::env::var("IDEARIO_TAKEOUT") else { return };
+        let tmp = std::env::temp_dir().join(format!("ideario-real-{}", uuid::Uuid::now_v7()));
+        let core = Core::open(tmp.clone()).unwrap();
+        let t0 = std::time::Instant::now();
+        let r = core.import_keep(Path::new(&path), |_, _| {}).unwrap();
+        println!("{r:?} em {:.1} s", t0.elapsed().as_secs_f64());
+        let ids = core.with(|s| s.list_notes(&Filter::default(), "active", "", "updated")).unwrap().len()
+            + core.with(|s| s.list_notes(&Filter::default(), "archive", "", "updated")).unwrap().len()
+            + core.with(|s| s.list_notes(&Filter::default(), "trash", "", "updated")).unwrap().len();
+        println!("notas no banco (com a de boas-vindas): {ids}");
+        let all: Vec<String> = core.with(|s| s.list_notes(&Filter::default(), "active", "", "updated")).unwrap().into_iter().map(|n| n.id).collect();
+        let mut bad = 0;
+        for id in &all {
+            let state = core.with(|s| s.ydoc(id)).unwrap().unwrap();
+            let n = crate::ydoc::to_note(id, &state).unwrap();
+            let again = crate::ydoc::to_note(id, &crate::ydoc::from_note(&n)).unwrap();
+            if again.body != n.body {
+                bad += 1;
+            }
+        }
+        println!("ida e volta pelo Y.Doc: {} de {} iguais", all.len() - bad, all.len());
+        let empty = core.with(|s| s.list_notes(&Filter::default(), "active", "", "updated")).unwrap().iter().filter(|n| n.label.is_empty()).count();
+        println!("notas sem rótulo (sem título nem texto): {empty}");
+        let _ = std::fs::remove_dir_all(&tmp);
+        assert_eq!(bad, 0);
     }
 
     #[test]

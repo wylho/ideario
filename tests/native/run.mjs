@@ -133,6 +133,40 @@ function png() {
   return Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), chunk('IHDR', ihdr), chunk('IDAT', zlib.deflateSync(raw)), chunk('IEND', Buffer.alloc(0))])
 }
 
+// Zip sem compressão (o bastante para um Takeout de teste).
+function storedZip(files) {
+  const crc = (b) => {
+    let c = ~0
+    for (const x of b) {
+      c ^= x
+      for (let k = 0; k < 8; k++) c = (c >>> 1) ^ (0xedb88320 & -(c & 1))
+    }
+    return ~c >>> 0
+  }
+  const parts = []
+  const central = []
+  let offset = 0
+  for (const [name, data] of Object.entries(files)) {
+    const n = Buffer.from(name, 'utf8')
+    const d = Buffer.isBuffer(data) ? data : Buffer.from(data, 'utf8')
+    const h = Buffer.alloc(30)
+    h.writeUInt32LE(0x04034b50, 0); h.writeUInt16LE(20, 4); h.writeUInt16LE(0x800, 6); h.writeUInt16LE(0, 8)
+    h.writeUInt32LE(crc(d), 14); h.writeUInt32LE(d.length, 18); h.writeUInt32LE(d.length, 22); h.writeUInt16LE(n.length, 26)
+    const c = Buffer.alloc(46)
+    c.writeUInt32LE(0x02014b50, 0); c.writeUInt16LE(20, 4); c.writeUInt16LE(20, 6); c.writeUInt16LE(0x800, 8)
+    c.writeUInt32LE(crc(d), 16); c.writeUInt32LE(d.length, 20); c.writeUInt32LE(d.length, 24); c.writeUInt16LE(n.length, 28)
+    c.writeUInt32LE(offset, 42)
+    parts.push(h, n, d)
+    central.push(c, n)
+    offset += 30 + n.length + d.length
+  }
+  const cd = Buffer.concat(central)
+  const end = Buffer.alloc(22)
+  end.writeUInt32LE(0x06054b50, 0); end.writeUInt16LE(Object.keys(files).length, 8); end.writeUInt16LE(Object.keys(files).length, 10)
+  end.writeUInt32LE(cd.length, 12); end.writeUInt32LE(offset, 16)
+  return Buffer.concat([...parts, cd, end])
+}
+
 // PDF mínimo de verdade (uma página A4 com um título), para o pdf.js desenhar.
 function tinyPdf(title) {
   const objs = [
@@ -305,6 +339,23 @@ try {
     // página A4 em pé: mais alta que larga
     if (!(size[1] > size[0])) throw new Error(`prévia ${size}`)
     if (process.env.IDEARIO_SHOT) writeFileSync(process.env.IDEARIO_SHOT, Buffer.from(await wd('GET', s.p('/screenshot')), 'base64'))
+  })
+
+  await test('Importar do Keep: soltar o Takeout pergunta, importa e mostra o resumo', async () => {
+    const note = (o) => JSON.stringify({ isPinned: false, isArchived: false, isTrashed: false, color: 'DEFAULT', createdTimestampUsec: 1700000000000000, userEditedTimestampUsec: 1700000000000000, ...o })
+    const file = join(DATA, 'takeout-keep.zip')
+    writeFileSync(file, storedZip({
+      'Takeout/Keep/Lista.json': note({ title: 'Lista do Keep', color: 'GREEN', labels: [{ name: 'Hospital' }], listContent: [{ text: 'Exame', textHtml: '', isChecked: true }, { text: 'Receita', textHtml: '', isChecked: false }] }),
+      'Takeout/Keep/Texto.json': note({ title: 'Texto do Keep', isArchived: true, textContentHtml: '<p dir="ltr"><span style="font-weight:700">Importante</span><span style="font-weight:400"> e o resto</span></p>', attachments: [{ filePath: 'apagada.jpg', mimetype: 'image/jpeg' }] }),
+      '__MACOSX/Takeout/Keep/._Lista.json': 'lixo',
+    }))
+    await s.exec(`window.__TAURI_INTERNALS__.invoke('plugin:event|emit', { event: 'tauri://drag-drop', payload: { paths: [arguments[0]], position: { x: 400, y: 400 } } }); return true`, file)
+    await s.waitFor(`return [...document.querySelectorAll('[role=dialog], [role=alertdialog]')].some((d) => d.textContent.includes('Importar do Google Keep?') && d.textContent.includes('2 notas'))`, 'pergunta')
+    await s.clickText('[role=alertdialog] button, [role=dialog] button', 'Importar')
+    const summary = await s.waitFor(`const d = [...document.querySelectorAll('[role=dialog]')].find((d) => d.textContent.includes('Importação do Keep concluída')); return d && d.textContent`, 'resumo', 15000)
+    for (const t of ['2 notas importadas', '1 arquivada', 'Categorias novas: Hospital', '1 anexo não estava']) if (!summary.includes(t)) throw new Error(`resumo: ${summary}`)
+    await s.clickText('[role=dialog] button', 'OK')
+    await s.waitFor(`const c = [...document.querySelectorAll('.card')].find((c) => c.getAttribute('aria-label') === 'Lista do Keep'); return c && c.querySelector('.pv-task.done') && c.textContent.includes('Hospital')`, 'card importado com checklist e categoria')
   })
 
   await test('fechar e reabrir: tudo continua lá, na hora', async () => {
