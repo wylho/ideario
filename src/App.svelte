@@ -1,5 +1,6 @@
 <script lang="ts">
   import { app } from './lib/app.svelte'
+  import { makePreviews } from './lib/previews.svelte'
   import TopBar from './components/TopBar.svelte'
   import TabBar from './components/TabBar.svelte'
   import Drawer from './components/Drawer.svelte'
@@ -46,6 +47,9 @@
       document.getElementById('busca')?.focus()
     }
   }
+
+  // Prévias de PDF e vídeo que ainda faltam: depois que a lista apareceu, em segundo plano.
+  setTimeout(makePreviews, 1500)
 </script>
 
 <svelte:window onkeydown={onKeydown} />

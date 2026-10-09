@@ -24,6 +24,8 @@ const DAY: Millis = 24 * 60 * 60 * 1000;
 const TRASH_DAYS: Millis = 30;
 /// Espaço entre posições da ordem personalizada; mover usa o meio entre vizinhos.
 const STEP: f64 = 1024.0;
+/// Formato da projeção gravada (2: blocos de arquivo levam o hash, para a miniatura).
+const PROJECTION_VERSION: u32 = 2;
 
 fn err<E: std::fmt::Display>(e: E) -> String {
     e.to_string()
@@ -289,8 +291,24 @@ impl Store {
         }
         let store = Store { conn };
         store.backfill_ydocs()?;
+        store.reproject_if_outdated()?;
         store.purge_trash()?;
         Ok(store)
+    }
+
+    /// A projeção (prévia, capa, rótulo) mudou de formato: recalcula todas as notas uma vez, sem mudar datas.
+    /// Suba `PROJECTION_VERSION` quando o que a projeção grava mudar.
+    fn reproject_if_outdated(&self) -> Result<()> {
+        let key = format!("projection_v{PROJECTION_VERSION}");
+        if self.flag(&key)? {
+            return Ok(());
+        }
+        for id in self.ids("SELECT id FROM notes", [])? {
+            if let (Some(n), Some(state)) = (self.note_input(&id)?, self.ydoc(&id)?) {
+                self.write_note(&n, false, &state)?;
+            }
+        }
+        self.set_flag(&key)
     }
 
     /// Notas sem estado Yjs (vindas da Fase 1): o estado nasce do JSON e dos metadados atuais, sem mudar a data.
@@ -951,6 +969,20 @@ impl Store {
             }
         }
         Ok(out)
+    }
+
+    pub fn attachment_kind(&self, hash: &str) -> Result<Option<String>> {
+        self.conn.query_row("SELECT kind FROM attachments WHERE hash = ?1", [hash], |r| r.get(0)).optional().map_err(err)
+    }
+
+    /// PDFs e vídeos (para gerar a prévia). Quem chama filtra os que já têm miniatura.
+    pub fn previewable(&self) -> Result<Vec<(String, String)>> {
+        let mut st = self
+            .conn
+            .prepare_cached("SELECT hash, kind FROM attachments WHERE kind IN ('pdf', 'video')")
+            .map_err(err)?;
+        let rows = st.query_map([], |r| Ok((r.get(0)?, r.get(1)?))).map_err(err)?;
+        rows.collect::<std::result::Result<_, _>>().map_err(err)
     }
 
     pub fn attachment_mime(&self, hash: &str) -> Result<Option<String>> {

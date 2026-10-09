@@ -7,6 +7,7 @@
   import { noteMenu } from '../lib/menus'
   import { watchClip } from '../lib/clip'
   import ContextMenu from './ContextMenu.svelte'
+  import FilePreview from './FilePreview.svelte'
   import type { NoteSummary } from '../lib/types'
 
   let { n }: { n: NoteSummary } = $props()
@@ -67,7 +68,9 @@
   {/if}
   {#if solo}
     {@const Icon = KIND_ICONS[solo.fileKind]}
-    <div class="card-file t-{solo.fileKind}"><Icon size={34} strokeWidth={1.6} /></div>
+    <div class="card-file t-{solo.fileKind}">
+      <FilePreview hash={solo.hash} kind={solo.fileKind}><Icon size={34} strokeWidth={1.6} /></FilePreview>
+    </div>
   {/if}
   <div class="card-body">
     {#if n.title}<h3>{n.title}</h3>{/if}

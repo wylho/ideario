@@ -219,6 +219,13 @@ button { cursor: pointer; }
 .card-file.t-audio { color: #8a6bc4; } .card-file.t-doc { color: #3d63d6; }
 .card-file-name { margin: 0; font-size: 14px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .stack .card-file { height: 120px; }
+/* prévia de PDF (página do topo) ou vídeo (quadro) por cima do ícone, recortada no quadrado */
+.card-file, .f-prev { position: relative; overflow: hidden; }
+.card-file .file-preview, .f-prev .file-preview { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: top; }
+.file-preview.video { object-position: center; }
+.f-prev { display: block; flex: none; border-radius: 10px; }
+.f-prev.big { border-radius: 12px; width: 100%; }
+.f-prev .file-preview { outline: 1px solid var(--card-edge); outline-offset: -1px; border-radius: inherit; }
 .card-media:last-child { border-radius: 15px; }
 .card-media img { display: block; width: 100%; height: auto; max-height: 260px; object-fit: cover; }
 .card-media.row { display: flex; gap: 2px; }

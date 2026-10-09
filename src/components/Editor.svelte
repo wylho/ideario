@@ -23,6 +23,7 @@
   import * as Y from 'yjs'
   import { noteExtensions } from '../lib/editor/extensions'
   import { readMeta, writeMeta, type NoteMeta } from '../lib/ydoc'
+  import { makePreviews } from '../lib/previews.svelte'
   import { ago, fmtBytes, hashTags, normalizeTag } from '../lib/format'
   import ReminderPopover from './ReminderPopover.svelte'
   import type { Attachment, NoteColor, NoteInput, RichDoc, RichNode } from '../lib/types'
@@ -361,6 +362,8 @@
       added.push(a)
     }
     if (!added.length) return
+    // PDF e vídeo ganham prévia (primeira página, um quadro) em segundo plano.
+    if (added.some((a) => a.kind === 'pdf' || a.kind === 'video')) makePreviews()
     // Várias fotos de uma vez entram lado a lado (até 4 por linha); o resto, um bloco cada.
     const photos = added.filter((a) => a.kind === 'image')
     const nodes: RichNode[] = []

@@ -133,6 +133,29 @@ function png() {
   return Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), chunk('IHDR', ihdr), chunk('IDAT', zlib.deflateSync(raw)), chunk('IEND', Buffer.alloc(0))])
 }
 
+// PDF mínimo de verdade (uma página A4 com um título), para o pdf.js desenhar.
+function tinyPdf(title) {
+  const objs = [
+    '<< /Type /Catalog /Pages 2 0 R >>',
+    '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>',
+    null,
+    '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
+  ]
+  const stream = `BT /F1 36 Tf 60 740 Td (${title}) Tj ET 0 0 1 rg 60 600 475 80 re f`
+  objs[3] = `<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`
+  let out = '%PDF-1.4\n'
+  const offsets = []
+  objs.forEach((o, i) => {
+    offsets.push(out.length)
+    out += `${i + 1} 0 obj\n${o}\nendobj\n`
+  })
+  const xref = out.length
+  out += `xref\n0 ${objs.length + 1}\n0000000000 65535 f \n` + offsets.map((o) => `${String(o).padStart(10, '0')} 00000 n \n`).join('')
+  out += `trailer\n<< /Size ${objs.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`
+  return Buffer.from(out, 'latin1')
+}
+
 // PNG grande com ruído (não comprime a nada), azulado: vira WebP bem menor.
 function noisyPng(w, h) {
   const crc = (b) => {
@@ -262,6 +285,26 @@ try {
     if (a.palette?.length !== 5 || !a.tone) throw new Error(`paleta ${a.palette} tom ${a.tone}`)
     const w = await s.execAsync(`const i = new Image(); i.onload = () => arguments[1](i.naturalWidth); i.onerror = () => arguments[1](0); i.src = window.__TAURI_INTERNALS__.convertFileSrc(arguments[0], 'att') + '?thumb'`, a.hash)
     if (w !== 400) throw new Error(`miniatura com ${w} px`)
+  })
+
+  await test('Fase 3: PDF arrastado ganha prévia da primeira página no card', async () => {
+    const file = join(DATA, 'Contrato.pdf')
+    writeFileSync(file, tinyPdf('Contrato de aluguel'))
+    await s.exec(`window.__TAURI_INTERNALS__.invoke('plugin:event|emit', { event: 'tauri://drag-drop', payload: { paths: [arguments[0]], position: { x: 400, y: 400 } } }); return true`, file)
+    await s.waitFor(`return document.querySelector('#corpo .nf-card')?.textContent.includes('Contrato.pdf')`, 'PDF na nota nova')
+    await sleep(700)
+    await s.exec(`document.querySelector('[aria-label="Voltar e salvar"]').click(); return true`)
+    const size = await s.waitFor(
+      `const i = [...document.querySelectorAll('.card')].find((c) => c.textContent.includes('Contrato.pdf'))?.querySelector('.file-preview'); return i && i.complete && i.naturalWidth > 0 && [i.naturalWidth, i.naturalHeight]`,
+      'prévia do PDF no card',
+      20000,
+    ).catch(async (e) => {
+      const dbg = await s.execAsync(`const done = arguments[0]; window.__TAURI_INTERNALS__.invoke('pending_previews').then((p) => done(JSON.stringify(p)), (e) => done('erro ' + e))`)
+      throw new Error(e.message + ' | pendentes: ' + dbg)
+    })
+    // página A4 em pé: mais alta que larga
+    if (!(size[1] > size[0])) throw new Error(`prévia ${size}`)
+    if (process.env.IDEARIO_SHOT) writeFileSync(process.env.IDEARIO_SHOT, Buffer.from(await wd('GET', s.p('/screenshot')), 'base64'))
   })
 
   await test('fechar e reabrir: tudo continua lá, na hora', async () => {
