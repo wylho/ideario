@@ -1095,6 +1095,29 @@ test.describe('categorias e tags', () => {
   })
   const side = (page: Page) => page.locator('.sidebar')
 
+  test('criar categoria na hora: pelo seletor do editor e pelo clique direito no card', async ({ page }) => {
+    await newNote(page)
+    await page.keyboard.type('Ingressos do show')
+    await page.locator('#categoria').click()
+    await page.getByRole('option', { name: 'Nova categoria' }).click()
+    await page.getByLabel('Nome', { exact: true }).fill('Lazer')
+    await page.locator('.name-form').getByRole('button', { name: 'Criar', exact: true }).click()
+    await expect(page.locator('#categoria')).toContainText('Lazer')
+    // o editor continua aberto e o texto, no lugar
+    await expect(page.locator('#corpo')).toContainText('Ingressos do show')
+    await back(page)
+    await expect(cards(page).filter({ hasText: 'Ingressos do show' })).toContainText('Lazer')
+
+    await cards(page).filter({ hasText: 'Ingressos do show' }).click({ button: 'right' })
+    await page.getByRole('menuitem', { name: 'Categoria' }).hover()
+    await page.getByRole('menuitem', { name: 'Nova categoria…' }).click()
+    await page.getByLabel('Nome', { exact: true }).fill('Shows')
+    await page.locator('.name-form').getByRole('button', { name: 'Criar', exact: true }).click()
+    await expect(page.locator('.toast span')).toHaveText('Movida para Shows')
+    await expect(cards(page).filter({ hasText: 'Ingressos do show' })).toContainText('Shows')
+    await expect(side(page).locator('.d-item', { hasText: 'Shows' })).toBeVisible()
+  })
+
   test('criar, renomear, mudar a cor e apagar categoria (com Desfazer)', async ({ page }) => {
     await side(page).getByRole('button', { name: 'Nova categoria' }).click()
     await page.getByLabel('Nome', { exact: true }).fill('Viagens')

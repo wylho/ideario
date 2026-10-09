@@ -1,9 +1,9 @@
 <script lang="ts">
   import { DropdownMenu } from 'bits-ui'
-  import { Archive, ArchiveRestore, Check, CheckCheck, Palette, Pin, PinOff, Tag, Trash2, X } from '@lucide/svelte'
+  import { Archive, ArchiveRestore, Check, CheckCheck, Palette, Pin, PinOff, Plus, Tag, Trash2, X } from '@lucide/svelte'
   import { api } from '../lib/api'
   import { app } from '../lib/app.svelte'
-  import { changeMany, manyMsg, NOTE_COLORS } from '../lib/menus'
+  import { changeMany, manyMsg, newCategory, NOTE_COLORS } from '../lib/menus'
   import ConfirmDialog from './ConfirmDialog.svelte'
 
   // Com notas selecionadas, a barra superior vira a barra de ações em lote (no lugar de ☰, marca e menu dinâmico).
@@ -71,6 +71,10 @@
               {#if notes.every((n) => n.categoryId === c.id)}<span class="menu-check"><Check size={15} /></span>{/if}
             </DropdownMenu.Item>
           {/each}
+          <DropdownMenu.Separator class="menu-sep" />
+          <DropdownMenu.Item class="menu-item" onSelect={() => newCategory((id, name) => done(() => changeMany(notes, { categoryId: id }, `Movidas para ${name}`)))}>
+            <Plus size={16} />Nova categoria…
+          </DropdownMenu.Item>
         </DropdownMenu.Content>
       </DropdownMenu.Portal>
     </DropdownMenu.Root>
