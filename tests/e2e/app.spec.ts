@@ -916,6 +916,22 @@ test.describe('seleção múltipla', () => {
     await expect(page.locator('.editor')).toHaveCount(0)
   })
 
+  test('a seleção continua depois de uma ação, para aplicar outra', async ({ page }) => {
+    const list = outras(page)
+    await list.nth(0).click({ modifiers: ['Control'] })
+    await list.nth(1).click({ modifiers: ['Control'] })
+    await page.getByRole('button', { name: 'Cor', exact: true }).click()
+    await page.getByRole('menuitem', { name: 'Lilás' }).click()
+    await expect(page.locator('.sel-count')).toHaveText('2 selecionadas')
+    await page.getByRole('button', { name: 'Fixar', exact: true }).click()
+    await expect(page.locator('.sel-count')).toHaveText('2 selecionadas')
+    await expect(page.locator('.card.selected.c-lilac')).toHaveCount(2)
+    // um clique no vazio encerra
+    const box = (await page.locator('.content').boundingBox())!
+    await page.mouse.click(box.x + 6, box.y + box.height - 20)
+    await expect(page.locator('.sel-count')).toHaveCount(0)
+  })
+
   test('fixar pelo alfinete do hover', async ({ page }) => {
     const card = outras(page).first()
     const title = await card.locator('h3').textContent()
