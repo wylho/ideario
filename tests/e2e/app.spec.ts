@@ -669,3 +669,13 @@ test('desktop: filtro de tipo como ícones no topo; tocar de novo tira o filtro'
   await page.locator('.filter-group').getByRole('button', { name: 'Verdes' }).click()
   await expect(page.locator('.mood-tile')).toHaveCount(2)
 })
+
+test('arquivos em grade: toda miniatura é quadrada, foto ou não', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 })
+  await page.locator('.view-switch').getByRole('button', { name: /Arquivos/ }).click()
+  await page.getByRole('button', { name: 'Ver em grade' }).click()
+  const sizes = await page.locator('.f-tile img, .f-tile .f-ico').evaluateAll((els) =>
+    els.map((e) => { const r = e.getBoundingClientRect(); return [r.width, r.height] }))
+  expect(sizes.length).toBe(24)
+  for (const [w, h] of sizes) expect(Math.abs(w - h)).toBeLessThan(1)
+})
