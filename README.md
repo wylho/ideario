@@ -1,4 +1,4 @@
-# Ideário
+# Ideario
 
 App de notas estilo Google Keep, local-first, com sync pelo Google Drive. Tauri 2 (Rust) + Svelte 5.
 Especificação: [`docs/SPEC.md`](docs/SPEC.md). Protótipo de design: [`prototype/`](prototype/).

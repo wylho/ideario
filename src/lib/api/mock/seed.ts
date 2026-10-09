@@ -153,7 +153,7 @@ export function seedNotes(): SeedNote[] {
       body: doc(p('Comprar pilha AA e lâmpada da varanda')),
     },
     {
-      id: 'n9', title: 'Ideário: app de notas', categoryId: null, tags: ['ideia', 'app'], color: 'rose', pinned: false,
+      id: 'n9', title: 'Ideario: app de notas', categoryId: null, tags: ['ideia', 'app'], color: 'rose', pinned: false,
       reminderAt: null, updatedAt: hoursAgo(1),
       body: doc(
         p('Bloco de notas rápido + hub de ideias. Local-first, sync pelo Google Drive.'),

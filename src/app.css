@@ -1,4 +1,4 @@
-/* Tokens, tipografia e estilos portados de prototype/index.css (referência visual, SPEC §9). */
+/* Tokens e estilos portados de prototype/index.css (referência visual, SPEC §9). Tipografia: fonte do sistema. */
 
 /* reset (equivale ao preflight que o protótipo usava) */
 *, ::before, ::after { box-sizing: border-box; margin: 0; padding: 0; border: 0 solid; }
@@ -34,9 +34,11 @@ b, strong { font-weight: bolder; }
   --n-rose: #f8e0e4;
   --n-lilac: #e9e2f6;
   --n-butter: #f8f0c8;
-  --font-display: 'Bricolage Grotesque Variable', 'Bricolage Grotesque', 'Segoe UI', system-ui, sans-serif;
-  --font-body: 'Figtree Variable', 'Figtree', 'Segoe UI', system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  /* Tipografia do sistema: a UI deve parecer nativa em cada plataforma.
+     --font-system / --font-system-mono são injetadas no Linux com a fonte do GNOME/KDE. */
+  --font-body: var(--font-system, system-ui), -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, Ubuntu, Cantarell, 'Noto Sans', sans-serif;
+  --font-display: var(--font-body);
+  --font-mono: var(--font-system-mono, ui-monospace), 'SF Mono', 'Cascadia Mono', Consolas, 'Ubuntu Mono', 'Noto Sans Mono', 'DejaVu Sans Mono', Menlo, monospace;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
@@ -189,7 +191,7 @@ button { cursor: pointer; }
   padding-top: env(safe-area-inset-top, 0px); animation: slide-in .2s ease;
 }
 .drawer-head { padding: 22px 24px 14px; display: flex; flex-direction: column; gap: 2px; }
-.brand { font-family: var(--font-display); font-size: 26px; font-weight: 700; letter-spacing: -.03em; }
+.brand { font-family: var(--font-display); font-size: 26px; font-weight: 700; letter-spacing: -.02em; }
 .meta { font-size: 12px; color: var(--good); font-weight: 600; }
 .drawer-scroll { flex: 1; overflow-y: auto; padding: 0 10px 24px; display: flex; flex-direction: column; gap: 2px; }
 .d-item { display: flex; align-items: center; gap: 16px; padding: 0 16px; min-height: 46px; border-radius: 999px; text-align: left; font-weight: 500; color: var(--fg); }

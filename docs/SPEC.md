@@ -1,8 +1,8 @@
-# Ideário — Especificação do projeto
+# Ideario — Especificação do projeto
 
 > Documento de passagem. Reúne todas as decisões tomadas na fase de conceito e no protótipo de design.
 > Leitor principal: Claude Code. Idioma do app e da UI: **português do Brasil**. Identificadores de código em inglês.
-> "Ideário" é nome provisório.
+> Nome definitivo: "Ideario" (D4).
 
 ---
 
@@ -131,7 +131,7 @@ O Automerge foi considerado e **descartado** em favor do Yjs por causa do editor
 - Inicialização a frio no desktop: lista visível em **< 300 ms**. No Android, uma primeira abertura a frio perto de ~0,5 s é aceitável; as seguintes devem ser imperceptíveis.
 - Consulta da lista (5 mil notas): **< 16 ms**. Busca FTS: **< 30 ms**.
 - Lista virtualizada. Miniaturas sempre locais. Nenhuma chamada de rede no caminho da renderização.
-- Fontes **empacotadas no app**, sem Google Fonts em runtime.
+- ~~Fontes empacotadas no app~~ → **fonte do sistema** (decisão posterior ao protótipo, ver §9.2). Nada de Google Fonts em runtime.
 - O frontend recebe dados prontos para exibir (trecho, capa, contagens), calculados no Rust ou em colunas derivadas, e não parseia HTML na lista. *(O protótipo faz parse no front; isso é aceitável só no protótipo.)*
 
 ---
@@ -267,7 +267,7 @@ O protótipo foi feito em **React + Radix UI** só para validar o design. O cód
 ### 9.1 Estrutura de navegação
 - **Topo**: menu (gaveta), busca em pílula, alternar grade/lista (só em Notas), ícone de status do sync.
 - **Barra de abas inferior** com 4 abas: Notas, Lembretes, Arquivos, Moodboard. A aba ativa tem o ícone dentro de uma pílula de destaque.
-- **Gaveta lateral**: marca "Ideário" e status do sync. Contém as 4 seções, **Categorias** (bolinha de cor, nome, contagem, "Editar", "Nova categoria"), **Tags** (nuvem de chips com contagem), Arquivo, Lixeira e Configurações.
+- **Gaveta lateral**: marca "Ideario" e status do sync. Contém as 4 seções, **Categorias** (bolinha de cor, nome, contagem, "Editar", "Nova categoria"), **Tags** (nuvem de chips com contagem), Arquivo, Lixeira e Configurações.
 - **Editor** em tela cheia sobre a lista, com fundo da cor da nota.
 - **Configurações** em bottom sheet.
 
@@ -289,7 +289,7 @@ Cores das categorias atuais:
 Arómate #C26A3D · Fluency #3E8E7E · Gestão de Pessoas #8A6BC4
 Hospital #C25478 · Linvo #3D63D6 · MBA #B08A1E
 ```
-- **Tipografia**: *Bricolage Grotesque* (títulos, marca, 500–700), *Figtree* (corpo, 15–16 px), *JetBrains Mono* (números, tamanhos, horários, hex, com `tabular-nums`).
+- **Tipografia**: **fonte do sistema** em toda a UI, para o app parecer nativo (Segoe UI no Windows, San Francisco no macOS, a fonte do GNOME/KDE no Linux, Roboto ou a do fabricante no Android). Pesos 500–700 em títulos e marca; corpo 15–16 px; monoespaçada do sistema para números, tamanhos, horários e hex, com `tabular-nums`. *(O protótipo usava Bricolage Grotesque, Figtree e JetBrains Mono; trocado por decisão do usuário.)*
 - Raios: cards 16 px, pílulas 999 px, FAB 20 px, sheets 24 px. Rótulos de seção em caixa alta 11 px com espaçamento 0,09em.
 - Tema segue o sistema (claro/escuro). Respeitar `prefers-reduced-motion`.
 
@@ -317,7 +317,7 @@ Cada fase termina com o app rodando e algo verificável.
 - **D1 — Frontend: Svelte ou React?** A recomendação original foi Svelte. Porém o protótipo está em React + Radix, e manter React permite reaproveitar componentes e estilos quase diretamente. A diferença de desempenho na prática é imperceptível. *Decidir antes da Fase 0.*
 - **D2 — Ordem das plataformas.** Confirmar desktop → Android.
 - **D3 — Notas visíveis no Drive?** A opção `appDataFolder` (oculta) é a recomendada. A alternativa é uma pasta visível com Markdown legível sem o app, que exige o escopo `drive.file` e uma conversão Yjs↔Markdown. Uma opção intermediária é exportar Markdown sob demanda.
-- **D4 — Nome definitivo do app.**
+- **D4 — Nome definitivo do app.** ✅ Decidido: **Ideario** (sem acento).
 - **D5 — Ícones das categorias.** Usar um conjunto fixo (ex.: Lucide) ou emoji?
 
 ---
