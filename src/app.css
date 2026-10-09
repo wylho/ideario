@@ -82,13 +82,21 @@ button { cursor: pointer; }
 .top-left { display: flex; align-items: center; gap: 6px; min-width: 0; flex: none; }
 .topbar:not(.appbar) .top-left { flex: 1; }
 .topbar:not(.appbar) { gap: 6px; }
-.search.inline { flex: 0 1 300px; min-width: 160px; height: 40px; animation: search-in .18s cubic-bezier(.2, .8, .2, 1); }
+/* campo de busca do desktop: sobreposto, ancorado na borda direita da lupa e crescendo para a esquerda */
+.search-slot { position: relative; width: 40px; height: 40px; flex: none; }
+.search.inline {
+  position: absolute; right: 0; top: 0; z-index: 2; width: var(--search-w, 300px); height: 40px;
+  box-shadow: 0 0 0 6px var(--bg); animation: search-in .18s cubic-bezier(.2, .8, .2, 1);
+}
 @keyframes search-in { from { opacity: 0; transform: scaleX(.85); transform-origin: right; } }
 :root { --side-w: 272px; --rail-w: 72px; }
 .brand-area { display: flex; align-items: center; gap: 10px; min-width: 0; margin-left: 2px; }
 .brand-mark { width: 30px; height: 30px; flex: none; }
 .appbar .brand { font-size: 22px; }
 .top-actions { display: flex; align-items: center; justify-content: flex-end; gap: 4px; min-width: 0; flex: none; }
+/* desktop: nuvem | busca | ordenar | grade — sempre a mesma largura (os espaços ficam reservados) */
+.appbar .top-actions { width: 172px; }
+.sync-slot { width: 36px; height: 36px; flex: none; margin-right: auto; }
 .sidebar {
   flex: none; width: var(--side-w); height: 100%; overflow-x: hidden; overflow-y: auto; background: var(--bg);
   transition: width .24s cubic-bezier(.2, .8, .2, 1);
@@ -524,10 +532,10 @@ button { cursor: pointer; }
 }
 .lens:hover { color: var(--fg); background: var(--raised); }
 .lens.on { background: var(--accent-soft); color: var(--accent); }
-.lens .n { font-family: var(--font-mono); font-size: 11.5px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.lens .n { min-width: 2ch; text-align: center; font-family: var(--font-mono); font-size: 11.5px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .lens .n.late { color: var(--late); }
 /* janelas mais estreitas: só ícones (o nome fica na dica); o número vira um selo no canto */
-@media (max-width: 1039px) {
+@media (max-width: 1199px) {
   .lens { padding: 0 11px; }
   .lens-label { display: none; }
   .lens .n { position: absolute; top: 3px; right: 2px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 999px; display: grid; place-items: center; font-size: 10px; background: var(--bg); }

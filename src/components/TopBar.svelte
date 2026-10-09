@@ -8,7 +8,7 @@
   import { viewInfo } from '../lib/views'
 
   // Desktop: barra superior fixa. Marca, visões e ações com folgas iguais entre os três grupos;
-  // a busca é um ícone que abre o campo ali mesmo e fica aberto enquanto houver texto.
+  // a busca é um ícone que abre o campo por cima da folga e fica aberto enquanto houver texto.
   // Celular: ☰ + campo de busca no topo do conteúdo.
   const where = $derived(app.box === 'archive' ? 'Arquivo' : app.box === 'trash' ? 'Lixeira' : app.filterLabel)
   const placeholder = $derived(`Buscar ${viewInfo(app.view).many}${where ? ` em ${where}` : ''}`)
@@ -18,6 +18,23 @@
   let input: HTMLInputElement | undefined = $state()
   $effect(() => {
     if (app.searchOpen) tick().then(() => input?.focus())
+  })
+
+  // O campo cresce para a esquerda até perto das visões, nunca por cima delas.
+  let bar: HTMLElement | undefined = $state()
+  let searchW = $state(300)
+  $effect(() => {
+    if (!bar || !app.wide) return
+    const fit = () => {
+      const views = bar!.querySelector('.view-switch')?.getBoundingClientRect()
+      const slot = bar!.querySelector('.search-slot')?.getBoundingClientRect()
+      if (views && slot) searchW = Math.max(180, Math.min(320, Math.floor(slot.right - views.right - 16)))
+    }
+    const ro = new ResizeObserver(fit)
+    ro.observe(bar)
+    const views = bar.querySelector('.view-switch')
+    if (views) ro.observe(views)
+    return () => ro.disconnect()
   })
 
   function closeIfEmpty() {
@@ -49,7 +66,7 @@
   </label>
 {/snippet}
 
-<header class="topbar" class:appbar={app.wide}>
+<header class="topbar" class:appbar={app.wide} bind:this={bar} style:--search-w={app.wide ? `${searchW}px` : undefined}>
   <div class="top-left">
     <button
       class="icon-btn nav-btn"
@@ -79,13 +96,19 @@
 
   {#if app.wide}<ViewSwitch />{/if}
 
+  <!-- Largura fixa e a nuvem como primeiro item, num espaço reservado: nada aqui muda de tamanho
+       (nem ao trocar de visão, nem quando a nuvem aparece), então as visões não saem do lugar.
+       No desktop o campo de busca abre por cima da folga, a partir da lupa, sem empurrar nada. -->
   <div class="top-actions">
     {#if app.wide}
-      {#if searchShown}
-        {@render searchField()}
-      {:else}
-        <button class="icon-btn" aria-label="Buscar" title="Buscar (Ctrl+F)" onclick={() => (app.searchOpen = true)}><Search size={19} /></button>
-      {/if}
+      <span class="sync-slot"><SyncIndicator /></span>
+      <span class="search-slot">
+        {#if searchShown}
+          {@render searchField()}
+        {:else}
+          <button class="icon-btn" aria-label="Buscar" title="Buscar (Ctrl+F)" onclick={() => (app.searchOpen = true)}><Search size={19} /></button>
+        {/if}
+      </span>
     {/if}
     {#if app.view === 'notes'}
       <SortMenu />
@@ -98,6 +121,6 @@
         {#if app.layout === 'grid'}<Rows3 size={19} />{:else}<LayoutGrid size={19} />{/if}
       </button>
     {/if}
-    <SyncIndicator />
+    {#if !app.wide}<SyncIndicator />{/if}
   </div>
 </header>
