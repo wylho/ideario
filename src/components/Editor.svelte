@@ -3,7 +3,7 @@
   import { Editor as TipTap } from '@tiptap/core'
   import { Dialog, DropdownMenu, Popover, Select } from 'bits-ui'
   import {
-    Archive, ArchiveRestore, ArrowLeft, Bold, Check, ChevronDown, Heading, ImagePlus, Italic, List, ListChecks, MoreVertical, Palette, Paperclip, Pin, PinOff, Redo2, Tag, Trash2, Undo2, X,
+    Archive, ArchiveRestore, ArrowLeft, Bold, Check, ChevronDown, Heading, ImagePlus, Italic, List, ListChecks, MoreVertical, SquareCode, Palette, Paperclip, Pin, PinOff, Redo2, Tag, Trash2, Undo2, X,
   } from '@lucide/svelte'
   import { api } from '../lib/api'
   import { app, type EditorTarget } from '../lib/app.svelte'
@@ -68,7 +68,7 @@
     const e = editor?.isFocused ? editor : null
     return {
       bold: !!e?.isActive('bold'), italic: !!e?.isActive('italic'), heading: !!e?.isActive('heading', { level: 3 }),
-      list: !!e?.isActive('bulletList'), check: !!e?.isActive('taskList'),
+      list: !!e?.isActive('bulletList'), check: !!e?.isActive('taskList'), code: !!e?.isActive('codeBlock'),
       undo: !!editor?.can().undo(), redo: !!editor?.can().redo(),
     }
   })
@@ -286,6 +286,7 @@
           <button onmousedown={(e) => e.preventDefault()} onclick={() => run((c) => c.toggleHeading({ level: 3 }))} aria-label="Título" aria-pressed={active.heading}><Heading size={18} /></button>
           <button onmousedown={(e) => e.preventDefault()} onclick={() => run((c) => c.toggleBulletList())} aria-label="Lista" aria-pressed={active.list}><List size={18} /></button>
           <button onmousedown={(e) => e.preventDefault()} onclick={() => run((c) => c.toggleTaskList())} aria-label="Checklist" aria-pressed={active.check}><ListChecks size={18} /></button>
+          <button onmousedown={(e) => e.preventDefault()} onclick={() => run((c) => c.toggleCodeBlock())} aria-label="Bloco de código" title="Bloco de código" aria-pressed={active.code}><SquareCode size={18} /></button>
           <Popover.Root bind:open={imagePickerOpen}>
             <Popover.Trigger aria-label="Inserir imagem" onmousedown={(e) => e.preventDefault()}><ImagePlus size={18} /></Popover.Trigger>
             <Popover.Portal>

@@ -45,6 +45,8 @@ export interface Api {
 
   /** URL local de uma imagem (miniatura ou tamanho cheio). Nunca depende de rede. */
   imageUrl(hash: string, size?: 'thumb' | 'full'): string
+  /** Salva uma cópia do anexo onde o usuário escolher (no app: diálogo "Salvar como"; no navegador: download). */
+  downloadAttachment(a: Pick<AttachmentRow, 'hash' | 'name' | 'mime'>): Promise<void>
   /** Imagens disponíveis no seletor do editor. Só existe enquanto não há importação real (Fase 3). */
   sampleImages(): Promise<AttachmentRow[]>
 

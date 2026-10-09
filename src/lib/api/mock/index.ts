@@ -37,6 +37,7 @@ const STEP = 1024
 const MAX_BLOCKS = 24
 const MAX_TASKS = 12
 const MAX_CHARS = 1200
+const MAX_CODE_LINES = 8
 
 const notes = new Map<string, StoredNote>()
 const attachments = new Map<string, Attachment>()
@@ -116,6 +117,11 @@ function project(body: RichDoc): Projection {
       case 'orderedList':
       case 'taskList':
         return listItems(n, depth)
+      case 'codeBlock': {
+        const text = inline(n).replace(/\s+$/, '').split('\n').slice(0, MAX_CODE_LINES).join('\n')
+        if (text.trim()) blocks.push({ kind: 'code', text })
+        return
+      }
       case 'noteImage':
         if (typeof n.attrs?.hash === 'string') images.push(n.attrs.hash)
         return
@@ -157,7 +163,7 @@ function previewOf(blocks: PreviewBlock[]): PreviewBlock[] {
 
 const labelOf = (n: StoredNote) => {
   if (n.title.trim()) return n.title
-  const first = project(n.body).blocks.find((b) => 'text' in b && b.text)
+  const first = project(n.body).blocks.find((b) => b.kind !== 'code' && 'text' in b && b.text)
   return first && 'text' in first ? first.text.split('\n')[0].slice(0, 90) : 'Sem título'
 }
 
@@ -425,6 +431,14 @@ export const mockApi: Api = {
     done({ connected: true, lastSyncAt: Date.now() - 2 * 60_000, noteCount: notes.size, cacheUsedBytes: 310 * 1024 * 1024 }),
 
   imageUrl: (hash) => imageSrc.get(hash) ?? '',
+  async downloadAttachment(a) {
+    // Prévia: imagens baixam a própria figura; os demais anexos de exemplo não têm conteúdo, então vai um arquivo de texto.
+    const src = imageSrc.get(a.hash)
+    const url = src || URL.createObjectURL(new Blob([`Arquivo de exemplo do Ideario: ${a.name}\n`], { type: 'text/plain' }))
+    const link = Object.assign(document.createElement('a'), { href: url, download: src ? a.name.replace(/\.\w+$/, '') + '.svg' : a.name })
+    link.click()
+    if (!src) setTimeout(() => URL.revokeObjectURL(url), 1000)
+  },
   sampleImages: () =>
     done([...attachments.values()].filter((a) => a.kind === 'image').map((a) => ({ ...a, noteId: '', noteTitle: '', categoryId: null }))),
 
