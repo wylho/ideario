@@ -35,6 +35,10 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
   conexão ou com erro; nada de controles que ainda não funcionam).
 - Navegação (proposta A): `app.view` (como ver) e `app.filter` (categoria + tags, o que ver) são independentes; `app.box`
   = active/archive/trash só na visão Notas. Seletor de visão: no desktop no canto direito da barra superior (busca é ícone ao lado), no celular barra flutuante (pílula) embaixo; número só em Lembretes (`app.counts`).
+- Barra superior = ☰ + marca | **menu dinâmico** (`ViewActions.svelte`) | visões. O menu dinâmico tem tudo o que depende
+  da visão ou do lugar, sempre na mesma ordem e com os mesmos componentes: filtro da visão (`FilterGroup`: ícones no
+  desktop, um menu no celular) → ordenar (`SortMenu`) → lista/grade (`LayoutToggle`). Lembretes: mostrar concluídos;
+  Lixeira: "Esvaziar lixeira" (com confirmação, só quando há notas). Nada de controles soltos no meio do conteúdo.
 - Menus de contexto: `ContextMenu.svelte` (clique direito, Shift+F10, toque longo) + itens em `src/lib/menus.ts`.
   O menu do navegador é bloqueado fora de campos de texto (`main.ts`). Ações com "Desfazer" no toast.
 - Prévia dos cards: a projeção entrega `preview` (blocos na ordem do documento) e `label`; a UI não parseia o corpo.

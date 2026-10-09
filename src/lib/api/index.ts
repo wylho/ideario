@@ -22,6 +22,10 @@ export interface Api {
   /** Cria ou atualiza. `tags` são as manuais; as `#palavra` do corpo entram na projeção. */
   saveNote(input: NoteInput): Promise<NoteSummary>
   setReminderDone(id: string, done: boolean): Promise<void>
+  /** Quantas notas há na lixeira (para mostrar "Esvaziar lixeira" só quando há o que esvaziar). */
+  trashCount(): Promise<number>
+  /** Apaga para sempre tudo o que está na lixeira. Devolve quantas notas saíram. */
+  emptyTrash(): Promise<number>
   /** Muda metadados sem abrir o editor (menus de contexto). */
   updateNote(id: string, patch: NotePatch): Promise<void>
   /** Ordem personalizada: coloca a nota entre `after` e `before` (ids vizinhos; null nas pontas). */

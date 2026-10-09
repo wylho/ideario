@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Check, ChevronDown } from '@lucide/svelte'
+  import { Check } from '@lucide/svelte'
   import { api } from '../lib/api'
   import { app, live } from '../lib/app.svelte'
   import { dayDiff, fmtShortDate, fmtTime, isOverdue } from '../lib/format'
@@ -8,7 +8,6 @@
   import { reminderMenu } from '../lib/menus'
   import type { NoteSummary } from '../lib/types'
 
-  let showDone = $state(false)
   const list = live(() => api.listReminders({ filter: $state.snapshot(app.filter), query: app.query, includeDone: true }), [] as NoteSummary[])
 
   const pending = $derived(list.current.filter((n) => !n.reminderDone))
@@ -78,16 +77,11 @@
   </section>
 {/each}
 
-{#if done.length}
+{#if app.showDone && done.length}
   <section class="r-group">
-    <button class="section-label done-toggle" aria-expanded={showDone} onclick={() => (showDone = !showDone)}>
-      Concluídos<span class="count">{done.length}</span>
-      <ChevronDown size={15} />
-    </button>
-    {#if showDone}
-      <div class="r-list">
-        {#each done as n (n.id)}{@render item(n)}{/each}
-      </div>
-    {/if}
+    <h2 class="section-label">Concluídos<span class="count">{done.length}</span></h2>
+    <div class="r-list">
+      {#each done as n (n.id)}{@render item(n)}{/each}
+    </div>
   </section>
 {/if}

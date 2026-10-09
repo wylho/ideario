@@ -1,8 +1,8 @@
 <script lang="ts">
   import { tick } from 'svelte'
-  import { LayoutGrid, Menu, Rows3, Search, X } from '@lucide/svelte'
+  import { Menu, Search, X } from '@lucide/svelte'
   import SyncIndicator from './SyncIndicator.svelte'
-  import SortMenu from './SortMenu.svelte'
+  import ViewActions from './ViewActions.svelte'
   import ViewSwitch from './ViewSwitch.svelte'
   import { app } from '../lib/app.svelte'
   import { viewInfo } from '../lib/views'
@@ -87,17 +87,7 @@
         <button class="icon-btn" aria-label="Buscar" title="Buscar (Ctrl+F)" onclick={() => (app.searchOpen = true)}><Search size={19} /></button>
       {/if}
     {/if}
-    {#if app.view === 'notes'}
-      <SortMenu />
-      <button
-        class="icon-btn"
-        aria-label={app.layout === 'grid' ? 'Ver em lista' : 'Ver em grade'}
-        title={app.layout === 'grid' ? 'Ver em lista' : 'Ver em grade'}
-        onclick={() => (app.layout = app.layout === 'grid' ? 'list' : 'grid')}
-      >
-        {#if app.layout === 'grid'}<Rows3 size={19} />{:else}<LayoutGrid size={19} />{/if}
-      </button>
-    {/if}
+    <ViewActions />
   </div>
 
   {#if app.wide}

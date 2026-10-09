@@ -408,6 +408,14 @@ export const mockApi: Api = {
     return done(undefined)
   },
 
+  trashCount: () => done([...notes.values()].filter((n) => n.trashedAt != null).length),
+  emptyTrash() {
+    let n = 0
+    for (const [id, note] of notes) if (note.trashedAt != null && notes.delete(id)) n++
+    if (n) changed()
+    return done(n)
+  },
+
   getSettings: () => done({ ...settings }),
   saveSettings(s) {
     settings = { ...s }
