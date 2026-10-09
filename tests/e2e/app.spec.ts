@@ -341,8 +341,8 @@ test('prévia do card mantém títulos, tópicos e a ordem do documento', async 
   await expect(card.locator('.preview > p').last()).toContainText('Dobras a cada 30 min')
   const mercado = cards(page).filter({ hasText: 'Mercado da semana' })
   await expect(mercado.locator('.preview > p').first()).toHaveText('O que está faltando:')
-  await expect(mercado.locator('.pv-task')).toHaveCount(4)
-  await expect(mercado.locator('.pv-more')).toHaveText('+3 itens')
+  await expect(mercado.locator('.pv-task')).toHaveCount(7)
+  await expect(mercado.locator('.pv-more')).toHaveCount(0)
 })
 
 test('nota sem título aparece pela primeira linha em Lembretes e Arquivos', async ({ page }) => {
@@ -436,4 +436,15 @@ test.describe('menus de contexto', () => {
     })
     expect(blocked).toEqual([true, false])
   })
+})
+
+test('card grande para na altura máxima e esmaece o fim; os metadados continuam visíveis', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 })
+  const longo = cards(page).filter({ hasText: 'Feedbacks do trimestre' })
+  await expect(longo.locator('.preview')).toHaveAttribute('data-clipped', '')
+  const pv = (await longo.locator('.preview').boundingBox())!
+  expect(pv.height).toBeLessThanOrEqual(300)
+  await expect(longo.locator('.card-meta')).toBeVisible()
+  const curto = cards(page).filter({ hasText: 'Horários e estacionamento' })
+  await expect(curto.locator('.preview')).not.toHaveAttribute('data-clipped', '')
 })
