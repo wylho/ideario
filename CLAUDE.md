@@ -31,7 +31,7 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
 - D3 continua em aberto (SPEC §11); decidir antes da Fase 5.
 
 ## Estado atual
-- **Fases 0, 1 e 2 concluídas.** No app, a UI fala com o núcleo Rust (`src/lib/api/tauri.ts` → `src-tauri/src/commands.rs`):
+- **Fases 0, 1, 2 e 3 concluídas.** No app, a UI fala com o núcleo Rust (`src/lib/api/tauri.ts` → `src-tauri/src/commands.rs`):
   SQLite com FTS5 (`store.rs`: migrações por `user_version`; antes de migrar guarda `ideario.db.vN.bak`).
   **Cada nota é um Y.Doc** (`ydoc.rs` com yrs; `src/lib/ydoc.ts` no front): `meta` (Y.Map) + `body` (Y.XmlFragment no formato
   do y-prosemirror). A coluna `notes.ydoc` é a fonte da verdade; `body_json` e as demais colunas são projeção dela.
@@ -82,15 +82,23 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
   nativo (`npx tauri build --debug --no-bundle && xvfb-run -a node tests/native/run.mjs`; precisa de webkit2gtk-driver e
   tauri-driver), desempenho (`tests/native/perf.mjs`, build de release) e `npm run tauri build`.
 - Release: `.github/workflows/release.yml` (Actions → Release → Run workflow; precisa estar no branch padrão).
+- Graphify (mapa do código, local, sem chave): `pip3 install --user graphifyy` e
+  `graphify extract . --code-only --out <pasta fora do repo>`; consultas com `graphify explain "X" --graph <…>/graph.json`.
 - Ordem combinada com o usuário (plano em https://claude.ai/code/artifact/45aafe33-c71a-4b29-abb6-4caf94af6817):
   Fase 3 (Mídia) → Importar Keep (Fase 6, antecipada; precisa de um Takeout real) → Fase 4 → Fase 5 → Fase 7.
-- **Fase 3 em andamento.** Pipeline de fotos no núcleo (`media.rs`): orientação EXIF, sem metadados, redução pela
+- **Fase 3 (concluída).** Pipeline de fotos no núcleo (`media.rs`): orientação EXIF, sem metadados, redução pela
   qualidade (1280/2048/3072), WebP (com perda; sem perda se ficar menor), miniatura de 400 px em `<dados>/thumbs/<hash>.webp`
   (servida por `att://…/<hash>?thumb`), paleta de 5 cores (corte da mediana) e tom. Original e GIF ficam como vieram.
   Importação assíncrona (`attachments::prepare` fora da trava do banco; `save` grava). Fotos da Fase 1 ganham
   miniatura/paleta/tom em segundo plano ao abrir (`Core::backfill_media`). 12 MP: ~0,7 s, 6,2 MB → 630 KB.
+  Prévias de PDF (pdf.js embutido, primeira página) e vídeo (um quadro) feitas na interface (`previews.svelte.ts`) e
+  guardadas pelo núcleo como miniatura (`set_preview`; arquivo vazio = sem prévia possível); `FilePreview.svelte` mostra
+  por cima do ícone. Projeção versionada (`PROJECTION_VERSION`): mudou o formato, as notas são reprojetadas ao abrir.
+  Fica para a Fase 5: cache com limite (LRU) dos anexos, que depende do Drive.
 - Skills do usuário para todas as fases: testes em Rust (TDD, proptest, provar que o teste pega erro quebrando o
   código de propósito, clippy sem avisos no CI) e padrões idiomáticos de Rust (sem `unwrap` em produção, `pub` mínimo).
 - Pedidos do usuário para a fase certa: emoji grande de capa na nota; arrastar card até categoria da lateral; baixar em
   Downloads ou escolher a pasta (diálogo nativo); prévia de PDFs e documentos; bug: card tremendo ao arrastar e cards
-  quebrados ao redimensionar a janela (Masonry).
+  quebrados ao redimensionar a janela (Masonry). Visualizador de PDF no Linux (a WebKitGTK não mostra PDF no
+  iframe; dá para usar o pdf.js que já está no app).
+- **Próximo passo: Importar do Keep (Fase 6, antecipada). Precisa de um Takeout real do usuário.**
