@@ -8,6 +8,8 @@ mod attachments;
 mod background;
 mod commands;
 mod keep;
+mod markdown;
+mod mcp;
 mod media;
 mod notify;
 mod projection;
@@ -17,6 +19,8 @@ mod sync;
 mod system_fonts;
 mod system_theme;
 mod text;
+#[cfg(test)]
+mod testdoc;
 mod ydoc;
 
 use tauri::{Manager, WebviewWindowBuilder};
@@ -63,6 +67,8 @@ pub fn run() {
             notify::start(app.handle().clone());
             // Sync com o Google Drive em segundo plano (se houver login).
             sync::start(app.handle());
+            // O que o Claude (MCP, outro processo) muda no banco aparece na tela na hora.
+            mcp::watch::start(app.handle().clone());
 
             // A janela é criada aqui (e não pelo tauri.conf.json) para receber as fontes e as cores do
             // sistema antes de a página carregar, sem troca visível de fonte ou de cor.
@@ -141,6 +147,9 @@ pub fn run() {
             commands::get_attachments,
             commands::import_file,
             commands::download_attachment,
+            mcp::setup::mcp_info,
+            mcp::setup::mcp_install,
+            mcp::setup::mcp_uninstall,
         ])
         .build(tauri::generate_context!());
     let app = match app {
@@ -157,6 +166,11 @@ pub fn run() {
                 background::show(_app);
             }
         });
+}
+
+/// `ideario --mcp`: servidor MCP no stdin/stdout (o Claude chama), sem janela. Devolve o código de saída.
+pub fn mcp_serve() -> i32 {
+    mcp::serve()
 }
 
 /// Versão do núcleo, para a UI confirmar que o IPC está de pé.

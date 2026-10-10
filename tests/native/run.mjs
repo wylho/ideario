@@ -229,6 +229,40 @@ function noisyPng(w, h) {
   return Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), chunk('IHDR', ihdr), chunk('IDAT', zlib.deflateSync(raw)), chunk('IEND', Buffer.alloc(0))])
 }
 
+/** O Claude de mentira: roda `ideario --mcp` (outro processo, mesmo banco) e conversa por JSON-RPC em linhas. */
+function mcpClient() {
+  const proc = spawn(APP, ['--mcp'], { env: { ...process.env, XDG_DATA_HOME: DATA, XDG_CONFIG_HOME: DATA }, stdio: ['pipe', 'pipe', 'inherit'] })
+  const waiting = new Map()
+  let buf = ''
+  proc.stdout.on('data', (d) => {
+    buf += d
+    let i
+    while ((i = buf.indexOf('\n')) >= 0) {
+      const msg = JSON.parse(buf.slice(0, i))
+      buf = buf.slice(i + 1)
+      waiting.get(msg.id)?.(msg)
+    }
+  })
+  let next = 1
+  const send = (method, params) =>
+    new Promise((resolve, reject) => {
+      const id = next++
+      const t = setTimeout(() => reject(new Error(`MCP sem resposta: ${method}`)), 10000)
+      waiting.set(id, (m) => (clearTimeout(t), resolve(m)))
+      proc.stdin.write(JSON.stringify({ jsonrpc: '2.0', id, method, params }) + '\n')
+    })
+  return {
+    init: () => send('initialize', { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'teste', version: '1' } }),
+    async tool(name, args) {
+      const r = await send('tools/call', { name, arguments: args })
+      const text = r.result.content.map((c) => c.text ?? '').join('\n')
+      if (r.result.isError) throw new Error(`${name}: ${text}`)
+      return text
+    },
+    close: () => proc.stdin.end(),
+  }
+}
+
 try {
   console.log('Ideario nativo (WebDriver)')
   let s = await Session.start()
@@ -421,6 +455,35 @@ try {
     const later = await s.execAsync(`window.__TAURI_INTERNALS__.invoke('get_note', { id: arguments[0] }).then((n) => arguments[1](n.reminderAt))`, '01990000-0000-7000-8000-000000000001')
     if (!(later > Date.now() + 9 * 60_000)) throw new Error(`reagendado para ${new Date(later)}`)
     await s.exec(`document.querySelectorAll('.alert [aria-label="Fechar aviso"]').forEach((b) => b.click()); return true`)
+  })
+
+  await test('MCP: o Claude (outro processo) cria a nota, ela aparece na hora; marca um item com a nota aberta', async () => {
+    const mcp = mcpClient()
+    try {
+      await mcp.init()
+      const created = await mcp.tool('create_note', { title: 'Do Claude', content: 'Para hoje:\n\n- [ ] Pão\n- [ ] Leite' })
+      const id = created.match(/^id: (.+)$/m)[1]
+      await s.waitFor(`return [...document.querySelectorAll('.card')].some((c) => c.getAttribute('aria-label') === 'Do Claude')`, 'card criado pelo MCP', 5000)
+      await s.clickText('.card', 'Do Claude')
+      await s.waitFor(`return document.querySelectorAll('#corpo li[data-checked]').length === 2`, 'checklist no editor')
+      // com a nota aberta: o MCP marca o Pão e acrescenta uma linha; o editor mostra sem fechar
+      await mcp.tool('set_checklist_items', { id, items: [{ text: 'pao', checked: true }] })
+      await mcp.tool('append_to_note', { id, content: 'comprar na volta' })
+      await s.waitFor(`const li = [...document.querySelectorAll('#corpo li')].find((l) => l.textContent.includes('Pão')); return li?.dataset.checked === 'true' && document.querySelector('#corpo').textContent.includes('comprar na volta')`, 'mudança do MCP no editor aberto', 5000)
+      // e o que se digita no app chega ao MCP
+      await s.exec(`const p = [...document.querySelectorAll('#corpo p')].find((x) => x.textContent.includes('Para hoje')); const r = document.createRange(); r.selectNodeContents(p); r.collapse(false); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); return true`)
+      await s.keys(' cedo')
+      await sleep(900)
+      await s.exec(`document.querySelector('[aria-label="Voltar e salvar"]').click(); return true`)
+      await sleep(300)
+      const note = await mcp.tool('get_note', { id })
+      if (!note.includes('Para hoje: cedo') || !note.includes('- [x] Pão') || !note.includes('comprar na volta')) throw new Error(note)
+      // mandar para a Lixeira tira o card da tela
+      await mcp.tool('move_note', { id, to: 'trash' })
+      await s.waitFor(`return ![...document.querySelectorAll('.card')].some((c) => c.getAttribute('aria-label') === 'Do Claude')`, 'card sai da tela', 5000)
+    } finally {
+      mcp.close()
+    }
   })
 
   await test('tema escuro: a janela (barra de título e fundo) acompanha e fica guardado para a próxima abertura', async () => {

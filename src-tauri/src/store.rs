@@ -335,7 +335,24 @@ const MIGRATIONS: &[&str] = &[
     r#"
     ALTER TABLE notes ADD COLUMN snoozed_until INTEGER;
     "#,
+    // 6 — MCP: o que outro processo (o `ideario --mcp`) mudou no banco, para o app aberto atualizar a tela na hora.
+    // `note_id` nulo = categorias, tags ou anexos (a lista inteira recarrega).
+    r#"
+    CREATE TABLE external_changes (
+      seq INTEGER PRIMARY KEY AUTOINCREMENT,
+      note_id TEXT,
+      removed INTEGER NOT NULL DEFAULT 0
+    );
+    "#,
 ];
+
+/// Mudança feita por outro processo no banco (o MCP).
+#[derive(Debug, Clone, PartialEq)]
+pub struct ExternalChange {
+    pub seq: i64,
+    pub note_id: Option<String>,
+    pub removed: bool,
+}
 
 pub struct Store {
     pub conn: Connection,
@@ -361,6 +378,9 @@ impl Store {
     }
 
     fn setup(conn: Connection) -> Result<Store> {
+        // O app e o MCP (`ideario --mcp`) abrem o mesmo banco: quem chega com o outro escrevendo espera um pouco
+        // em vez de falhar (o rusqlite já usa 5 s; fica explícito porque o MCP depende disso).
+        conn.busy_timeout(std::time::Duration::from_secs(5)).map_err(err)?;
         conn.execute_batch("PRAGMA journal_mode = WAL; PRAGMA synchronous = NORMAL; PRAGMA foreign_keys = ON;").map_err(err)?;
         let version: usize = conn.query_row("PRAGMA user_version", [], |r| r.get(0)).map_err(err)?;
         for (i, sql) in MIGRATIONS.iter().enumerate().skip(version) {
@@ -700,6 +720,11 @@ impl Store {
 
     /// Renomeia (ou, com `to = None`, tira) uma tag em todas as notas: nas tags manuais e nas `#tags` do texto
     /// (que vira palavra comum ao tirar). Devolve quantas notas mudaram.
+    /// Notas com a tag (manual ou `#tag` do texto).
+    pub fn note_ids_with_tag(&self, tag: &str) -> Result<Vec<String>> {
+        self.ids("SELECT DISTINCT note_id FROM note_tags WHERE tag = ?1", params![tag])
+    }
+
     pub fn rename_tag(&self, from: &str, to: Option<&str>) -> Result<usize> {
         let to = to.map(normalize_tag).filter(|t| !t.is_empty());
         let ids = self.ids("SELECT DISTINCT note_id FROM note_tags WHERE tag = ?1", params![from])?;
@@ -720,7 +745,7 @@ impl Store {
 
     // ---------- uma nota ----------
 
-    fn note_input(&self, id: &str) -> Result<Option<NoteInput>> {
+    pub fn note_input(&self, id: &str) -> Result<Option<NoteInput>> {
         self.conn
             .query_row(
                 "SELECT id, title, body_json, category_id, color, pinned, archived, trashed_at, reminder_at, reminder_done, reminder_repeat FROM notes WHERE id = ?1",
@@ -1502,6 +1527,32 @@ impl Store {
         })
     }
 
+    // ---------- mudanças de outro processo (MCP) ----------
+
+    /// Anota que este processo (o MCP) mudou a nota (`None`: categorias, tags ou anexos), para o app aberto ver.
+    pub fn log_external(&self, note_id: Option<&str>, removed: bool) -> Result<()> {
+        self.conn.execute("INSERT INTO external_changes (note_id, removed) VALUES (?1, ?2)", params![note_id, removed]).map_err(err)?;
+        Ok(())
+    }
+
+    /// Mudanças anotadas depois de `seq`, na ordem.
+    pub fn external_after(&self, seq: i64) -> Result<Vec<ExternalChange>> {
+        let mut st = self.conn.prepare_cached("SELECT seq, note_id, removed FROM external_changes WHERE seq > ?1 ORDER BY seq").map_err(err)?;
+        let rows = st.query_map([seq], |r| Ok(ExternalChange { seq: r.get(0)?, note_id: r.get(1)?, removed: r.get(2)? })).map_err(err)?;
+        rows.collect::<std::result::Result<_, _>>().map_err(err)
+    }
+
+    /// Esquece as mudanças até `seq` (já mostradas).
+    pub fn forget_external(&self, seq: i64) -> Result<()> {
+        self.conn.execute("DELETE FROM external_changes WHERE seq <= ?1", [seq]).map_err(err)?;
+        Ok(())
+    }
+
+    /// Muda quando outra conexão grava no banco (barato: serve para o app olhar a cada instante).
+    pub fn data_version(&self) -> Result<i64> {
+        self.conn.query_row("PRAGMA data_version", [], |r| r.get(0)).map_err(err)
+    }
+
     pub fn is_empty(&self) -> Result<bool> {
         self.conn.query_row("SELECT NOT EXISTS (SELECT 1 FROM notes)", [], |r| r.get(0)).map_err(err)
     }
@@ -1803,7 +1854,7 @@ mod tests {
                 .execute_batch(
                     "DROP INDEX notes_drive; ALTER TABLE notes DROP COLUMN ydoc; ALTER TABLE notes DROP COLUMN reminder_repeat; \
                      ALTER TABLE notes DROP COLUMN notified_at; ALTER TABLE notes DROP COLUMN drive_file_id; ALTER TABLE notes DROP COLUMN drive_rev; \
-                     ALTER TABLE notes DROP COLUMN snoozed_until; PRAGMA user_version = 1",
+                     ALTER TABLE notes DROP COLUMN snoozed_until; DROP TABLE external_changes; PRAGMA user_version = 1",
                 )
                 .unwrap();
         }

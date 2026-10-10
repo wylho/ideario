@@ -4,7 +4,7 @@
 import type { Api } from '..'
 import { fold, hashTags, normalizeTag } from '../../format'
 import type {
-  Attachment, AttachmentKind, AttachmentRow, Box, Category, Filter, NoteInput, NotePatch, NoteSort, NoteSummary, PreviewBlock, RichDoc, RichNode, Settings, SyncState, TagCount,
+  Attachment, AttachmentKind, AttachmentRow, Box, Category, Filter, McpInfo, NoteInput, NotePatch, NoteSort, NoteSummary, PreviewBlock, RichDoc, RichNode, Settings, SyncState, TagCount,
 } from '../../types'
 import * as Y from 'yjs'
 import { uuidv7 } from '../../uuid'
@@ -354,6 +354,17 @@ function saveNote(input: NoteInput) {
   changed()
 }
 
+let mcpInstalled = false
+const MCP_COMMAND = '/Applications/Ideario.app/Contents/MacOS/ideario'
+const mcpMock = (): McpInfo => ({
+  command: MCP_COMMAND,
+  args: ['--mcp'],
+  claudeCode: `claude mcp add --scope user ideario -- "${MCP_COMMAND}" --mcp`,
+  desktopConfig: '~/Library/Application Support/Claude/claude_desktop_config.json',
+  desktopFound: true,
+  desktopInstalled: mcpInstalled,
+})
+
 export const mockApi: Api = {
   listNotes({ filter, box, query, sort }) {
     return done([...notes.values()].filter((n) => inBox(n, box) && passes(n, filter) && matches(n, query)).sort(compareFor(sort)).map(summarize))
@@ -646,6 +657,17 @@ export const mockApi: Api = {
     return done(undefined)
   },
   syncFocus() {},
+
+  // Na prévia, um Claude Desktop de faz de conta: ligar e desligar só mudam o estado.
+  mcpInfo: () => done(mcpMock()),
+  mcpInstall() {
+    mcpInstalled = true
+    return done(mcpMock())
+  },
+  mcpUninstall() {
+    mcpInstalled = false
+    return done(mcpMock())
+  },
 
   imageUrl: (hash) => imageSrc.get(hash) ?? '',
   getAttachments: (hashes) => done(hashes.flatMap((h) => attachments.get(h) ?? [])),

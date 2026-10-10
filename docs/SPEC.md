@@ -103,6 +103,25 @@ O Automerge foi considerado e **descartado** em favor do Yjs por causa do editor
 - Fotos: qualidade (Econômica 1280px, Equilibrada 2048px como padrão, Alta 3072px, Original sem compressão) — quem quer a foto intacta escolhe Original. Só fotos são comprimidas; PDFs, documentos, áudio e vídeo ficam como foram anexados.
 - Cache: barra de uso e slider de limite (0,5 a 5 GB).
 - Importar do Google Keep.
+- Claude: ligar o Ideario no Claude Desktop (um botão) e o comando pronto para o Claude Code (ver §3.11).
+
+### 3.11 Claude (MCP)
+O próprio executável vira um servidor MCP (`ideario --mcp`, stdin/stdout) que o Claude Desktop e o Claude Code chamam.
+Ele usa o mesmo núcleo e o mesmo banco local, com o app aberto ou fechado, e faz tudo o que o app faz:
+- buscar e ler notas; criar, editar (o corpo inteiro ou só um trecho) e acrescentar;
+- marcar, acrescentar e tirar itens de checklist;
+- categorias, tags, cor e fixar; arquivo, Lixeira e restaurar;
+- lembretes: pôr, repetir, adiar e concluir;
+- anexos: listar, ver fotos e textos, anexar do computador e salvar uma cópia;
+- importar do Keep.
+
+O corpo entra e sai em Markdown. Os checklists são `- [ ]` com subitens recuados, e as fotos e anexos são links
+`ideario://att/<hash>`. A ida e volta nota → Markdown → nota devolve a mesma nota (teste de propriedade), e a gravação no
+Y.Doc mexe só no que mudou. Assim o Claude pode marcar um item com a nota aberta no editor sem atrapalhar quem digita.
+
+Cada mudança fica anotada no banco (`external_changes`). O app aberto percebe pelo `PRAGMA data_version` e atualiza a
+tela na hora; o sync do app leva as mudanças para o Drive. Apagar manda para a Lixeira; apagar para sempre só funciona
+para o que já está nela (decisão do usuário). Guia: `docs/MCP.md`.
 
 ---
 
@@ -359,4 +378,4 @@ Cada fase termina com o app rodando e algo verificável.
 ---
 
 ## 12. Fora do escopo (por enquanto)
-Colaboração em tempo real com outras pessoas, compartilhamento de notas, IA nas notas, criptografia ponta a ponta, versão web pública e lembretes recorrentes.
+Colaboração em tempo real com outras pessoas, compartilhamento de notas, IA dentro do app (a IA entra de fora, pelo MCP: §3.11), criptografia ponta a ponta e versão web pública.

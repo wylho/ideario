@@ -98,14 +98,14 @@
       if (closed || !ids.includes(id)) return
       if (pending.length) {
         persisted = false
-        app.say('Esta nota foi excluída em outro aparelho; o que você escreveu aqui a manteve.')
+        app.say('Esta nota foi excluída fora desta janela (em outro aparelho ou pelo Claude); o que você escreveu aqui a manteve.')
         schedule()
       } else {
         closed = true
         clearTimeout(timer)
         recorder.cancel()
         app.editor = null
-        app.say('Esta nota foi excluída em outro aparelho.')
+        app.say('Esta nota foi excluída fora desta janela (em outro aparelho ou pelo Claude).')
       }
     }),
   )
