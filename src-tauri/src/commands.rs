@@ -200,6 +200,18 @@ pub fn apply_note_update(core: Core_, request: Request<'_>) -> Result<()> {
     core.with(|s| s.apply_update(id, update))
 }
 
+/// Adiar um lembrete (o que se repete avisa de novo sem mudar a série).
+#[tauri::command]
+pub fn snooze_reminder(core: Core_, id: String, until: crate::store::Millis) -> Result<()> {
+    core.with(|s| crate::reminders::snooze(s, &id, until))
+}
+
+/// Concluir um lembrete (o que se repete pula para a próxima vez).
+#[tauri::command]
+pub fn complete_reminder(core: Core_, id: String) -> Result<()> {
+    core.with(|s| crate::reminders::complete(s, &id, crate::store::now(), &chrono::Local))
+}
+
 #[tauri::command]
 pub fn set_reminder_done(core: Core_, id: String, done: bool) -> Result<()> {
     core.with(|s| s.set_reminder_done(&id, done).map(|_| ()))
@@ -382,7 +394,7 @@ impl Core {
             }
             let (mut images, mut files) = (Vec::new(), Vec::new());
             for a in &n.attachments {
-                let Some(bytes) = t.media(&a.file_path) else {
+                let Some(bytes) = t.media(&n.path, &a.file_path) else {
                     r.missing_media += 1;
                     continue;
                 };

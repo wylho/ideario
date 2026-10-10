@@ -40,9 +40,14 @@ pub fn run() {
                 // Anexo grande que outro aparelho subiu: desce agora, na hora de abrir.
                 sync::ensure_local(&app, req.uri().path().trim_start_matches('/'));
                 let core = app.state::<Core>();
-                let res = match core.store.lock() {
-                    Ok(store) => attachments::serve(&store, &core.data, &req),
-                    Err(_) => attachments::status_only(tauri::http::StatusCode::SERVICE_UNAVAILABLE),
+                // A trava do banco só para saber o tipo; o arquivo é lido sem ela (um vídeo grande não trava o app).
+                let info = match core.store.lock() {
+                    Ok(store) => Some(attachments::info(&store, &attachments::hash_of(&req))),
+                    Err(_) => None,
+                };
+                let res = match info {
+                    Some(info) => attachments::serve(info, &core.data, &req),
+                    None => attachments::status_only(tauri::http::StatusCode::SERVICE_UNAVAILABLE),
                 };
                 responder.respond(res);
             });
@@ -115,6 +120,8 @@ pub fn run() {
             commands::get_note_state,
             commands::apply_note_update,
             commands::set_reminder_done,
+            commands::snooze_reminder,
+            commands::complete_reminder,
             commands::update_note,
             commands::move_note,
             commands::adopt_order,

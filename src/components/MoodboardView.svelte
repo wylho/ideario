@@ -27,7 +27,7 @@
     {#snippet children(trigger)}
   <button {...trigger} class="mood-tile" onclick={() => (app.lightbox = r)}>
     <img src={api.imageUrl(r.hash, 'thumb')} alt={r.name} style:aspect-ratio="{r.width}/{r.height}" decoding="async" />
-    {#if r.palette}<span class="mood-pal">{#each r.palette as p (p)}<i style:background={p}></i>{/each}</span>{/if}
+    {#if r.palette}<span class="mood-pal">{#each r.palette as p, i (i)}<i style:background={p}></i>{/each}</span>{/if}
     <span class="mood-cap">{r.noteTitle}</span>
   </button>
     {/snippet}

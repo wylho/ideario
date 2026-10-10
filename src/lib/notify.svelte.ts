@@ -31,13 +31,13 @@ export function openAlert(a: Alert) {
 
 export function snooze(a: Alert) {
   dismiss(a.id)
-  void api.updateNote(a.id, { reminderAt: Date.now() + SNOOZE_MS, reminderDone: false })
+  void api.snoozeReminder(a.id, Date.now() + SNOOZE_MS)
   app.say('Adiado por 10 minutos')
 }
 
 export function complete(a: Alert) {
   dismiss(a.id)
-  void api.setReminderDone(a.id, true)
+  void api.completeReminder(a.id)
 }
 
 if (isTauri()) {

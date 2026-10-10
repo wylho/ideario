@@ -1087,6 +1087,45 @@ test('remover o lembrete pelo menu do card também tira a repetição', async ({
   await expect(note().locator('[aria-label="se repete"]')).toHaveCount(0)
 })
 
+test('lembrete que se repete: marcar como feito vale para esta vez e a série continua', async ({ page }) => {
+  await cards(page).filter({ hasText: 'Referências tipográficas' }).click()
+  await page.getByLabel('Lembrete', { exact: true }).click()
+  await page.locator('.quick button', { hasText: 'Amanhã de manhã' }).click()
+  await page.getByLabel(/^Alterar lembrete/).click()
+  await page.locator('#lembrete-repetir').click()
+  await page.getByRole('option', { name: 'Todo dia' }).click()
+  await page.keyboard.press('Escape')
+  await back(page)
+  await tab(page, 'Lembretes')
+  const item = page.locator('.r-item', { hasText: 'Referências tipográficas' })
+  await expect(item.locator('.r-time')).toContainText('09:00')
+  await item.getByRole('button', { name: 'Feito por esta vez' }).click()
+  await expect(page.locator('.toast span')).toHaveText('Feito por esta vez')
+  // continua na lista, não concluído, no dia seguinte
+  await expect(item).not.toHaveClass(/done/)
+  await expect(item.locator('[aria-label="se repete"]')).toBeVisible()
+})
+
+test('lembrete de nota arquivada continua em Lembretes', async ({ page }) => {
+  const note = () => cards(page).filter({ hasText: 'Referências tipográficas' })
+  await note().click()
+  await page.getByLabel('Lembrete', { exact: true }).click()
+  await page.locator('.quick button', { hasText: 'Amanhã de manhã' }).click()
+  await page.getByLabel('Mais opções').click()
+  await page.getByRole('menuitem', { name: 'Arquivar' }).click()
+  await expect(note()).toHaveCount(0)
+  await tab(page, 'Lembretes')
+  await expect(page.locator('.r-item', { hasText: 'Referências tipográficas' })).toHaveCount(1)
+})
+
+test('configurações só mostram o que funciona', async ({ page }) => {
+  await openSettings(page)
+  await expect(page.locator('.sheet-title')).toHaveText('Configurações')
+  await expect(page.getByText('Trazer notas do Google Keep')).toHaveCount(0)
+  await expect(page.getByRole('slider')).toHaveCount(0)
+  await expect(page.locator('.footnote')).toHaveText('Prévia no navegador · dados de exemplo')
+})
+
 test('"+" em leque: atalhos que já abrem a nota fazendo a coisa', async ({ page }) => {
   await page.getByRole('button', { name: 'Criar' }).click()
   const items = page.getByRole('menuitem')

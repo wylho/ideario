@@ -72,8 +72,6 @@ pub struct Takeout<R: Read + Seek> {
     archive: ZipArchive<R>,
     /// Caminho (já com o nome certo) → índice no zip.
     index: HashMap<String, usize>,
-    /// Pasta `…/Keep/` onde estão as notas (as mídias ficam ao lado).
-    keep_dir: String,
 }
 
 /// Nome da entrada no zip. Zips refeitos no Mac gravam o nome em UTF-8 sem avisar (sem a marca de UTF-8): lido como
@@ -100,7 +98,6 @@ impl<R: Read + Seek> Takeout<R> {
             }
         }
         let mut notes = Vec::new();
-        let mut keep_dir = String::new();
         let mut paths: Vec<(&String, &usize)> = index.iter().filter(|(p, _)| in_keep_dir(p) && p.ends_with(".json")).collect();
         paths.sort();
         for (path, &i) in paths {
@@ -115,18 +112,19 @@ impl<R: Read + Seek> Takeout<R> {
             }
             let Ok(mut note) = serde_json::from_value::<KeepNote>(v) else { continue };
             note.path = path.clone();
-            keep_dir = path.rsplit_once('/').map(|(d, _)| format!("{d}/")).unwrap_or_default();
             notes.push(note);
         }
         if notes.is_empty() {
             return Ok(None);
         }
-        Ok(Some(Takeout { notes, archive, index, keep_dir }))
+        Ok(Some(Takeout { notes, archive, index }))
     }
 
-    /// Mídia de uma nota (`filePath` é relativo à pasta Keep). None = não está no zip (apagada, por exemplo).
-    pub fn media(&mut self, file_path: &str) -> Option<Vec<u8>> {
-        let i = *self.index.get(&format!("{}{file_path}", self.keep_dir))?;
+    /// Mídia de uma nota (`filePath` é relativo à pasta Keep da própria nota: um zip pode juntar várias partes do
+    /// Takeout, cada uma com a sua). None = não está no zip (apagada, por exemplo).
+    pub fn media(&mut self, note_path: &str, file_path: &str) -> Option<Vec<u8>> {
+        let dir = note_path.rsplit_once('/').map(|(d, _)| format!("{d}/")).unwrap_or_default();
+        let i = *self.index.get(&format!("{dir}{file_path}"))?;
         let mut out = Vec::new();
         self.archive.by_index(i).ok()?.read_to_end(&mut out).ok()?;
         Some(out)
@@ -603,10 +601,38 @@ pub(crate) mod tests {
     }
 
     #[test]
+    fn a_zip_with_two_takeout_parts_finds_each_note_media_in_its_own_folder() {
+        let mut z = zip::ZipWriter::new(Cursor::new(Vec::new()));
+        let o = SimpleFileOptions::default();
+        let note = |title: &str, file: &str| {
+            json!({"title": title, "createdTimestampUsec": 1_700_000_000_000_000i64, "userEditedTimestampUsec": 1_700_000_000_000_000i64,
+                   "textContent": "x", "attachments": [{"filePath": file, "mimetype": "image/jpeg"}]})
+            .to_string()
+        };
+        for (name, data) in [
+            ("Takeout/Keep/A.json", note("A", "a.jpg").into_bytes()),
+            ("Takeout/Keep/a.jpg", b"foto A".to_vec()),
+            ("Takeout 2/Keep/B.json", note("B", "b.jpg").into_bytes()),
+            ("Takeout 2/Keep/b.jpg", b"foto B".to_vec()),
+        ] {
+            z.start_file(name, o).unwrap();
+            z.write_all(&data).unwrap();
+        }
+        let bytes = z.finish().unwrap().into_inner();
+        let mut t = Takeout::open(Cursor::new(bytes)).unwrap().unwrap();
+        let wanted: Vec<(String, String)> = t.notes.iter().map(|n| (n.path.clone(), n.attachments[0].file_path.clone())).collect();
+        assert_eq!(wanted.len(), 2);
+        for (path, file) in wanted {
+            assert!(t.media(&path, &file).is_some(), "{path} sem a mídia {file}");
+        }
+    }
+
+    #[test]
     fn plain_text_photos_and_missing_media() {
         let mut t = open();
-        assert!(t.media("foto1.jpg").is_some());
-        assert!(t.media("apagada.jpg").is_none(), "apagada do zip: a nota entra sem ela");
+        let viagem = note(&t, "Viagem").path.clone();
+        assert!(t.media(&viagem, "foto1.jpg").is_some());
+        assert!(t.media(&viagem, "apagada.jpg").is_none(), "apagada do zip: a nota entra sem ela");
         let n = note(&t, "Viagem");
         assert!(n.is_trashed);
         assert_eq!(color(&n.color), "sage");

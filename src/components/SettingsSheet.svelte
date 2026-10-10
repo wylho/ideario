@@ -1,9 +1,10 @@
 <script lang="ts">
-  import { Dialog, Slider, Switch, ToggleGroup } from 'bits-ui'
-  import { CloudAlert, CloudCheck, CloudOff, Monitor, Moon, StickyNote, Sun, X } from '@lucide/svelte'
+  import { Dialog, Switch, ToggleGroup } from 'bits-ui'
+  import { CloudAlert, CloudCheck, CloudOff, Monitor, Moon, Sun, X } from '@lucide/svelte'
+  import { untrack } from 'svelte'
   import { api, coreVersion } from '../lib/api'
   import { app } from '../lib/app.svelte'
-  import { ago } from '../lib/format'
+  import { ago, fmtBytes } from '../lib/format'
   import { paletteColors, theme, type ThemePref } from '../lib/theme.svelte'
   import { background } from '../lib/background.svelte'
   import { pickKeepTakeout } from '../lib/keep.svelte'
@@ -18,13 +19,23 @@
   coreVersion().then((v) => (version = v))
 
   const loadStatus = () => api.syncStatus().then((s) => (status = s))
+  // As configurações são lidas uma vez, ao abrir (reler a cada mudança no núcleo poderia trazer de volta um valor
+  // antigo por cima do que acabou de ser escolhido).
+  let fresh = false
   $effect(() => {
     if (!app.settingsOpen) return
-    api.getSettings().then((s) => (settings = s))
-    // Acompanha o sync enquanto as configurações estão abertas (última vez, pendências, erro).
+    untrack(() =>
+      api.getSettings().then((s) => {
+        fresh = true
+        settings = s
+      }),
+    )
+  })
+  // O estado do sync acompanha enquanto estão abertas (última vez, pendências, erro).
+  $effect(() => {
     void app.sync
     void app.revision
-    void loadStatus()
+    if (app.settingsOpen) void loadStatus()
   })
 
   // ---------- Google Drive ----------
@@ -63,12 +74,15 @@
     return `${s.lastSyncAt ? `Sincronizado ${ago(s.lastSyncAt)}` : 'Ainda não sincronizou'} · ${s.noteCount} notas${pending}`
   }
 
-  // Grava a cada mudança (não há botão "salvar").
-  let runs = 0
+  // Grava a cada mudança (não há botão "salvar"); o que acabou de ser lido não é mudança.
   $effect(() => {
     if (!settings) return
     const snap = $state.snapshot(settings)
-    if (runs++ > 0) void api.saveSettings(snap)
+    if (fresh) {
+      fresh = false
+      return
+    }
+    void api.saveSettings(snap)
   })
 
   // Segundo plano: o mesmo recurso, com o nome que cada sistema usa para o lugar do ícone.
@@ -96,7 +110,6 @@
   const systemName = $derived(`Cores do ${DESKTOPS[theme.system.desktop ?? 'gnome'].label}`)
 
   const usedBytes = $derived(status?.cacheUsedBytes ?? 0)
-  const gb = (n: number) => n.toString().replace('.', ',')
 </script>
 
 <Dialog.Root bind:open={app.settingsOpen}>
@@ -245,26 +258,13 @@
           </section>
 
           <section class="set-group">
-            <h3>Cache neste aparelho</h3>
+            <h3>Neste aparelho</h3>
             <div class="cache">
-              <div class="cache-bar"><i style:width="{Math.min(100, (usedBytes / 1024 ** 3 / settings.cacheLimitGb) * 100)}%"></i></div>
-              <p><b>{Math.round(usedBytes / 1024 ** 2)} MB</b> usados de {gb(settings.cacheLimitGb)} GB</p>
-              <Slider.Root type="single" class="slider" min={0.5} max={5} step={0.5} bind:value={settings.cacheLimitGb} aria-label="Limite do cache">
-                <span class="track"><Slider.Range class="range" /></span>
-                <Slider.Thumb index={0} class="s-thumb" aria-label="Limite do cache" />
-              </Slider.Root>
-              <small>Texto e miniaturas ficam sempre aqui. Anexos pouco usados saem primeiro quando o limite enche.</small>
+              <p><b>{fmtBytes(usedBytes)}</b> em fotos e anexos</p>
+              <small>Texto e miniaturas ficam sempre aqui. Fotos e anexos grandes que vêm de outros aparelhos descem quando você abre.</small>
             </div>
           </section>
-
-          <section class="set-group">
-            <h3>Importar</h3>
-            <button class="import" onclick={() => app.say('Escolha o .zip do Google Takeout')}>
-              <span class="import-ico"><StickyNote size={20} /></span>
-              <span><b>Trazer notas do Google Keep</b><small>Marcadores viram categorias. Fotos são otimizadas no caminho.</small></span>
-            </button>
-          </section>
-          <p class="footnote">Fase 0 · dados de exemplo{version ? ` · núcleo v${version}` : ''}</p>
+          <p class="footnote">{isTauri() ? `Ideario${version ? ` v${version}` : ''}` : 'Prévia no navegador · dados de exemplo'}</p>
         </div>
       {/if}
     </Dialog.Content>
