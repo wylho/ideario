@@ -16,10 +16,18 @@
 
   // A seleção continua depois de cada ação, para encadear várias (fixar, depois mudar a cor…).
   // Só termina no ×, no Esc, num clique no vazio, ou quando as notas saem da tela (arquivar, lixeira).
-  const done = (fn: () => void) => fn()
   async function deleteForever() {
-    const n = notes.length
-    for (const x of notes) await api.deleteNote(x.id)
+    let n = 0
+    try {
+      for (const x of notes) {
+        await api.deleteNote(x.id)
+        n++
+      }
+    } catch {
+      app.say(n ? `${n} de ${notes.length} notas excluídas; as outras não puderam ser excluídas` : 'Não foi possível excluir as notas')
+      app.clearSelection()
+      return
+    }
     app.clearSelection()
     app.say(n === 1 ? 'Nota excluída' : `${n} notas excluídas`)
   }
@@ -35,14 +43,14 @@
     <button class="icon-btn" aria-label="Selecionar tudo" title="Selecionar tudo (Ctrl+A)" onclick={() => app.selectAll()}><CheckCheck size={19} /></button>
   {/if}
   {#if inTrash}
-    <button class="icon-btn" aria-label="Restaurar" title="Restaurar" onclick={() => done(() => changeMany(notes, { trashedAt: null }, manyMsg(notes.length, 'restaurada', 'restauradas')))}><ArchiveRestore size={19} /></button>
+    <button class="icon-btn" aria-label="Restaurar" title="Restaurar" onclick={() => changeMany(notes, { trashedAt: null }, manyMsg(notes.length, 'restaurada', 'restauradas'))}><ArchiveRestore size={19} /></button>
     <button class="icon-btn" aria-label="Excluir para sempre" title="Excluir para sempre" onclick={() => (confirmDelete = true)}><Trash2 size={19} /></button>
   {:else}
     <button
       class="icon-btn"
       aria-label={allPinned ? 'Desafixar' : 'Fixar'}
       title={allPinned ? 'Desafixar' : 'Fixar'}
-      onclick={() => done(() => changeMany(notes, { pinned: !allPinned }, manyMsg(notes.length, allPinned ? 'desafixada' : 'fixada', allPinned ? 'desafixadas' : 'fixadas')))}
+      onclick={() => changeMany(notes, { pinned: !allPinned }, manyMsg(notes.length, allPinned ? 'desafixada' : 'fixada', allPinned ? 'desafixadas' : 'fixadas'))}
     >
       {#if allPinned}<PinOff size={19} />{:else}<Pin size={19} />{/if}
     </button>
@@ -52,7 +60,7 @@
         <DropdownMenu.Content class="menu" align="end" sideOffset={6}>
           <div class="menu-heading" aria-hidden="true">Cor</div>
           {#each NOTE_COLORS as c (c.id)}
-            <DropdownMenu.Item class="menu-item" onSelect={() => done(() => changeMany(notes, { color: c.id }, `Cor: ${c.label}`))}>
+            <DropdownMenu.Item class="menu-item" onSelect={() => changeMany(notes, { color: c.id }, `Cor: ${c.label}`)}>
               <i class="swatch-dot" style:background={c.css}></i>{c.label}
             </DropdownMenu.Item>
           {/each}
@@ -64,26 +72,26 @@
       <DropdownMenu.Portal>
         <DropdownMenu.Content class="menu" align="end" sideOffset={6}>
           <div class="menu-heading" aria-hidden="true">Mover para</div>
-          <DropdownMenu.Item class="menu-item" onSelect={() => done(() => changeMany(notes, { categoryId: null }, 'Sem categoria'))}>Sem categoria</DropdownMenu.Item>
+          <DropdownMenu.Item class="menu-item" onSelect={() => changeMany(notes, { categoryId: null }, 'Sem categoria')}>Sem categoria</DropdownMenu.Item>
           {#each app.categories as c (c.id)}
-            <DropdownMenu.Item class="menu-item" onSelect={() => done(() => changeMany(notes, { categoryId: c.id }, `Movidas para ${c.name}`))}>
+            <DropdownMenu.Item class="menu-item" onSelect={() => changeMany(notes, { categoryId: c.id }, `Movidas para ${c.name}`)}>
               <i class="dot" style:background={c.color}></i>{c.name}
               {#if notes.every((n) => n.categoryId === c.id)}<span class="menu-check"><Check size={15} /></span>{/if}
             </DropdownMenu.Item>
           {/each}
           <DropdownMenu.Separator class="menu-sep" />
-          <DropdownMenu.Item class="menu-item" onSelect={() => newCategory((id, name) => done(() => changeMany(notes, { categoryId: id }, `Movidas para ${name}`)))}>
+          <DropdownMenu.Item class="menu-item" onSelect={() => newCategory((id, name) => changeMany(notes, { categoryId: id }, `Movidas para ${name}`))}>
             <Plus size={16} />Nova categoria…
           </DropdownMenu.Item>
         </DropdownMenu.Content>
       </DropdownMenu.Portal>
     </DropdownMenu.Root>
     {#if inArchive}
-      <button class="icon-btn" aria-label="Desarquivar" title="Desarquivar" onclick={() => done(() => changeMany(notes, { archived: false }, manyMsg(notes.length, 'desarquivada', 'desarquivadas')))}><ArchiveRestore size={19} /></button>
+      <button class="icon-btn" aria-label="Desarquivar" title="Desarquivar" onclick={() => changeMany(notes, { archived: false }, manyMsg(notes.length, 'desarquivada', 'desarquivadas'))}><ArchiveRestore size={19} /></button>
     {:else}
-      <button class="icon-btn" aria-label="Arquivar" title="Arquivar" onclick={() => done(() => changeMany(notes, { archived: true }, manyMsg(notes.length, 'arquivada', 'arquivadas')))}><Archive size={19} /></button>
+      <button class="icon-btn" aria-label="Arquivar" title="Arquivar" onclick={() => changeMany(notes, { archived: true }, manyMsg(notes.length, 'arquivada', 'arquivadas'))}><Archive size={19} /></button>
     {/if}
-    <button class="icon-btn" aria-label="Mover para a lixeira" title="Mover para a lixeira" onclick={() => done(() => changeMany(notes, { trashedAt: Date.now() }, notes.length === 1 ? 'Nota movida para a lixeira' : `${notes.length} notas movidas para a lixeira`))}><Trash2 size={19} /></button>
+    <button class="icon-btn" aria-label="Mover para a lixeira" title="Mover para a lixeira" onclick={() => changeMany(notes, { trashedAt: Date.now() }, notes.length === 1 ? 'Nota movida para a lixeira' : `${notes.length} notas movidas para a lixeira`)}><Trash2 size={19} /></button>
   {/if}
 </div>
 

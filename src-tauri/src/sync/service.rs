@@ -185,6 +185,9 @@ fn run_once(app: &AppHandle, visible: bool) -> SResult<Report> {
             if report.changed_here() {
                 let _ = app.emit("core-changed", ());
                 let _ = app.emit("notes-synced", &report.notes);
+                if !report.removed_notes.is_empty() {
+                    let _ = app.emit("notes-removed", &report.removed_notes);
+                }
             }
         }
         Err(SyncError::Offline(_)) => sync.set_phase(app, "offline", None),

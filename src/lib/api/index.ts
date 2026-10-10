@@ -93,6 +93,8 @@ export interface Api {
   subscribeSync(fn: (s: SyncState) => void): () => void
   /** Notas que mudaram por causa de outro aparelho (o editor aberto numa delas junta na hora). */
   subscribeRemote(fn: (ids: string[]) => void): () => void
+  /** Notas excluídas de vez em outro aparelho (o editor aberto numa delas avisa). */
+  subscribeRemoved(fn: (ids: string[]) => void): () => void
 }
 
 export const api: Api = isTauri() ? tauriApi : mockApi

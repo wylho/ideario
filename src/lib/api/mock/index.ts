@@ -704,4 +704,5 @@ export const mockApi: Api = {
   },
   // Na prévia não há outro aparelho.
   subscribeRemote: () => () => {},
+  subscribeRemoved: () => () => {},
 }

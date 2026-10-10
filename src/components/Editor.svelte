@@ -89,6 +89,25 @@
     })
   }
 
+  // Outro aparelho excluiu esta nota de vez. Com algo escrito aqui ainda não salvo, a nota volta inteira (o que se
+  // escreve não se perde); sem nada novo, fecha avisando.
+  $effect(() =>
+    api.subscribeRemoved((ids) => {
+      if (closed || !ids.includes(id)) return
+      if (pending.length) {
+        persisted = false
+        app.say('Esta nota foi excluída em outro aparelho; o que você escreveu aqui a manteve.')
+        schedule()
+      } else {
+        closed = true
+        clearTimeout(timer)
+        recorder.cancel()
+        app.editor = null
+        app.say('Esta nota foi excluída em outro aparelho.')
+      }
+    }),
+  )
+
   // Outro aparelho mudou esta nota (sync): junta na hora, sem fechar nem perder o que se está escrevendo aqui.
   $effect(() =>
     api.subscribeRemote((ids) => {
@@ -117,7 +136,7 @@
     if (v === NEW_CATEGORY) newCategory((id) => meta && (meta.categoryId = id))
     else meta.categoryId = v === 'none' ? null : v
   }
-  const extraTags = $derived(bodyTags.filter((t) => !meta?.tags.includes(t)))
+  const extraTags = $derived([...new Set(bodyTags)].filter((t) => !meta?.tags.includes(t)))
   const active = $derived.by(() => {
     void tick
     // Só destaca a formatação enquanto se escreve.
@@ -132,16 +151,28 @@
   // ---------- salvamento contínuo ----------
   const isEmpty = () => !meta?.title.trim() && !!editor?.isEmpty
 
-  function save() {
+  /** Envia o que mudou. Se o núcleo recusar, nada se perde: volta para a fila e tenta de novo. Devolve se salvou. */
+  async function save(): Promise<boolean> {
     clearTimeout(timer)
     timer = undefined
-    if (!editor || !meta) return
-    if (!persisted && isEmpty()) return // nota nova vazia não é criada
+    if (!editor || !meta) return true
+    if (!persisted && isEmpty()) return true // nota nova vazia não é criada
     // Nota nova: vai o estado inteiro; depois, só o que mudou desde o último envio.
+    const wasPersisted = persisted
+    const sent = pending
     const update = persisted ? (pending.length ? Y.mergeUpdates(pending) : null) : Y.encodeStateAsUpdate(doc)
     pending = []
     persisted = true
-    if (update) return api.applyNoteUpdate(id, update)
+    if (!update) return true
+    try {
+      await api.applyNoteUpdate(id, update)
+      return true
+    } catch {
+      pending = [...sent, ...pending]
+      persisted = wasPersisted
+      if (!closed) timer = setTimeout(save, 2000)
+      return false
+    }
   }
   const schedule = () => {
     // Fechada, a nota já foi salva: um salvamento atrasado desfaria o "Desfazer" do aviso (ex.: arquivaria de novo).
@@ -160,6 +191,10 @@
   async function close(patch?: Partial<Meta>, msg?: string) {
     if (closed) return
     closed = true
+    // Gravando: a gravação entra na nota (fechar não joga o áudio fora nem deixa o microfone ligado).
+    if (recorder.recording) await stopRecording()
+    // Arquivos ainda entrando (fotos grandes levam um instante): esperam para entrar na nota antes de salvar.
+    await Promise.allSettled([...imports])
     // O que muda ao sair (arquivar, lixeira, restaurar) pode ser desfeito pelo aviso.
     const before = meta && patch ? (Object.fromEntries(Object.keys(patch).map((k) => [k, meta![k as keyof Meta]])) as Partial<Meta>) : null
     if (meta && patch) Object.assign(meta, patch)
@@ -167,20 +202,31 @@
     if (isNew && isEmpty()) {
       clearTimeout(timer)
       if (persisted) await api.deleteNote(id)
-    } else {
-      await save()
+    } else if (!(await save())) {
+      // Não salvou: a nota continua aberta, com tudo o que foi escrito.
+      closed = false
+      app.say('Não foi possível salvar a nota. Ela continua aberta; tente de novo.')
+      return
     }
     api.settle()
     app.editor = null
     if (msg) app.say(msg, before ? { label: 'Desfazer', run: () => void api.updateNote(id, before) } : undefined)
   }
 
-  async function deleteForever() {
-    closed = true
-    clearTimeout(timer)
-    await api.deleteNote(id)
-    app.editor = null
-    app.say('Nota excluída')
+  function deleteForever() {
+    app.confirm({
+      title: 'Excluir para sempre?',
+      text: 'A nota sai deste aparelho e do Drive. Não dá para desfazer.',
+      confirm: 'Excluir',
+      onconfirm: async () => {
+        closed = true
+        clearTimeout(timer)
+        recorder.cancel()
+        await api.deleteNote(id)
+        app.editor = null
+        app.say('Nota excluída')
+      },
+    })
   }
 
   // ---------- TipTap ----------
@@ -234,7 +280,14 @@
         void addFiles(files, pos ?? ed.state.doc.content.size)
       }
       app.dropIntoEditor = drop
+      // Arquivo solto enquanto a nota ainda abria: entra agora.
+      const early = app.pendingDrop
+      if (early) {
+        app.pendingDrop = null
+        drop(early.files, early.at)
+      }
       return () => {
+        if (recorder.recording) recorder.cancel()
         if (app.dropIntoEditor === drop) app.dropIntoEditor = null
         if (!closed) save()
         clearTimeout(timer)
@@ -368,21 +421,36 @@
     blockMenu?.openAt(x, y, nodeEntries(pos, clicked))
   }
 
+  /** Importações em andamento: fechar a nota espera por elas. */
+  const imports = new Set<Promise<unknown>>()
+
   /** Importa arquivos (do computador, arrastados, colados, da câmera ou do gravador) e põe no texto. */
-  async function addFiles(list: (DroppedFile | { blob: Blob; name: string })[], pos?: number) {
+  function addFiles(list: (DroppedFile | { blob: Blob; name: string })[], pos?: number) {
+    const job = importFiles(list, pos)
+    imports.add(job)
+    return job.finally(() => imports.delete(job))
+  }
+
+  async function importFiles(list: (DroppedFile | { blob: Blob; name: string })[], pos?: number) {
     if (!editor || !list.length) return
-    const added: Attachment[] = []
-    for (const f of list) {
-      let a: Attachment
-      try {
-        a = f instanceof File ? await api.importFile(f, f.name) : 'path' in f ? await api.importPath(f.path) : await api.importFile(f.blob, f.name)
-      } catch (e) {
-        app.say(`Não foi possível anexar: ${e}`)
-        continue
+    // Até 3 de uma vez (cada foto passa pelo pipeline no núcleo), na ordem em que vieram.
+    const results: (Attachment | null)[] = new Array(list.length).fill(null)
+    let next = 0
+    const worker = async () => {
+      while (next < list.length) {
+        const i = next++
+        const f = list[i]
+        try {
+          results[i] = f instanceof File ? await api.importFile(f, f.name) : 'path' in f ? await api.importPath(f.path) : await api.importFile(f.blob, f.name)
+        } catch (e) {
+          app.say(`Não foi possível anexar: ${e}`)
+        }
       }
-      media.set(a.hash, a)
-      added.push(a)
     }
+    await Promise.all(Array.from({ length: Math.min(3, list.length) }, worker))
+    if (!editor || editor.isDestroyed) return
+    const added = results.filter((a): a is Attachment => !!a)
+    for (const a of added) media.set(a.hash, a)
     if (!added.length) return
     // PDF e vídeo ganham prévia (primeira página, um quadro) em segundo plano.
     if (added.some((a) => a.kind === 'pdf' || a.kind === 'video')) makePreviews()
@@ -424,8 +492,8 @@
     const r = dom.getBoundingClientRect()
     if (!box) return null
     const half = 110
-    const left = Math.min(Math.max(r.left + r.width / 2 - box.left, half + 8), box.width - half - 8)
-    return { pos: sel.from, ...acts, top: Math.max(r.top - box.top, 56), left }
+    const x = Math.min(Math.max(r.left + r.width / 2 - box.left, half + 8), box.width - half - 8)
+    return { pos: sel.from, ...acts, top: Math.max(r.top - box.top, 56), x }
   })
   function apply(tr: ReturnType<typeof placeBeside>) {
     if (tr && editor) editor.view.dispatch(tr)
@@ -608,7 +676,7 @@
         </div>
 
         {#if selectedImage}
-          <div class="img-tools" role="toolbar" aria-label="Foto" style:top="{selectedImage.top}px" style:left="{selectedImage.left}px">
+          <div class="img-tools" role="toolbar" aria-label="Foto" style:top="{selectedImage.top}px" style:left="{selectedImage.x}px">
             {#if selectedImage.joinTarget != null}
               <button onmousedown={(e) => e.preventDefault()} onclick={() => editor && apply(placeBeside(editor.state, selectedImage.pos, selectedImage.joinTarget!, 'right'))} aria-label="Pôr ao lado da foto de cima" title="Pôr ao lado da foto de cima"><Columns2 size={17} /></button>
             {/if}

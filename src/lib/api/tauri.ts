@@ -5,10 +5,16 @@ import type { SyncState } from '../types'
 
 const listeners = new Set<() => void>()
 let soon: ReturnType<typeof setTimeout> | undefined
+let frame = 0
+/** Avisa a interface que os dados mudaram. Várias escritas seguidas (arquivar 200 notas de uma vez) viram um aviso
+ *  só por quadro, não 200 recargas da lista. */
 const changed = () => {
   clearTimeout(soon)
   soon = undefined
-  listeners.forEach((fn) => fn())
+  frame ||= requestAnimationFrame(() => {
+    frame = 0
+    listeners.forEach((fn) => fn())
+  })
 }
 /** Escrita contínua no editor: a lista por trás só recarrega quando a escrita para (recarregar milhares de cards a
  *  cada pausa da digitação engasga). Fechar a nota (`settle`) atualiza na hora. */
@@ -109,4 +115,5 @@ export const tauriApi: Api = {
   },
   subscribeSync: (fn) => onEvent<{ state: SyncState }>('sync-state', (p) => fn(p.state)),
   subscribeRemote: (fn) => onEvent<string[]>('notes-synced', fn),
+  subscribeRemoved: (fn) => onEvent<string[]>('notes-removed', fn),
 }

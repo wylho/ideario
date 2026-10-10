@@ -9,6 +9,7 @@ import { fmtReminder, normalizeTag } from './format'
 import { CATEGORY_COLORS, COLOR_NAMES, nextCategoryColor } from './colors'
 import { SEP, type MenuEntry } from './menu'
 import { quickTimes, snoozeTimes } from './reminders'
+import { reminderSet } from './notify.svelte'
 import type { AttachmentRow, NoteColor, NotePatch, NoteSummary } from './types'
 
 export const NOTE_COLORS: { id: NoteColor; label: string; css: string }[] = [
@@ -73,7 +74,13 @@ export function noteMenu(n: NoteSummary): MenuEntry[] {
       SEP,
       {
         label: 'Excluir para sempre', icon: Trash2, danger: true,
-        onSelect: () => { void api.deleteNote(n.id); app.say('Nota excluída') },
+        onSelect: () =>
+          app.confirm({
+            title: 'Excluir para sempre?',
+            text: 'A nota sai deste aparelho e do Drive. Não dá para desfazer.',
+            confirm: 'Excluir',
+            onconfirm: () => void api.deleteNote(n.id).then(() => app.say('Nota excluída')),
+          }),
       },
     ]
   }
@@ -83,7 +90,11 @@ export function noteMenu(n: NoteSummary): MenuEntry[] {
     { label: n.pinned ? 'Desafixar' : 'Fixar', icon: n.pinned ? PinOff : Pin, onSelect: () => change(n, { pinned: !n.pinned }) },
     {
       label: n.reminderAt != null ? 'Lembrete' : 'Lembrar', icon: Bell,
-      sub: reminderEntries(n, (v) => change(n, { reminderAt: v, reminderDone: false }, v == null ? 'Lembrete removido' : `Lembrete: ${fmtReminder(v)}`)),
+      sub: reminderEntries(n, (v) => {
+        // Sem lembrete não há repetição (senão um lembrete marcado depois voltaria a se repetir sozinho).
+        change(n, v == null ? { reminderAt: null, reminderDone: false, reminderRepeat: null } : { reminderAt: v, reminderDone: false }, v == null ? 'Lembrete removido' : `Lembrete: ${fmtReminder(v)}`)
+        if (v != null) void reminderSet()
+      }),
     },
     {
       label: 'Cor', icon: Palette,
@@ -133,7 +144,7 @@ export function reminderMenu(n: NoteSummary): MenuEntry[] {
       })),
     },
     SEP,
-    { label: 'Remover lembrete', icon: BellOff, danger: true, onSelect: () => change(n, { reminderAt: null, reminderDone: false }, 'Lembrete removido') },
+    { label: 'Remover lembrete', icon: BellOff, danger: true, onSelect: () => change(n, { reminderAt: null, reminderDone: false, reminderRepeat: null }, 'Lembrete removido') },
   ]
 }
 

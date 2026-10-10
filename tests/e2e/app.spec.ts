@@ -1007,6 +1007,84 @@ test.describe('gravador de voz', () => {
     await expect(page.locator('#corpo .nf-card .player')).toHaveCount(1)
     await expect(page.locator('#corpo .nf-card')).toContainText('Gravação')
   })
+
+  test('fechar a nota no meio da gravação guarda o áudio e desliga o microfone', async ({ page }) => {
+    // conta as faixas de microfone abertas pelo app
+    await page.evaluate(() => {
+      const w = window as unknown as { __tracks: MediaStreamTrack[] }
+      w.__tracks = []
+      const orig = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices)
+      navigator.mediaDevices.getUserMedia = async (c) => {
+        const s = await orig(c)
+        w.__tracks.push(...s.getTracks())
+        return s
+      }
+    })
+    await newNote(page)
+    await page.keyboard.type('Reunião gravada')
+    await page.getByRole('button', { name: 'Inserir' }).click()
+    await page.getByRole('menuitem', { name: 'Gravar áudio' }).click()
+    await expect(page.locator('.rec-time')).toContainText('Gravando')
+    await page.waitForTimeout(1000)
+    await back(page)
+    await expect(page.locator('.editor')).toHaveCount(0)
+    const card = cards(page).filter({ hasText: 'Reunião gravada' })
+    await expect(card).toContainText('Gravação')
+    // nenhuma faixa de microfone continua viva
+    const tracks = await page.evaluate(() => (window as unknown as { __tracks: MediaStreamTrack[] }).__tracks.map((t) => t.readyState))
+    expect(tracks.length).toBeGreaterThan(0)
+    expect(tracks.every((t) => t === 'ended')).toBe(true)
+  })
+})
+
+test('a mesma #tag duas vezes no texto não quebra o editor e aparece uma vez', async ({ page }) => {
+  const errors: string[] = []
+  page.on('pageerror', (e) => errors.push(String(e)))
+  await newNote(page)
+  await page.keyboard.type('#ideia primeiro, depois #Ideia de novo e #ideia')
+  await expect(page.locator('.ed-tags .pill.tag', { hasText: /^#ideia$/ })).toHaveCount(1)
+  await page.keyboard.type(' mais texto')
+  await expect(page.locator('#corpo')).toContainText('mais texto')
+  expect(errors).toEqual([])
+})
+
+test('excluir para sempre pelo clique direito pede confirmação', async ({ page }) => {
+  const note = () => cards(page).filter({ hasText: 'Horários e estacionamento' })
+  await note().click({ button: 'right' })
+  await page.getByRole('menuitem', { name: 'Mover para a lixeira' }).click()
+  await drawerItem(page, 'Lixeira')
+  await note().click({ button: 'right' })
+  await page.getByRole('menuitem', { name: 'Excluir para sempre' }).click()
+  const dialog = page.getByRole('alertdialog')
+  await expect(dialog).toContainText('Excluir para sempre?')
+  await dialog.getByRole('button', { name: 'Cancelar' }).click()
+  await expect(note()).toHaveCount(1)
+  await note().click({ button: 'right' })
+  await page.getByRole('menuitem', { name: 'Excluir para sempre' }).click()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Excluir' }).click()
+  await expect(note()).toHaveCount(0)
+})
+
+test('remover o lembrete pelo menu do card também tira a repetição', async ({ page }) => {
+  const note = () => cards(page).filter({ hasText: 'Referências tipográficas' })
+  await note().click()
+  await page.getByLabel('Lembrete', { exact: true }).click()
+  await page.locator('.quick button', { hasText: 'Amanhã de manhã' }).click()
+  await page.getByLabel(/^Alterar lembrete/).click()
+  await page.locator('#lembrete-repetir').click()
+  await page.getByRole('option', { name: 'Toda semana' }).click()
+  await page.keyboard.press('Escape')
+  await back(page)
+  await expect(note().locator('[aria-label="se repete"]')).toBeVisible()
+  // tira pelo menu do card e marca outro: o novo não se repete
+  await note().click({ button: 'right' })
+  await page.getByRole('menuitem', { name: 'Lembrete', exact: true }).click()
+  await page.getByRole('menuitem', { name: 'Remover lembrete' }).click()
+  await note().click({ button: 'right' })
+  await page.getByRole('menuitem', { name: 'Lembrar', exact: true }).click()
+  await page.getByRole('menuitem', { name: /^Amanhã de manhã/ }).click()
+  await expect(note().locator('.pill', { hasText: /Amanhã/ })).toBeVisible()
+  await expect(note().locator('[aria-label="se repete"]')).toHaveCount(0)
 })
 
 test('"+" em leque: atalhos que já abrem a nota fazendo a coisa', async ({ page }) => {

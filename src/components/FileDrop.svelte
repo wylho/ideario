@@ -18,7 +18,8 @@
 
   function deliver(files: DroppedFile[], at?: { x: number; y: number }) {
     if (!files.length || blocked()) return
-    if (app.editor) app.dropIntoEditor?.(files, at)
+    if (app.editor && app.dropIntoEditor) app.dropIntoEditor(files, at)
+    else if (app.editor) app.pendingDrop = { files, at }
     else app.openNew(undefined, { files })
   }
 

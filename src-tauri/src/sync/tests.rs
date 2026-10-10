@@ -189,6 +189,7 @@ fn trash_and_permanent_delete_reach_the_other_device() {
     assert_eq!(drive.files().len(), 1, "o arquivo da excluída de vez sai do Drive");
     let r = b.sync(&drive).unwrap();
     assert_eq!(r.removed, 1);
+    assert_eq!(r.removed_notes, vec!["n2".to_string()], "o editor aberto nela fica sabendo");
     assert_eq!(b.note("n1").unwrap().trashed_at, Some(1_700_000_000_000));
     assert!(b.note("n2").is_none());
     assert_same(&a, &b);
