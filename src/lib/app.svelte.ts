@@ -135,7 +135,12 @@ class AppState {
     void this.loadShared()
     api.subscribeSync((s) => (this.sync = navigator.onLine ? s : 'offline'))
     addEventListener('offline', () => (this.sync = 'offline'))
-    addEventListener('online', () => (this.sync = 'ok'))
+    addEventListener('online', () => {
+      this.sync = 'ok'
+      api.syncNow()
+    })
+    // Voltou à janela: o que mudou em outros aparelhos chega logo.
+    addEventListener('focus', () => api.syncFocus())
     // As contagens acompanham filtro, busca e dados.
     $effect.root(() => {
       $effect(() => {

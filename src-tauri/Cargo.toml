@@ -33,12 +33,21 @@ tauri-plugin-dialog = "2.8"
 notify-rust = "4.18"
 # Hora local dos lembretes (repetir todo mês/ano no mesmo horário, com horário de verão).
 chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
+# Sync com o Google Drive (Fase 5): HTTP da API, navegador para o login, PKCE.
+ureq = { version = "2", features = ["json"] }
+tauri-plugin-opener = "2"
+base64 = "0.22"
+rand = "0.8"
 
 [profile.release]
 codegen-units = 1
 lto = true
 panic = "abort"
 strip = true
+
+# Chave do login Google (refresh token) no chaveiro do sistema (Mac e Windows; no Linux, arquivo só do usuário).
+[target.'cfg(any(target_os = "macos", windows))'.dependencies]
+keyring = { version = "3", features = ["apple-native", "windows-native"] }
 
 # Linux: lê a fonte e o destaque da área de trabalho (GNOME, KDE…) para a UI parecer nativa.
 [target.'cfg(target_os = "linux")'.dependencies]

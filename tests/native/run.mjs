@@ -360,6 +360,16 @@ try {
     await s.waitFor(`const c = [...document.querySelectorAll('.card')].find((c) => c.getAttribute('aria-label') === 'Lista do Keep'); return c && c.querySelector('.pv-task.done') && c.textContent.includes('Hospital')`, 'card importado com checklist e categoria')
   })
 
+  await test('Fase 5: sem a chave do Google, o sync fica de fora e diz o porquê', async () => {
+    const st = await s.execAsync(`window.__TAURI_INTERNALS__.invoke('sync_status').then((v) => arguments[0](v), (e) => arguments[0]('erro ' + e))`)
+    if (typeof st !== 'object' || st.configured !== false || st.connected !== false || !(st.pending > 0)) throw new Error(JSON.stringify(st))
+    const err = await s.execAsync(`window.__TAURI_INTERNALS__.invoke('sync_sign_in').then(() => arguments[0]('entrou?'), (e) => arguments[0](String(e)))`)
+    if (!err.includes('não está configurado')) throw new Error(err)
+    await s.exec(`[...document.querySelectorAll('.sidebar button')].find((b) => b.textContent.includes('Configurações'))?.click(); return true`)
+    await s.waitFor(`return document.querySelector('.sync-card')?.textContent.includes('não tem a sincronização')`, 'aviso nas Configurações')
+    await s.exec(`document.querySelector('.sheet [aria-label="Fechar"]').click(); return true`)
+  })
+
   await test('Fase 4: lembrete vence e avisa sozinho (atrasado também); Adiar reagenda', async () => {
     const note = (id, title, at) => ({ id, title, body: { type: 'doc', content: [{ type: 'paragraph' }] }, categoryId: null, color: 'none', pinned: false, archived: false, trashedAt: null, reminderAt: at, reminderDone: false, reminderRepeat: null, tags: [] })
     const now = Date.now()

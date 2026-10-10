@@ -91,6 +91,10 @@ jobs:
           workspaces: src-tauri
       - run: npm ci
       - run: npx tauri build ${{ matrix.args }}
+        env:
+          # Cliente OAuth do Google (sync com o Drive). Sem os segredos no repositório, o app sai sem o sync.
+          IDEARIO_GOOGLE_CLIENT_ID: ${{ secrets.IDEARIO_GOOGLE_CLIENT_ID }}
+          IDEARIO_GOOGLE_CLIENT_SECRET: ${{ secrets.IDEARIO_GOOGLE_CLIENT_SECRET }}
       - uses: actions/upload-artifact@v4
         with:
           name: Ideario-${{ matrix.name }}

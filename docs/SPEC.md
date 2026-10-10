@@ -212,7 +212,7 @@ Imagens no corpo referenciam o anexo por hash (`<img data-hash="…">`). O front
 
 ## 6. Sincronização com o Google Drive
 
-- **Escopo**: `drive.appdata`, a pasta oculta do app. Evita a auditoria pesada de escopos restritos. *(Alternativa em aberto: pasta visível com Markdown, ver D3.)*
+- **Escopo**: `drive.appdata`, a pasta oculta do app. Evita a auditoria pesada de escopos restritos. *(D3 decidido: pasta oculta.)*
 - **Layout no Drive**:
   ```
   appDataFolder/
@@ -231,6 +231,31 @@ Imagens no corpo referenciam o anexo por hash (`<img data-hash="…">`). O front
 - **Frequência**: ao abrir, ao voltar ao primeiro plano, alguns segundos depois de uma edição (debounce) e por polling periódico. Não é tempo real, e não precisa ser.
 - **Exclusão**: a nota vai para a lixeira (`trashed_at` no meta e sincroniza). Após 30 dias, o arquivo é apagado no Drive. Anexos sem referência são coletados depois.
 - **OAuth**: no desktop, fluxo loopback com PKCE. No Android e no iOS, login Google nativo via plugin (provavelmente um plugin Tauri com código Kotlin/Swift). Guardar o refresh token no keystore do sistema.
+
+**Fase 5 (implementado, `src-tauri/src/sync/`):**
+- Arquivos soltos no `appDataFolder` (o Drive não precisa de pastas lá), reconhecidos pelo `appProperties`:
+  `note-<id>.ydoc` (`kind=note`, `noteId`, `created`, `updated`: as datas da nota viajam junto), `categories.ydoc`
+  (`kind=categories`, um Y.Doc com um `Y.Map` por categoria: nome, cor, ordem e "apagada" fazem merge campo a campo) e
+  `att-<hash>` (`kind=attachment`, `hash`; os metadados do anexo, inclusive paleta e tom, vão na `description`).
+- Cada nota guarda o arquivo e a `version` dele já juntada (`notes.drive_file_id`, `drive_rev`): o que este aparelho
+  mesmo enviou não desce de novo. Excluídas de vez vão para `pending_deletes` e saem do Drive no próximo ciclo.
+- Ciclo (`sync_once`): puxa (`changes.list`; na primeira vez, a marca e depois a lista inteira) → anexos, categorias e
+  notas são juntados (`merge_remote_note`, que mantém `dirty` se o local tiver algo que o Drive não tem, inclusive só
+  exclusões) → sobe anexos, notas `dirty`, categorias e exclusões. Não baixa a nota antes de sobrescrever: o passo de
+  puxar do mesmo ciclo já trouxe o que havia; se outro aparelho escrever entre os dois, quem perdeu algo continua
+  `dirty` depois de juntar e reenvia (teste `simultaneous_overwrite_converges_on_the_next_round`).
+- Casos de borda: dois arquivos para a mesma nota (fica o de menor id, nos dois aparelhos); nota excluída em outro
+  aparelho com edição local ainda não enviada volta (a edição não se perde); a mesma nota criada em dois aparelhos
+  (o mesmo Takeout importado nos dois) dá o mesmo Y.Doc (o autor da criação sai do conteúdo) e categorias do Keep têm
+  id derivado do nome; a nota de boas-vindas intocada sai quando o aparelho entra numa conta que já tem notas.
+- Anexos: fotos e arquivos até 8 MB descem no sync (fotos ganham a miniatura aqui); os maiores descem ao abrir
+  (`att://` busca no Drive). O hash é conferido. Envio multipart até 5 MB, "resumable" acima.
+- Login: loopback + PKCE (`auth.rs`), cliente "App para computador" vindo da compilação
+  (`IDEARIO_GOOGLE_CLIENT_ID`/`_SECRET`, passo a passo em `docs/GOOGLE_DRIVE.md`). Sem ele, o sync não aparece.
+- Linha de fundo (`service.rs`): olha a cada 4 s; sobe quando a escrita para (duas olhadas iguais), pergunta ao Drive a
+  cada minuto, ao voltar à janela e no "Sincronizar agora"; sem rede espera 30 s. Eventos `sync-state` (a nuvem),
+  `core-changed` e `notes-synced` (o editor aberto junta a mudança na hora).
+- Ainda não: cache com limite (LRU) dos anexos e "só no Wi-Fi" (fica para o Android).
 
 ---
 
@@ -327,7 +352,7 @@ Cada fase termina com o app rodando e algo verificável.
 
 - **D1 — Frontend: Svelte ou React?** A recomendação original foi Svelte. Porém o protótipo está em React + Radix, e manter React permite reaproveitar componentes e estilos quase diretamente. A diferença de desempenho na prática é imperceptível. *Decidir antes da Fase 0.*
 - **D2 — Ordem das plataformas.** Confirmar desktop → Android.
-- **D3 — Notas visíveis no Drive?** A opção `appDataFolder` (oculta) é a recomendada. A alternativa é uma pasta visível com Markdown legível sem o app, que exige o escopo `drive.file` e uma conversão Yjs↔Markdown. Uma opção intermediária é exportar Markdown sob demanda.
+- **D3 — Notas visíveis no Drive?** ✅ Decidido: **pasta oculta** (`appDataFolder`). A opção `appDataFolder` (oculta) é a recomendada. A alternativa é uma pasta visível com Markdown legível sem o app, que exige o escopo `drive.file` e uma conversão Yjs↔Markdown. Uma opção intermediária é exportar Markdown sob demanda.
 - **D4 — Nome definitivo do app.** ✅ Decidido: **Ideario** (sem acento).
 - **D5 — Ícones das categorias.** ✅ Decidido: **só cor**, sem ícone.
 

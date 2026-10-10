@@ -28,10 +28,10 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
 - **Tipografia:** fonte do sistema em toda a UI, para parecer nativo (substitui Bricolage/Figtree/JetBrains Mono do protótipo).
   No Linux o núcleo lê a fonte do GNOME/KDE (`src-tauri/src/system_fonts.rs`); nos demais, `system-ui`.
 - **D5:** categorias só com cor (sem ícone).
-- D3 continua em aberto (SPEC §11); decidir antes da Fase 5.
+- **D3:** notas na **pasta oculta do app** no Drive (`appDataFolder`, escopo `drive.appdata`). Sem pasta visível em Markdown.
 
 ## Estado atual
-- **Fases 0, 1, 2, 3 e 4 concluídas (e a importação do Keep).** No app, a UI fala com o núcleo Rust (`src/lib/api/tauri.ts` → `src-tauri/src/commands.rs`):
+- **Fases 0 a 5 concluídas (e a importação do Keep).** No app, a UI fala com o núcleo Rust (`src/lib/api/tauri.ts` → `src-tauri/src/commands.rs`):
   SQLite com FTS5 (`store.rs`: migrações por `user_version`; antes de migrar guarda `ideario.db.vN.bak`).
   **Cada nota é um Y.Doc** (`ydoc.rs` com yrs; `src/lib/ydoc.ts` no front): `meta` (Y.Map) + `body` (Y.XmlFragment no formato
   do y-prosemirror). A coluna `notes.ydoc` é a fonte da verdade; `body_json` e as demais colunas são projeção dela.
@@ -120,4 +120,15 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
   para o aviso dentro do app (`ReminderAlerts.svelte`, `notify.svelte.ts`) e `core-changed` para a UI recarregar.
   Com a janela fechada avisa se o segundo plano estiver ligado; ao marcar o primeiro lembrete o app sugere ligar
   (uma vez). Atalho global continua fora (decisão do usuário).
-- **Próximo passo: Fase 5 (Sync com o Google Drive). Antes: decidir D3 (pasta oculta do app ou pasta visível em Markdown).**
+- **Fase 5 (concluída no código): sync com o Google Drive** (`src-tauri/src/sync/`; detalhes em SPEC §6). Pasta oculta
+  (`appDataFolder`): um arquivo por nota (Y.Doc), `categories.ydoc` e anexos por hash, reconhecidos pelo
+  `appProperties`. `mod.rs` = motor (`sync_once`: puxar mudanças e juntar, depois subir anexos, notas `dirty`,
+  categorias e exclusões) sobre o trait `Remote`; `memory.rs` = Drive em memória dos testes (dois/três aparelhos,
+  falhas de rede, corridas, proptest de convergência); `drive.rs` = API v3 por HTTP (ureq; multipart/resumable,
+  renova o token no 401, espera no 429/5xx); `auth.rs` = login loopback + PKCE, token de renovação no chaveiro
+  (Mac/Windows) ou arquivo 0600 (Linux); `service.rs` = linha de fundo, comandos `sync_*` e eventos.
+  O cliente OAuth entra na compilação (`IDEARIO_GOOGLE_CLIENT_ID`/`_SECRET`, segredos do GitHub; passo a passo em
+  `docs/GOOGLE_DRIVE.md`); sem ele as Configurações dizem que o sync não está ligado nesta versão.
+  Falta validar com uma conta Google real (precisa do cliente OAuth do usuário). Ficam para depois: cache LRU dos
+  anexos e "só no Wi-Fi" (Android).
+- **Próximo passo: Fase 7 (Android).**

@@ -160,6 +160,15 @@ pub fn save(store: &Store, data: &Path, p: Prepared) -> Result<Attachment, Strin
     store.get_attachments(std::slice::from_ref(&p.att.hash))?.pop().ok_or_else(|| "anexo não gravado".into())
 }
 
+/// Conteúdo de um anexo que desceu do Drive.
+pub fn store_file(data: &Path, hash: &str, bytes: &[u8]) -> Result<(), String> {
+    write_once(&dir(data).join(hash), bytes)
+}
+
+pub fn store_thumb(data: &Path, hash: &str, thumb: &[u8]) -> Result<(), String> {
+    write_once(&thumb_path(data, hash), thumb)
+}
+
 /// Grava ao lado e renomeia: um arquivo pela metade nunca fica com o nome final.
 fn write_once(path: &Path, bytes: &[u8]) -> Result<(), String> {
     if path.exists() {

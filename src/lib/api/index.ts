@@ -53,6 +53,16 @@ export interface Api {
   getSettings(): Promise<Settings>
   saveSettings(s: Settings): Promise<void>
   syncStatus(): Promise<SyncStatus>
+  /** Entrar com o Google: abre o navegador e resolve quando o login volta (ou falha). */
+  syncSignIn(): Promise<SyncStatus>
+  /** Desiste do login em andamento. */
+  syncCancelSignIn(): Promise<void>
+  /** Sai da conta: as notas continuam neste aparelho. */
+  syncSignOut(): Promise<void>
+  /** Sincroniza agora (o resultado chega por `subscribeSync`). */
+  syncNow(): Promise<void>
+  /** A janela voltou ao primeiro plano: sincroniza se já faz um tempo. */
+  syncFocus(): void
 
   /** URL local de uma imagem (miniatura ou tamanho cheio). Nunca depende de rede. */
   imageUrl(hash: string, size?: 'thumb' | 'full'): string
@@ -75,10 +85,12 @@ export interface Api {
   /** Salva uma cópia do anexo (no app: na pasta Downloads, e devolve o caminho; no navegador: download, e devolve null). */
   downloadAttachment(a: Pick<AttachmentRow, 'hash' | 'name' | 'mime'>): Promise<string | null>
 
-  /** Avisa quando os dados mudam (edição local ou, no futuro, sync). Devolve a função de cancelamento. */
+  /** Avisa quando os dados mudam (edição local ou sync). Devolve a função de cancelamento. */
   subscribe(fn: () => void): () => void
   /** Avisa mudanças no estado da sincronização (sincronizando, sem conexão, erro, ok). */
   subscribeSync(fn: (s: SyncState) => void): () => void
+  /** Notas que mudaram por causa de outro aparelho (o editor aberto numa delas junta na hora). */
+  subscribeRemote(fn: (ids: string[]) => void): () => void
 }
 
 export const api: Api = isTauri() ? tauriApi : mockApi

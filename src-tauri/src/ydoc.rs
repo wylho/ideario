@@ -13,11 +13,13 @@ use yrs::types::text::Diff;
 use yrs::types::Attrs;
 use yrs::updates::decoder::Decode;
 use yrs::{
-    Any, Doc, Number, Map as _, MapRef, OffsetKind, Options, Out, ReadTxn, StateVector, Text, Transact, TransactionMut, Update, Xml,
+    Any, Doc, Number, Map as _, MapPrelim, MapRef, OffsetKind, Options, Out, ReadTxn, StateVector, Text, Transact, TransactionMut, Update, Xml,
     XmlElementPrelim, XmlFragment, XmlFragmentRef, XmlOut, XmlTextPrelim,
 };
 
-use crate::store::{Millis, NoteInput};
+use sha2::{Digest, Sha256};
+
+use crate::store::{CategoryRow, Millis, NoteInput};
 
 const META: &str = "meta";
 const BODY: &str = "body";
@@ -27,6 +29,10 @@ type Result<T> = std::result::Result<T, String>;
 fn new_doc() -> Doc {
     // Posições em UTF-16, como no Yjs do editor.
     Doc::with_options(Options { offset_kind: OffsetKind::Utf16, ..Options::default() })
+}
+
+fn doc_with_client(client: u64) -> Doc {
+    Doc::with_options(Options { offset_kind: OffsetKind::Utf16, ..Options::with_client_id(yrs::block::ClientID::new(client)) })
 }
 
 fn load(state: &[u8]) -> Result<Doc> {
@@ -42,9 +48,20 @@ fn encode(doc: &Doc) -> Vec<u8> {
     doc.transact().encode_state_as_update_v1(&StateVector::default())
 }
 
-/// Estado novo a partir de uma nota (migração do JSON da Fase 1, nota de boas-vindas, cópia).
+/// Estado novo a partir de uma nota (migração do JSON da Fase 1, nota de boas-vindas, cópia, importação).
+///
+/// O mesmo conteúdo dá sempre o mesmo estado: o "autor" (client id do Yjs) da criação sai do próprio conteúdo. Assim
+/// a mesma nota criada em dois aparelhos sem sync (o mesmo Takeout importado nos dois) junta sem duplicar o texto;
+/// conteúdos diferentes têm autores diferentes e nunca se confundem. As edições seguintes usam autores aleatórios.
 pub(crate) fn from_note(n: &NoteInput) -> Vec<u8> {
-    let doc = new_doc();
+    let key = json!([n.id, n.title, n.body, n.category_id, n.color, n.pinned, n.archived, n.trashed_at, n.reminder_at, n.reminder_done, n.reminder_repeat, n.tags]);
+    let digest = Sha256::digest(key.to_string());
+    let client = u32::from_le_bytes([digest[0], digest[1], digest[2], digest[3]]).max(2);
+    build(n, u64::from(client))
+}
+
+fn build(n: &NoteInput, client: u64) -> Vec<u8> {
+    let doc = doc_with_client(client);
     {
         let meta = doc.get_or_insert_map(META);
         let body = doc.get_or_insert_xml_fragment(BODY);
@@ -121,6 +138,117 @@ pub(crate) fn update(state: &[u8], n: &NoteInput, body: bool) -> Result<Vec<u8>>
         }
     }
     Ok(encode(&doc))
+}
+
+/// O estado local tem algo que o remoto não tem? (conteúdo novo de algum aparelho, ou algo apagado aqui e ainda
+/// não lá). Decide se a nota continua precisando subir depois de juntar a versão do Drive.
+pub(crate) fn has_more_than(local: &[u8], remote: &[u8]) -> Result<bool> {
+    let (l, r) = (load(local)?, load(remote)?);
+    let (ls, rs) = (l.transact().snapshot(), r.transact().snapshot());
+    if ls.state_map.iter().any(|(client, clock)| *clock > rs.state_map.get(client)) {
+        return Ok(true);
+    }
+    for (client, ranges) in ls.delete_set.iter() {
+        for range in ranges.iter() {
+            if range.clone().any(|clock| !rs.delete_set.contains(&yrs::ID::new(*client, clock))) {
+                return Ok(true);
+            }
+        }
+    }
+    Ok(false)
+}
+
+/// Como o editor faz: insere `text` no bloco `block`, na posição `at` (limitada ao tamanho), ou um parágrafo novo no
+/// fim se o bloco não existir. Devolve o estado novo (serve como atualização). Para testes de sync.
+#[cfg(test)]
+pub(crate) fn type_text(state: &[u8], block: u32, at: u32, text: &str) -> Vec<u8> {
+    let doc = load(state).unwrap_or_else(|_| new_doc());
+    let frag = doc.get_or_insert_xml_fragment(BODY);
+    {
+        let mut txn = doc.transact_mut();
+        match frag.get(&txn, block) {
+            Some(XmlOut::Element(p)) => {
+                let t = match p.get(&txn, 0) {
+                    Some(XmlOut::Text(t)) => t,
+                    _ => p.insert(&mut txn, 0, XmlTextPrelim::new("")),
+                };
+                let at = at.min(t.len(&txn));
+                t.insert(&mut txn, at, text);
+            }
+            _ => {
+                let len = frag.len(&txn);
+                let p = frag.insert(&mut txn, len, XmlElementPrelim::empty("paragraph"));
+                p.insert(&mut txn, 0, XmlTextPrelim::new(text));
+            }
+        }
+    }
+    encode(&doc)
+}
+
+// ---------- categorias ----------
+
+/// Categorias como um Y.Doc (`categories.ydoc` no Drive): `Y.Map("categories")` com um `Y.Map` por id (nome, cor,
+/// ordem, apagada). Cada campo faz merge sozinho: renomear num aparelho e mudar a cor no outro preserva os dois.
+const CATEGORIES: &str = "categories";
+
+/// Grava no estado só os campos que mudaram nas categorias locais.
+pub(crate) fn write_categories(state: &[u8], rows: &[CategoryRow]) -> Result<Vec<u8>> {
+    let doc = load(state)?;
+    let root = doc.get_or_insert_map(CATEGORIES);
+    {
+        let mut txn = doc.transact_mut();
+        for c in rows {
+            let fields: [(&str, Any); 4] = [
+                ("name", Any::from(c.name.as_str())),
+                ("color", Any::from(c.color.as_str())),
+                ("sort", Any::Number(Number::Float(c.sort as f64))),
+                ("deleted", Any::Bool(c.deleted)),
+            ];
+            match root.get(&txn, &c.id) {
+                Some(Out::YMap(m)) => {
+                    for (k, v) in fields {
+                        if m.get(&txn, k) != Some(Out::Any(v.clone())) {
+                            m.insert(&mut txn, k, v);
+                        }
+                    }
+                }
+                _ => {
+                    root.insert(&mut txn, c.id.as_str(), MapPrelim::from(fields));
+                }
+            }
+        }
+    }
+    Ok(encode(&doc))
+}
+
+pub(crate) fn read_categories(state: &[u8]) -> Result<Vec<CategoryRow>> {
+    let doc = load(state)?;
+    let root = doc.get_or_insert_map(CATEGORIES);
+    let txn = doc.transact();
+    let mut rows: Vec<CategoryRow> = root
+        .iter(&txn)
+        .filter_map(|(id, v)| {
+            let Out::YMap(m) = v else { return None };
+            let s = |k: &str| match m.get(&txn, k) {
+                Some(Out::Any(Any::String(s))) => Some(s.to_string()),
+                _ => None,
+            };
+            let sort = match m.get(&txn, "sort") {
+                Some(Out::Any(Any::Number(Number::Float(n)))) => n as i64,
+                Some(Out::Any(Any::Number(Number::Int(n)))) => n,
+                _ => 0,
+            };
+            Some(CategoryRow {
+                id: id.to_string(),
+                name: s("name")?,
+                color: s("color").unwrap_or_default(),
+                sort,
+                deleted: matches!(m.get(&txn, "deleted"), Some(Out::Any(Any::Bool(true)))),
+            })
+        })
+        .collect();
+    rows.sort_by(|a, b| a.id.cmp(&b.id));
+    Ok(rows)
 }
 
 // ---------- metadados ----------
@@ -374,6 +502,69 @@ mod tests {
         n.body = json!({"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"novo"}]}]});
         let s = update(&base, &n, true).unwrap();
         assert_eq!(to_note("n1", &s).unwrap().body, n.body);
+    }
+
+    #[test]
+    fn knows_when_local_has_something_the_remote_lacks() {
+        let base = from_note(&note(rich()));
+        assert!(!has_more_than(&base, &base).unwrap());
+        // título novo aqui
+        let mut n = to_note("n1", &base).unwrap();
+        n.title = "Outro".into();
+        let edited = update(&base, &n, false).unwrap();
+        assert!(has_more_than(&edited, &base).unwrap());
+        assert!(!has_more_than(&base, &edited).unwrap(), "o remoto já tem tudo do base");
+        // só apagar duas letras (nenhum conteúdo novo, só exclusão) também conta
+        let doc = load(&base).unwrap();
+        let frag = doc.get_or_insert_xml_fragment(BODY);
+        {
+            let mut t = doc.transact_mut();
+            let Some(XmlOut::Element(p)) = frag.get(&t, 0) else { panic!("parágrafo") };
+            let Some(XmlOut::Text(x)) = p.get(&t, 0) else { panic!("texto") };
+            x.remove_range(&mut t, 0, 2);
+        }
+        let deleted_only = encode(&doc);
+        assert_eq!(doc.transact().state_vector(), load(&base).unwrap().transact().state_vector(), "nada novo");
+        assert!(has_more_than(&deleted_only, &base).unwrap());
+        // depois de juntar, nenhum lado tem mais nada
+        let merged = apply(&edited, &base).unwrap();
+        assert!(!has_more_than(&merged, &edited).unwrap());
+    }
+
+    #[test]
+    fn same_note_created_on_two_devices_merges_without_duplicating() {
+        let a = from_note(&note(rich()));
+        let b = from_note(&note(rich()));
+        // (os bytes podem variar na ordem dos atributos de um mapa; os itens e os autores são os mesmos)
+        assert_eq!(load(&a).unwrap().transact().state_vector(), load(&b).unwrap().transact().state_vector(), "mesmo conteúdo, mesmo autor");
+        assert_eq!(to_note("n1", &apply(&a, &b).unwrap()).unwrap().body, note(rich()).body);
+        assert!(!has_more_than(&apply(&a, &b).unwrap(), &a).unwrap());
+        // conteúdo diferente: autores diferentes, o merge guarda os dois (nada some, nada se confunde)
+        let mut other = note(rich());
+        other.title = "Feira".into();
+        let c = from_note(&other);
+        let merged = to_note("n1", &apply(&a, &c).unwrap()).unwrap();
+        let count = |v: &Value| v.to_string().matches("Arroz").count();
+        assert_eq!(count(&merged.body), 2);
+    }
+
+    fn cat(id: &str, name: &str, color: &str) -> CategoryRow {
+        CategoryRow { id: id.into(), name: name.into(), color: color.into(), sort: 0, deleted: false }
+    }
+
+    #[test]
+    fn categories_merge_field_by_field() {
+        let base = write_categories(&[], &[cat("c1", "Casa", "#C26A3D"), cat("c2", "Trabalho", "#3D63D6")]).unwrap();
+        assert_eq!(read_categories(&base).unwrap(), vec![cat("c1", "Casa", "#C26A3D"), cat("c2", "Trabalho", "#3D63D6")]);
+        assert_eq!(write_categories(&base, &read_categories(&base).unwrap()).unwrap(), base, "sem mudança, o estado fica igual");
+        // um aparelho renomeia, o outro muda a cor e apaga a outra
+        let a = write_categories(&base, &[cat("c1", "Lar", "#C26A3D")]).unwrap();
+        let mut gone = cat("c2", "Trabalho", "#3D63D6");
+        gone.deleted = true;
+        let b = write_categories(&base, &[cat("c1", "Casa", "#4F8A3E"), gone.clone()]).unwrap();
+        let merged = apply(&a, &b).unwrap();
+        assert_eq!(read_categories(&merged).unwrap(), vec![cat("c1", "Lar", "#4F8A3E"), gone]);
+        assert_eq!(read_categories(&merged).unwrap(), read_categories(&apply(&b, &a).unwrap()).unwrap());
     }
 
     #[test]

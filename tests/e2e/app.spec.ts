@@ -559,6 +559,25 @@ test('nuvem do sync só aparece quando há algo a dizer', async ({ page }) => {
   await page.context().setOffline(false)
 })
 
+test('Google Drive nas configurações: conta, sair, cancelar e entrar de novo', async ({ page }) => {
+  await openSettings(page)
+  const card = page.locator('.sync-card')
+  await expect(card).toContainText('voce@gmail.com')
+  await expect(card).toContainText('Sincronizado há 2 min')
+  await page.getByRole('button', { name: 'Sair', exact: true }).click()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Sair' }).click()
+  await expect(card).toContainText('Só neste aparelho')
+  // começou o login e desistiu
+  await page.getByRole('button', { name: 'Entrar com Google' }).click()
+  await expect(card).toContainText('Continue no navegador')
+  await card.getByRole('button', { name: 'Cancelar' }).click()
+  await expect(card.getByRole('button', { name: 'Entrar com Google' })).toBeVisible()
+  // login até o fim
+  await page.getByRole('button', { name: 'Entrar com Google' }).click()
+  await expect(card).toContainText('voce@gmail.com')
+  await expect(page.locator('.toast')).toContainText('Conectado ao Google Drive')
+})
+
 test.describe('ordenar e arrastar', () => {
   const titles = (page: Page, section = 1) =>
     page.locator('.drag-section').nth(section).locator('.card').evaluateAll((els) => els.map((e) => e.getAttribute('aria-label')))
