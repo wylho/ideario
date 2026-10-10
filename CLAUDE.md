@@ -59,6 +59,8 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
   Lixeira: ícone de esvaziar (vassoura, neutro, com confirmação, só quando há notas). Nada de controles soltos no meio do conteúdo.
 - Contorno: tudo o que é card ou miniatura (cards, listas de lembretes/arquivos, miniaturas, moodboard, fotos no
   editor, blocos das configurações) usa o mesmo `--card-edge` translúcido; `--line` fica para controles e separadores.
+- Barra de título (macOS/Windows) e fundo da janela acompanham o claro/escuro do app (`theme.svelte.ts` → `setTheme`,
+  `setBackgroundColor`); a escolha fica no núcleo (`set_window_look`) e a janela já nasce com ela (`lib.rs`).
 - Temas (`src/lib/palettes.ts`, `theme.svelte.ts`): Sistema (padrão; o núcleo lê destaque/esquema do GNOME, KDE, Windows,
   macOS em `src-tauri/src/system_theme.rs`), Ideario, Papel, Grafite, Floresta; claro/escuro/automático à parte.
 - Mídia no editor (`src/lib/editor/media.ts`): fotos lado a lado (`imageRow`, 2–4, arrastar como no Gutenberg + botões na foto
@@ -86,7 +88,7 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
   nativo (`npx tauri build --debug --no-bundle && xvfb-run -a node tests/native/run.mjs`; precisa de webkit2gtk-driver e
   tauri-driver), desempenho (`tests/native/perf.mjs`, build de release) e `npm run tauri build`.
 - Release: `.github/workflows/release.yml` (Actions → Release → Run workflow; precisa estar no branch padrão).
-- Graphify (mapa do código, local, sem chave): `pip3 install --user graphifyy` e
+- Graphify (mapa do código, local, sem chave; o usuário pediu para usar sempre que ajudar a achar código): `pip3 install --user graphifyy` e
   `graphify extract . --code-only --out <pasta fora do repo>`; consultas com `graphify explain "X" --graph <…>/graph.json`.
 - Ordem combinada com o usuário (plano em https://claude.ai/code/artifact/45aafe33-c71a-4b29-abb6-4caf94af6817):
   Fase 3 (Mídia) → Importar Keep (Fase 6, antecipada; precisa de um Takeout real) → Fase 4 → Fase 5 → Fase 7.

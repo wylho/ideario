@@ -89,6 +89,26 @@ fn welcome(store: &Store) -> Result<()> {
 
 type Core_<'a> = State<'a, Core>;
 
+/// Aparência escolhida na interface ("light", "dark" ou "system") e a cor de fundo do tema: na próxima abertura a
+/// janela já nasce com elas (sem piscar clara antes de a página pintar, nem barra de título branca no tema escuro).
+#[tauri::command]
+pub fn set_window_look(core: Core_, theme: String, background: String) -> Result<()> {
+    core.with(|s| {
+        s.set_sync_value("window_theme", Some(&theme))?;
+        s.set_sync_value("window_bg", Some(&background))
+    })
+}
+
+/// "#rrggbb" → cor da janela.
+pub fn parse_hex(s: &str) -> Option<tauri::window::Color> {
+    let h = s.trim().strip_prefix('#')?;
+    if h.len() != 6 || !h.is_ascii() {
+        return None;
+    }
+    let byte = |i: usize| u8::from_str_radix(&h[i..i + 2], 16).ok();
+    Some(tauri::window::Color(byte(0)?, byte(2)?, byte(4)?, 255))
+}
+
 #[tauri::command]
 pub fn list_notes(core: Core_, filter: Filter, r#box: String, query: String, sort: String) -> Result<Vec<NoteSummary>> {
     core.with(|s| s.list_notes(&filter, &r#box, &query, &sort))
@@ -443,6 +463,14 @@ fn percent_decode(s: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn window_color_from_the_theme() {
+        assert_eq!(parse_hex("#101513"), Some(tauri::window::Color(0x10, 0x15, 0x13, 255)));
+        assert_eq!(parse_hex("rgb(1, 2, 3)"), None);
+        assert_eq!(parse_hex("#12345"), None);
+        assert_eq!(parse_hex("#ééé"), None);
+    }
 
     #[test]
     fn decode_names() {

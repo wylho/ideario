@@ -387,6 +387,21 @@ try {
     await s.exec(`document.querySelectorAll('.alert [aria-label="Fechar aviso"]').forEach((b) => b.click()); return true`)
   })
 
+  await test('tema escuro: a janela (barra de título e fundo) acompanha e fica guardado para a próxima abertura', async () => {
+    await s.exec(`[...document.querySelectorAll('.sidebar button')].find((b) => b.textContent.includes('Configurações'))?.click(); return true`)
+    await s.waitFor(`return !!document.querySelector('.seg-item[data-value="dark"], [data-value="dark"]')`, 'opção Escuro')
+    await s.exec(`document.querySelector('[data-value="dark"]').click(); return true`)
+    await s.waitFor(`return document.documentElement.getAttribute('data-theme') === 'dark'`, 'tema escuro aplicado')
+    const theme = await s.execAsync(`window.__TAURI_INTERNALS__.invoke('plugin:window|theme', { label: 'main' }).then(arguments[0], (e) => arguments[0]('erro ' + e))`)
+    if (theme !== 'dark') throw new Error(`janela: ${theme}`)
+    await sleep(300)
+    const db = new DatabaseSync(join(DATA, IDENTIFIER, 'ideario.db'), { readOnly: true })
+    const saved = Object.fromEntries(db.prepare("SELECT key, value FROM sync_state WHERE key IN ('window_theme', 'window_bg')").all().map((r) => [r.key, r.value]))
+    db.close()
+    if (saved.window_theme !== 'dark' || !/^#[0-9a-f]{6}$/i.test(saved.window_bg ?? '')) throw new Error(JSON.stringify(saved))
+    await s.exec(`document.querySelector('.sheet [aria-label="Fechar"]').click(); return true`)
+  })
+
   await test('fechar e reabrir: tudo continua lá, na hora', async () => {
     await s.end()
     s = await Session.start()
@@ -396,6 +411,9 @@ try {
     if (!t.includes('Bolo da vó') || !t.includes('Bem-vindo ao Ideario')) throw new Error(`cards: ${t}`)
     const cover = await s.exec(`const c = [...document.querySelectorAll('.card')].find((c) => c.getAttribute('aria-label') === 'Bolo da vó'); const i = c?.querySelector('.card-media img'); return i ? i.naturalWidth : 0`)
     if (!cover) throw new Error('capa sumiu')
+    // a janela já nasceu escura (o tema escolhido antes de fechar)
+    const theme = await s.execAsync(`window.__TAURI_INTERNALS__.invoke('plugin:window|theme', { label: 'main' }).then(arguments[0], (e) => arguments[0]('erro ' + e))`)
+    if (theme !== 'dark') throw new Error(`janela nasceu ${theme}`)
   })
 
   await test('Y.Doc: depois de reabrir, o item marcado e o negrito continuam', async () => {
