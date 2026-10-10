@@ -94,6 +94,8 @@ class AppState {
   showDone = $state(false)
   /** Card sendo arrastado (para o resto da UI reagir). */
   dragId = $state<string | null>(null)
+  /** Categoria da lateral sob o card arrastado (soltar ali muda a categoria da nota). */
+  dropCategory = $state<string | null>(null)
   drawerOpen = $state(false)
   settingsOpen = $state(false)
   editor = $state<EditorTarget | null>(null)

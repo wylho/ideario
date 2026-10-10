@@ -47,6 +47,8 @@
       {...trigger}
       class="d-item"
       class:on={app.filter.categoryId === c.id && app.box === 'active'}
+      class:drop-target={app.dropCategory === c.id}
+      data-drop-category={c.id}
       aria-pressed={app.filter.categoryId === c.id}
       onclick={() => pickCategory(c.id)}
       title={c.name}

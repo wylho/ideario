@@ -67,6 +67,13 @@
       return true
     },
     onDrop: (id, after, before) => api.moveNote(id, { after, before }),
+    onDropCategory: (id, categoryId) => {
+      const n = notes.current.find((x) => x.id === id)
+      if (!n || n.categoryId === categoryId) return
+      const before = n.categoryId
+      void api.updateNote(id, { categoryId })
+      app.say(`Movida para ${app.category(categoryId)?.name ?? 'a categoria'}`, { label: 'Desfazer', run: () => void api.updateNote(id, { categoryId: before }) })
+    },
   })
 </script>
 
