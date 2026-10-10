@@ -120,6 +120,8 @@ export const tauriApi: Api = {
   pendingPreviews: () => invoke('pending_previews'),
   setPreview: (hash, png) => invoke('set_preview', png, { headers: { 'x-hash': hash } }),
   inspectTakeout: (path) => invoke('inspect_takeout', { path }),
+  exportNote: (id, format, path) => invoke('export_note_cmd', { id, format, path }),
+  printWindow: () => invoke('print_window'),
   backupStatus: () => invoke('backup_status'),
   backupSetAuto: (enabled, dir) => invoke('backup_set_auto', { enabled, dir }),
   backupExport: (path, onProgress) => withProgress('backup-progress', onProgress, () => invoke('backup_export', { path })),

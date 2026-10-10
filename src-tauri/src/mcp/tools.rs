@@ -404,6 +404,15 @@ fn defs() -> Vec<Def> {
             destructive: false,
         },
         Def {
+            name: "export_note",
+            title: "Exportar nota",
+            description: "Exporta a nota em Markdown ou HTML para uma pasta. Com anexos, sai um .zip com a pasta anexos/ (no HTML, áudio e vídeo tocam). PDF: só pelo app (imprimir → Salvar como PDF).",
+            params: json!({ "id": s(ID), "format": one_of(&["md", "html"], "formato"), "folder": s("pasta de destino (padrão: Downloads)") }),
+            required: &["id", "format"],
+            read_only: false,
+            destructive: false,
+        },
+        Def {
             name: "create_backup",
             title: "Fazer backup local",
             description: "Grava um backup completo (notas, categorias, anexos e uma cópia em Markdown) num arquivo .ideario. Restaurar é no app (Configurações → Backup local) e junta com o que existe.",
@@ -611,6 +620,18 @@ fn run(core: &Core, name: &str, a: &Args) -> Result<Out> {
         "get_attachment" => get_attachment(core, a),
         "attach_file" => attach(core, a),
         "export_attachment" => export(core, a),
+        "export_note" => {
+            let id = core.with(|s| existing(s, a.need("id")?))?;
+            let format = a.need("format")?;
+            let folder = match a.str("folder") {
+                Some(f) => PathBuf::from(f),
+                None => dirs::download_dir().or_else(|| dirs::home_dir().map(|h| h.join("Downloads"))).ok_or("não achei a pasta Downloads")?,
+            };
+            let title = core.with(|s| Ok(note(s, &id)?.title))?;
+            let ext = if crate::export::has_attachments(core, &id)? { "zip" } else { format };
+            let r = crate::export::export_note(core, &id, format, &folder.join(format!("{}.{ext}", crate::export::file_stem(&title))))?;
+            Ok(Out::Json(serde_json::to_value(r).map_err(|e| e.to_string())?))
+        }
         "create_backup" => {
             let folder = match a.str("folder") {
                 Some(f) => PathBuf::from(f),

@@ -904,3 +904,39 @@ button { cursor: pointer; }
 .alert-text b { font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .alert-text small { font-size: 12px; color: var(--muted); }
 .alert-actions { display: flex; }
+
+/* modo documento: a nota em página inteira, coluna de leitura no meio e letra maior */
+.editor[data-doc] {
+  inset: 0 !important; margin: 0 !important; width: 100% !important; height: 100% !important; max-width: none;
+  border-radius: 0 !important; border: 0 !important; box-shadow: none !important;
+}
+.editor[data-doc] .ed-top { padding-inline: max(12px, calc((100% - 880px) / 2)); }
+.editor[data-doc] .ed-scroll { padding: 28px max(44px, calc((100% - 760px) / 2)) 96px; }
+.editor[data-doc] .ed-title { font-size: 36px; }
+.editor[data-doc] .ed-body { font-size: 17.5px; line-height: 1.72; }
+.editor[data-doc] .ed-tools { align-self: center; border-radius: 16px; margin-bottom: 14px; }
+
+/* imprimir / PDF: só a nota, no papel, com as fotos inteiras; áudio e vídeo viram o cartão com o nome */
+@media print {
+  html:has(body.print-note), body.print-note, body.print-note #app { height: auto !important; overflow: visible !important; background: #fff !important; }
+  /* caixinhas marcadas e cartões com a cor deles (o navegador não imprime fundos se não pedir) */
+  body.print-note .editor { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body.print-note .nf-card .icon-btn { display: none !important; }
+  body.print-note > :not(.editor):not(:has(.editor)) { display: none !important; }
+  body.print-note .shell, body.print-note .overlay, body.print-note .toast { display: none !important; }
+  body.print-note .editor {
+    position: static !important; inset: auto !important; width: auto !important; height: auto !important; max-width: none !important;
+    display: block !important; overflow: visible !important; border: 0 !important; border-radius: 0 !important; box-shadow: none !important;
+    background: #fff !important; color: #111 !important; animation: none !important; padding: 0 !important;
+  }
+  body.print-note .ed-scroll { display: block !important; overflow: visible !important; padding: 0 !important; }
+  body.print-note .ed-top, body.print-note .ed-tools, body.print-note .ed-meta, body.print-note .ed-tags,
+  body.print-note .blk-handle, body.print-note .img-tools, body.print-note .tag-suggest { display: none !important; }
+  body.print-note .ed-blocks { margin: 0 !important; padding: 0 !important; }
+  body.print-note .ed-title { font-size: 26pt; color: #111; }
+  body.print-note .ed-body { font-size: 12pt; line-height: 1.6; color: #111; }
+  body.print-note img, body.print-note .img-row, body.print-note .note-file { break-inside: avoid; }
+  /* áudio: some o player, fica o nome e a duração ("0:00 / 0:42"); vídeo: só o cartão */
+  body.print-note audio, body.print-note video, body.print-note .player > button, body.print-note .player > input { display: none !important; }
+  @page { margin: 18mm 16mm; }
+}

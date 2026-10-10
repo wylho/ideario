@@ -248,6 +248,13 @@ export interface BackupReport {
   skippedAttachments: number
   bytes: number
 }
+/** Nota exportada. */
+export interface ExportReport {
+  path: string
+  attachments: number
+  /** Anexos que não estão neste computador (só no Drive) e ficaram de fora. */
+  missing: number
+}
 /** O que tem num arquivo de backup. */
 export interface BackupManifest {
   format: number

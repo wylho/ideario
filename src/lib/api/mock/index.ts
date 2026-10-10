@@ -746,6 +746,11 @@ export const mockApi: Api = {
 
   // Importar do Keep lê o zip pelo caminho: só no app.
   inspectTakeout: () => done(null),
+  exportNote: () => Promise.reject(new Error('exportar arquivos só existe no app')),
+  printWindow() {
+    window.print()
+    return done(undefined)
+  },
   // Backup local: só no app (a prévia não grava arquivos); o estado do automático fica na memória.
   backupStatus: () => done({ ...backupState }),
   backupSetAuto(enabled, dir) {

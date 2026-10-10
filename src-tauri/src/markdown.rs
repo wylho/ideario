@@ -248,6 +248,11 @@ fn entity_at(chars: &[char]) -> bool {
     rest.contains(';') && !body.is_empty() && body.chars().all(|c| c.is_ascii_alphanumeric() || c == '#')
 }
 
+/// Texto solto (um título) escapado para uma linha de Markdown.
+pub fn escape_line(text: &str) -> String {
+    esc(text, true, true)
+}
+
 fn esc_label(s: &str) -> String {
     s.chars()
         .flat_map(|c| if matches!(c, '[' | ']' | '\\' | '*' | '_' | '`' | '<') { vec!['\\', c] } else { vec![c] })

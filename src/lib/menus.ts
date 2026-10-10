@@ -3,6 +3,7 @@ import {
   Archive, ArchiveRestore, Bell, BellOff, Check, CircleCheck, Copy, Pencil, Download, ExternalLink, Files, Filter, FilterX, Image, Palette, Pin, PinOff, FileText, Play, Plus, RotateCcw, Tag, Trash2, AlarmClock, Eye, EyeOff, Lock, LockOpen, KeyRound,
 } from '@lucide/svelte'
 import { api } from './api'
+import { exportEntries } from './exporting'
 import { app } from './app.svelte'
 import { fmtReminder, normalizeTag } from './format'
 import { CATEGORY_COLORS, COLOR_NAMES, nextCategoryColor } from './colors'
@@ -121,6 +122,7 @@ export function noteMenu(n: NoteSummary): MenuEntry[] {
         app.say('Cópia criada', { label: 'Abrir', run: () => app.openNote(id) })
       },
     },
+    { label: 'Exportar', icon: Download, sub: exportEntries(n.id, n.title, n.imageCount + n.fileCount > 0, () => app.openNote(n.id, { print: true })) },
     SEP,
     n.archived
       ? { label: 'Desarquivar', icon: ArchiveRestore, onSelect: () => change(n, { archived: false }, 'Nota desarquivada') }
