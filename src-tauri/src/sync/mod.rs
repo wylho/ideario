@@ -154,6 +154,8 @@ pub struct Report {
     pub sent: usize,
     /// Notas que saíram daqui porque foram excluídas em outro aparelho.
     pub removed: usize,
+    /// Quais (o editor aberto numa delas avisa).
+    pub removed_notes: Vec<String>,
     /// Anexos que desceram.
     pub files: usize,
     /// Categorias mudaram por causa do Drive.
@@ -214,9 +216,11 @@ pub(crate) fn pull(dev: &Device, remote: &mut dyn Remote, report: &mut Report) -
     for f in &notes {
         pull_note(dev, remote, f, report)?;
     }
-    for id in &removed {
-        if dev.with(|s| s.remove_synced_note(id))? {
+    for file in &removed {
+        let note = dev.with(|s| s.note_by_file(file))?;
+        if dev.with(|s| s.remove_synced_note(file))? {
             report.removed += 1;
+            report.removed_notes.extend(note);
         }
     }
     dev.with(|s| s.set_sync_value("drive_token", Some(&next)))

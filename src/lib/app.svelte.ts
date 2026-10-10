@@ -100,6 +100,8 @@ class AppState {
   /** Recebe arquivos soltos na janela enquanto o editor está aberto (o editor registra ao montar).
    *  `at`: ponto da tela onde caíram; dentro do texto entram ali, fora vão para o fim. */
   dropIntoEditor: ((files: DroppedFile[], at?: { x: number; y: number }) => void) | null = null
+  /** Arquivos soltos enquanto a nota ainda estava abrindo: o editor pega quando ficar pronto. */
+  pendingDrop: { files: DroppedFile[]; at?: { x: number; y: number } } | null = null
   lightbox = $state<AttachmentRow | null>(null)
   toast = $state<string | null>(null)
   /** Ação do toast (ex.: Desfazer). */
