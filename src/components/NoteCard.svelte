@@ -1,6 +1,6 @@
 <script lang="ts">
   import { KIND_ICONS } from '../lib/file-kinds'
-  import { Bell, Check, Paperclip, Pin, PinOff, Repeat } from '@lucide/svelte'
+  import { Bell, Check, Link2, Paperclip, Pin, PinOff, Repeat } from '@lucide/svelte'
   import { api } from '../lib/api'
   import { app } from '../lib/app.svelte'
   import { fmtReminder, isOverdue, withHashtags } from '../lib/format'
@@ -93,6 +93,8 @@
           {:else if b.kind === 'file'}
             {@const Icon = KIND_ICONS[b.fileKind]}
             <p class="pv-file"><Icon size={14} /><span>{b.text}</span></p>
+          {:else if b.kind === 'link'}
+            <p class="pv-link"><Link2 size={14} /><span class="pv-link-t">{b.text}</span><span class="pv-link-s">{b.site}</span></p>
           {:else if b.kind === 'code'}
             <pre class="pv-code">{b.text}</pre>
           {:else if b.kind === 'bullet' || b.kind === 'ordered'}

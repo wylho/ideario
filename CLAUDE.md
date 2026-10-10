@@ -171,5 +171,9 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
   HTML/Markdown, `.zip` com `anexos/` quando há anexo; `src/lib/exporting.ts`). PDF = `print_window` (Tauri
   `WebviewWindow::print`; no navegador `window.print`) com `body.print-note` e o CSS `@media print` do fim do app.css.
   MCP: `export_note`.
+- Bloco de link (`linkCard`, `src/lib/editor/link.ts`): colar URL sozinha numa linha vazia ou "+ Link…"; o cursor vai
+  para a linha de baixo (`insertLinkCard`). Prévia pelo núcleo (`src-tauri/src/link.rs`: ureq, Open Graph/`<title>`,
+  imagem → `media::thumbnail` → `data:image/webp` nos atributos; só http/https); `open_url` abre no navegador.
+  Projeção `Block::Link` (título/descrição entram na busca); Markdown `[🔗 título](url)` e `keep_link_meta` no MCP.
 - Filtro "Sem categoria"/"Sem tags": sentinelas `NO_CATEGORY`/`NO_TAGS` (`~none`) no `Filter` (TS e Rust).
 - **Próximo passo: Fase 7 (Android).**

@@ -7,9 +7,10 @@
     Archive, ArchiveRestore, ArrowLeft, Bold, Camera, Check, ChevronDown, ChevronLeft, ChevronRight, Columns2, Heading, Image, Italic, List,
     ListChecks, Mic, MoreVertical, SquareCode, Palette, Paperclip, Pin, PinOff, Plus, Redo2, Rows2, Square, Tag, Trash2, Undo2, X,
     ArrowDown, ArrowUp, Copy, CopyPlus, Download, Eye, GripVertical, ListTodo, Pilcrow, Scissors, SquareCheck, SquareDashed, ExternalLink,
-    ListIndentDecrease, ListIndentIncrease, BookOpen, Minimize2, FileDown,
+    ListIndentDecrease, ListIndentIncrease, BookOpen, Minimize2, FileDown, Link2, RefreshCw,
   } from '@lucide/svelte'
   import { exportEntries, printNote } from '../lib/exporting'
+  import { bareUrl, fillPreview, insertLinkCard } from '../lib/editor/link'
   import { isDocNote, setDocNote } from '../lib/docmode'
   import {
     blockAt, canIndent, canMove, checkAll, checkCount, clipNode, convertBlock, deleteChecked, deleteNode, duplicateNode, moveNode, shapeOf,
@@ -51,6 +52,31 @@
   function toggleDoc() {
     docMode = !docMode
     setDocNote(id, docMode)
+  }
+  /** "+ Link…": pede o endereço e põe o cartão onde está o cursor (a prévia chega depois). */
+  function askLink() {
+    app.askName({
+      title: 'Inserir link',
+      label: 'Endereço (https://…)',
+      value: '',
+      confirm: 'Inserir',
+      submit: (text) => {
+        const url = bareUrl(text) ?? bareUrl(`https://${text}`)
+        if (!url || !editor) {
+          app.say('Isso não parece um endereço')
+          return
+        }
+        // numa linha vazia, o cartão toma o lugar dela; no meio do texto, entra logo abaixo do bloco
+        const at = editor.state.selection.$from
+        if (at.depth === 0) insertLinkCard(editor.view, url, at.pos, at.pos)
+        else {
+          const block = at.node(1)
+          const empty = block.type.name === 'paragraph' && block.content.size === 0
+          insertLinkCard(editor.view, url, empty ? at.before(1) : at.after(1), at.after(1))
+        }
+        fillPreview(editor.view, url, (u) => api.linkPreview(u))
+      },
+    })
   }
   /** A nota tem foto ou anexo (exportar vira .zip). */
   function hasMedia() {
@@ -276,6 +302,7 @@
           onMenu: (pos, e) => openNodeMenu(pos, e.clientX, e.clientY, e.target as Element),
           placeholder: 'Escreva… use #tag para marcar',
           ydoc: doc,
+          link: { preview: (u) => api.linkPreview(u), open: (u) => void api.openUrl(u) },
         }),
         editorProps: {
           attributes: { id: 'corpo', role: 'textbox', 'aria-multiline': 'true', 'aria-label': 'Texto da nota', spellcheck: 'true' },
@@ -396,6 +423,21 @@
         { label: 'Ver', icon: Eye, onSelect: () => a && viewAttachment(a) },
         { label: 'Baixar', icon: Download, onSelect: () => a && void download(a) },
         { label: 'Copiar imagem', icon: Copy, onSelect: () => void copyImage(imgHash) },
+        SEP,
+      )
+    }
+    if (name === 'linkCard') {
+      const url: string = node.attrs.url
+      out.push(
+        { label: 'Abrir link', icon: ExternalLink, onSelect: () => void api.openUrl(url) },
+        { label: 'Copiar endereço', icon: Copy, onSelect: () => void navigator.clipboard.writeText(url).then(() => app.say('Endereço copiado')) },
+        {
+          label: 'Atualizar prévia', icon: RefreshCw,
+          onSelect: () => {
+            view.dispatch(view.state.tr.setNodeMarkup(pos, undefined, { ...node.attrs, title: null }))
+            fillPreview(view, url, (u) => api.linkPreview(u))
+          },
+        },
         SEP,
       )
     }
@@ -751,6 +793,7 @@
                   <DropdownMenu.Item class="menu-item" onSelect={() => void recorder.start()}><Mic size={16} />Gravar áudio</DropdownMenu.Item>
                 {/if}
                 <DropdownMenu.Separator class="menu-sep" />
+                <DropdownMenu.Item class="menu-item" onSelect={askLink}><Link2 size={16} />Link…</DropdownMenu.Item>
                 <DropdownMenu.Item class="menu-item" onSelect={() => run((c) => c.toggleCodeBlock())}><SquareCode size={16} />Bloco de código</DropdownMenu.Item>
               </DropdownMenu.Content>
             </DropdownMenu.Portal>

@@ -10,6 +10,7 @@ mod background;
 mod commands;
 mod export;
 mod keep;
+mod link;
 mod markdown;
 mod mcp;
 mod media;
@@ -157,6 +158,8 @@ pub fn run() {
             commands::get_attachments,
             commands::import_file,
             commands::download_attachment,
+            link::link_preview,
+            link::open_url,
             export::export_note_cmd,
             export::print_window,
             backup::backup_status,

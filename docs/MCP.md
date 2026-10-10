@@ -92,11 +92,14 @@ Texto com **negrito** e *itálico*.
 
 ![foto da praia](ideario://att/3f2a…)  ![outra](ideario://att/9b1c…)   ← lado a lado
 [📎 contrato.pdf](ideario://att/77de…)
+[🔗 Receita de pão](https://exemplo.com/pao)   ← cartão de link (bloco)
 
 &nbsp;   ← linha em branco da nota
 ```
 
-O que o editor não tem (link, citação, riscado) vira texto. Ao reescrever uma nota, as linhas de fotos e anexos que
+Um link sozinho na linha com 🔗 no começo do texto é um **cartão de link** (a prévia: título, descrição e imagem da
+página; ao reescrever a nota, cartões que continuam com o mesmo endereço guardam a prévia). Os demais links, citação e
+riscado viram texto. Ao reescrever uma nota, as linhas de fotos e anexos que
 devem ficar precisam continuar no texto.
 
 ## Como funciona (para quem mexe no código)

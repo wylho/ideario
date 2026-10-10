@@ -111,6 +111,8 @@ function project(body: RichDoc): Projection {
   const files: string[] = []
   let cover: string[] = []
   const blocks: PreviewBlock[] = []
+  /** Texto só para a busca (descrição e endereço dos links), sem virar tag. */
+  const extra: string[] = []
   const inline = (n: RichNode): string =>
     n.type === 'text' ? (n.text ?? '') : n.type === 'hardBreak' ? '\n' : (n.content ?? []).map(inline).join('')
   const clean = (s: string) => s.replace(/[ \t]+/g, ' ').replace(/ *\n */g, '\n').trim()
@@ -158,6 +160,16 @@ function project(body: RichDoc): Projection {
         if (!cover.length) cover = row.slice(0, 4)
         return
       }
+      case 'linkCard': {
+        const url = typeof n.attrs?.url === 'string' ? n.attrs.url : ''
+        if (url) {
+          const site = (typeof n.attrs?.site === 'string' && n.attrs.site) || url.replace(/^[a-z]+:\/\//i, '').split(/[/?#]/)[0].replace(/^www\./, '')
+          const title = typeof n.attrs?.title === 'string' && n.attrs.title ? n.attrs.title : url
+          blocks.push({ kind: 'link', text: title, url, site })
+          extra.push(typeof n.attrs?.description === 'string' ? n.attrs.description : '', url)
+        }
+        return
+      }
       case 'noteFile': {
         const a = typeof n.attrs?.hash === 'string' ? attachments.get(n.attrs.hash) : undefined
         if (a) {
@@ -172,8 +184,9 @@ function project(body: RichDoc): Projection {
   }
   body.content?.forEach((c) => block(c))
 
-  const text = blocks.map((b) => ('text' in b ? b.text : '')).join(' ').replace(/\s+/g, ' ').trim()
-  const p: Projection = { text, images, cover, files, blocks, preview: previewOf(blocks), hashTags: hashTags(text) }
+  const shown = blocks.map((b) => ('text' in b ? b.text : '')).join(' ').replace(/\s+/g, ' ').trim()
+  const text = [shown, ...extra].join(' ').replace(/\s+/g, ' ').trim()
+  const p: Projection = { text, images, cover, files, blocks, preview: previewOf(blocks), hashTags: hashTags(shown) }
   projections.set(body, p)
   return p
 }
@@ -746,6 +759,15 @@ export const mockApi: Api = {
 
   // Importar do Keep lê o zip pelo caminho: só no app.
   inspectTakeout: () => done(null),
+  // Prévia de exemplo (no app vem da própria página, com a imagem dela).
+  linkPreview(url) {
+    const site = new URL(url).hostname.replace(/^www\./, '')
+    return done({ url, title: `Página de ${site}`, description: 'Prévia de exemplo: no app, o título, a descrição e a imagem vêm da própria página.', site, image: null })
+  },
+  openUrl(url) {
+    window.open(url, '_blank', 'noopener')
+    return done(undefined)
+  },
   exportNote: () => Promise.reject(new Error('exportar arquivos só existe no app')),
   printWindow() {
     window.print()

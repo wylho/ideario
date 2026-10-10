@@ -1,7 +1,7 @@
 // Camada de dados da UI. No app, os comandos Tauri (`invoke`) do núcleo Rust (SQLite local, Fase 1);
 // no navegador (`npm run dev`, prévia) e nos testes e2e, um mock em memória com dados de exemplo.
 import type {
-  Attachment, AttachmentKind, AttachmentRow, KeepReport, ExportReport, BackupManifest, BackupReport, BackupStatus, RestoreReport, Box, McpInfo, OrphanCounts, Millis, Category, Filter, NoteDetail, NoteInput, NotePatch, NoteSort, NoteSummary, Settings, SyncState, SyncStatus, TagCount, Tone, ViewCounts,
+  Attachment, AttachmentKind, AttachmentRow, KeepReport, ExportReport, LinkPreview, BackupManifest, BackupReport, BackupStatus, RestoreReport, Box, McpInfo, OrphanCounts, Millis, Category, Filter, NoteDetail, NoteInput, NotePatch, NoteSort, NoteSummary, Settings, SyncState, SyncStatus, TagCount, Tone, ViewCounts,
 } from '../types'
 import { invoke, isTauri } from '@tauri-apps/api/core'
 import { mockApi } from './mock'
@@ -102,6 +102,10 @@ export interface Api {
   inspectTakeout(path: string): Promise<{ notes: number; media: number } | null>
   /** Importa o Takeout (a lista se atualiza no fim). Só no app. */
   importKeep(path: string, onProgress: (done: number, total: number) => void): Promise<KeepReport>
+  /** Prévia de um link (título, descrição, imagem), buscada na página. Sem rede, só o site. */
+  linkPreview(url: string): Promise<LinkPreview>
+  /** Abre o endereço no navegador do sistema. */
+  openUrl(url: string): Promise<void>
   /** Exporta a nota em Markdown ou HTML para `path` (.zip = com os anexos). Só no app. */
   exportNote(id: string, format: 'md' | 'html', path: string): Promise<ExportReport>
   /** Abre a impressão do sistema (a interface deixa só a nota à vista): "Salvar como PDF". */

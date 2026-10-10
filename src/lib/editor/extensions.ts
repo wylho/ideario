@@ -11,6 +11,7 @@ import { ySyncPluginKey } from '@tiptap/y-tiptap'
 import { Decoration, DecorationSet } from '@tiptap/pm/view'
 import type { Node as PMNode } from '@tiptap/pm/model'
 import { ImageRow, MediaLayout, NoteFile, NoteImage, type MediaInfo } from './media'
+import { LinkCard, type LinkOptions } from './link'
 
 /** Marcar (ou desmarcar) um item de checklist faz o mesmo com os subitens dele, como no Google Keep. Só para o que
  *  se faz aqui: o que chega de outro aparelho (Yjs) já vem como lá ficou. */
@@ -119,6 +120,8 @@ export function noteExtensions(opts: {
   placeholder?: string
   /** Y.Doc da nota: o corpo vive no `body` dele (TipTap Collaboration, com o desfazer do Yjs). */
   ydoc?: Y.Doc
+  /** Cartão de link: buscar a prévia e abrir no navegador. */
+  link?: LinkOptions
 } = {}): AnyExtension[] {
   return [
     StarterKit.configure({
@@ -143,6 +146,7 @@ export function noteExtensions(opts: {
     NoteImage.configure({ media: opts.media ?? (() => ({ src: '' })), load: opts.load }),
     ImageRow,
     NoteFile.configure({ render: opts.renderFile }),
+    LinkCard.configure(opts.link ?? {}),
     MediaLayout.configure({ onFiles: opts.onFiles, onMenu: opts.onMenu }),
     Hashtags,
     CheckCascade,

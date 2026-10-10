@@ -41,6 +41,8 @@ rand = "0.8"
 # MCP (o Claude mexe nas notas): o corpo entra e sai em Markdown; a pasta de dados sem o Tauri (`ideario --mcp`).
 pulldown-cmark = { version = "0.13", default-features = false }
 dirs = "7"
+# Bloco de link: endereço da imagem da página relativo ao da página.
+url = "2"
 
 [profile.release]
 codegen-units = 1

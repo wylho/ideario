@@ -179,6 +179,20 @@ fn block_html(node: &Value, assets: &HashMap<String, Asset>) -> String {
                 .collect();
             format!("<figure class=\"row\">{imgs}</figure>\n")
         }
+        "linkCard" => {
+            let url = attr("url").as_str().unwrap_or("").to_string();
+            let text = |k: &str| attr(k).as_str().filter(|s| !s.is_empty()).map(str::to_string);
+            let title = text("title").unwrap_or_else(|| url.clone());
+            let img = text("image").filter(|i| i.starts_with("data:image/")).map(|i| format!("<img src=\"{}\" alt=\"\">", esc(&i))).unwrap_or_default();
+            let desc = text("description").map(|d| format!("<span>{}</span>", esc(&d))).unwrap_or_default();
+            let site = text("site").unwrap_or_default();
+            format!(
+                "<a class=\"link\" href=\"{}\">{img}<div><b>{}</b>{desc}<small>{}</small></div></a>\n",
+                esc(&url),
+                esc(&title),
+                esc(&site)
+            )
+        }
         "noteFile" => match attr("hash").as_str().and_then(|h| assets.get(h)) {
             Some(a) => {
                 let src = href(&a.href);
@@ -215,7 +229,10 @@ img{max-width:100%;border-radius:12px;display:block}figure{margin:1em 0}figure.r
 ul.tasks{list-style:none;padding-left:0}ul.tasks ul.tasks{padding-left:1.6em}li.task{display:flex;gap:.6em;align-items:flex-start}li.task input{margin-top:.45em}\
 li.task.done>div>p{text-decoration:line-through;color:#6b7280}pre{background:#f3f4f6;padding:14px 16px;border-radius:10px;overflow:auto;font-size:14px}\
 figure.file{border:1px solid #e5e7eb;border-radius:12px;padding:12px 14px}figure.file figcaption{font-size:14px;color:#6b7280;margin:4px 0}\
-figure.file audio,figure.file video{width:100%}p.file span{color:#6b7280;font-size:14px}a{color:#2563eb}\
+figure.file audio,figure.file video{width:100%}\
+a.link{display:flex;gap:14px;align-items:center;border:1px solid #e5e7eb;border-radius:12px;padding:10px;margin:1em 0;color:inherit;text-decoration:none}\
+a.link img{width:96px;height:72px;object-fit:cover;border-radius:8px;flex:none}a.link div{display:flex;flex-direction:column;min-width:0}\
+a.link span{color:#6b7280;font-size:14px}a.link small{color:#6b7280;font-size:12px}p.file span{color:#6b7280;font-size:14px}a{color:#2563eb}\
 @media (prefers-color-scheme:dark){body{background:#17191c;color:#e6e8eb}.meta,figure.file figcaption,p.file span,li.task.done>div>p{color:#9aa1a9}pre{background:#23262b}figure.file{border-color:#30343a}a{color:#7aa7ff}}";
 
 /// A nota como uma página HTML (sozinha, sem nada de fora: abre em qualquer navegador).

@@ -6,7 +6,8 @@
 //! - bloco de código (```);
 //! - foto `![nome](ideario://att/<hash>)` (várias na mesma linha = fotos lado a lado) e anexo
 //!   `[📎 nome](ideario://att/<hash>)`, sozinhos na linha;
-//! - parágrafo vazio = `&nbsp;` (sem isso o Markdown perde as linhas em branco da nota).
+//! - parágrafo vazio = `&nbsp;` (sem isso o Markdown perde as linhas em branco da nota);
+//! - cartão de link = `[🔗 título](endereço)` sozinho na linha (descrição e imagem ficam guardadas na nota).
 //!
 //! O que o editor não tem vira texto: link → "texto (endereço)", citação → parágrafos, riscado e `código` → texto.
 //! Ida e volta (nota → Markdown → nota) devolve a mesma nota: é o que deixa o MCP editar um pedaço do texto sem
@@ -18,6 +19,17 @@ use serde_json::{json, Value};
 /// Endereço dos anexos no Markdown: `ideario://att/<hash>`.
 pub const ATT: &str = "ideario://att/";
 const EMPTY_PARAGRAPH: &str = "&nbsp;";
+/// Marca do cartão de link no texto do link.
+const LINK: &str = "🔗";
+
+/// Endereço como destino de link (entre `<>` se tiver espaço ou parênteses).
+fn link_dest(url: &str) -> String {
+    if url.contains([' ', '(', ')', '<', '>']) {
+        format!("<{}>", url.replace('<', "%3C").replace('>', "%3E"))
+    } else {
+        url.to_string()
+    }
+}
 const NBSP: &str = "\u{a0}";
 
 // ---------- nota → Markdown ----------
@@ -67,6 +79,11 @@ fn block(node: &Value, name: &dyn Fn(&str) -> Option<String>, alt: bool) -> Stri
         "noteFile" => {
             let hash = attr_str(node, "hash");
             format!("[📎 {}]({ATT}{hash})", esc_label(&name(hash).unwrap_or_else(|| "arquivo".into())))
+        }
+        "linkCard" => {
+            let url = attr_str(node, "url");
+            let title = attr_str(node, "title");
+            format!("[{LINK} {}]({})", esc(if title.is_empty() { url } else { title }, false, false), link_dest(url))
         }
         "paragraph" if children(node).is_empty() => EMPTY_PARAGRAPH.into(),
         // parágrafo (e qualquer outro bloco de texto)
@@ -259,6 +276,42 @@ fn esc_label(s: &str) -> String {
         .collect()
 }
 
+/// O Markdown do cartão de link só leva endereço e título: ao reescrever uma nota (MCP), a descrição, o site e a imagem
+/// dos cartões com o mesmo endereço voltam da versão anterior.
+pub fn keep_link_meta(old: &Value, new: &mut Value) {
+    fn collect<'a>(v: &'a Value, out: &mut Vec<&'a Value>) {
+        if kind(v) == "linkCard" {
+            out.push(v);
+        }
+        for c in children(v) {
+            collect(c, out);
+        }
+    }
+    fn fill(v: &mut Value, old: &[&Value]) {
+        if kind(v) == "linkCard" {
+            let url = attr_str(v, "url").to_string();
+            if let Some(prev) = old.iter().find(|o| attr_str(o, "url") == url) {
+                for k in ["title", "description", "site", "image"] {
+                    let missing = v.get("attrs").and_then(|a| a.get(k)).map_or(true, Value::is_null);
+                    if let (true, Some(val)) = (missing, prev.get("attrs").and_then(|a| a.get(k)).filter(|x| !x.is_null())) {
+                        v["attrs"][k] = val.clone();
+                    }
+                }
+            }
+        }
+        if let Some(cs) = v.get_mut("content").and_then(Value::as_array_mut) {
+            for c in cs {
+                fill(c, old);
+            }
+        }
+    }
+    let mut prev = Vec::new();
+    collect(old, &mut prev);
+    if !prev.is_empty() {
+        fill(new, &prev);
+    }
+}
+
 // ---------- Markdown → nota ----------
 
 /// Bloco em construção.
@@ -280,6 +333,8 @@ enum Piece {
     Break,
     Image(String),
     File(String),
+    /// Cartão de link: endereço e título (vazio = sem título).
+    Link(String, String),
 }
 
 /// Lê Markdown e devolve o corpo no formato do editor (JSON do TipTap, forma canônica).
@@ -530,6 +585,12 @@ fn link_pieces(url: String, image: bool, inner: Vec<Piece>) -> Vec<Piece> {
         return vec![if image { Piece::Image(hash) } else { Piece::File(hash) }];
     }
     let label: String = inner.iter().filter_map(|p| if let Piece::Text(t, _) = p { Some(t.as_str()) } else { None }).collect();
+    if let Some(title) = label.strip_prefix(LINK) {
+        if !image && !url.is_empty() {
+            let title = title.trim();
+            return vec![Piece::Link(url.clone(), if title == url { String::new() } else { title.to_string() })];
+        }
+    }
     let mut out: Vec<Piece> = inner.into_iter().filter(|p| !matches!(p, Piece::Image(_) | Piece::File(_))).collect();
     if url.is_empty() || label == url || label.trim_start_matches("mailto:") == url.trim_start_matches("mailto:") {
         if out.is_empty() {
@@ -587,6 +648,15 @@ fn paragraph_blocks(pieces: Vec<Piece>) -> Vec<Value> {
                 flush_images(&mut images, &mut out);
                 flush_text(&mut text, &mut out);
                 out.push(json!({"type": "noteFile", "attrs": {"hash": h}}));
+            }
+            Piece::Link(url, title) => {
+                flush_images(&mut images, &mut out);
+                flush_text(&mut text, &mut out);
+                let mut attrs = json!({"url": url});
+                if !title.is_empty() {
+                    attrs["title"] = json!(title);
+                }
+                out.push(json!({"type": "linkCard", "attrs": attrs}));
             }
             other => {
                 // espaço entre fotos da mesma linha não quebra a linha de fotos
@@ -735,6 +805,21 @@ mod tests {
             let doc = json!({"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":t}]}]});
             assert_eq!(back(&doc), doc, "{t:?} → {:?}", to_markdown(&doc, &names));
         }
+    }
+
+    #[test]
+    fn link_cards() {
+        let md = "[🔗 Receita de bolo](https://exemplo.com/bolo)\n\n[🔗 https://x.y/z](https://x.y/z)\n\nveja [o site](https://a.b)";
+        let doc = from_markdown(md);
+        assert_eq!(doc["content"][0], json!({"type":"linkCard","attrs":{"url":"https://exemplo.com/bolo","title":"Receita de bolo"}}));
+        assert_eq!(doc["content"][1], json!({"type":"linkCard","attrs":{"url":"https://x.y/z"}}));
+        assert_eq!(doc["content"][2]["type"], "paragraph", "link no meio do texto continua texto");
+        // reescrever pelo MCP não perde a descrição nem a imagem
+        let old = json!({"type":"doc","content":[{"type":"linkCard","attrs":{"url":"https://exemplo.com/bolo","title":"Receita","description":"A melhor","image":"data:image/webp;base64,AAA"}}]});
+        let mut new = from_markdown("Antes\n\n[🔗 Receita de bolo](https://exemplo.com/bolo)");
+        keep_link_meta(&old, &mut new);
+        assert_eq!(new["content"][1]["attrs"], json!({"url":"https://exemplo.com/bolo","title":"Receita de bolo","description":"A melhor","image":"data:image/webp;base64,AAA"}));
+        assert_eq!(to_markdown(&old, &names), "[🔗 Receita](https://exemplo.com/bolo)");
     }
 
     #[test]

@@ -1001,7 +1001,9 @@ fn update(core: &Core, a: &Args) -> Result<Out> {
             n.title = t.trim().to_string();
         }
         if let Some(c) = a.str("content") {
-            n.body = from_markdown(c);
+            let mut body = from_markdown(c);
+            crate::markdown::keep_link_meta(&n.body, &mut body);
+            n.body = body;
         }
         if let Some(c) = a.str("category") {
             n.category_id = if c.trim().is_empty() { None } else { Some(category_id(s, c)?) };
@@ -1040,7 +1042,9 @@ fn edit_text(core: &Core, a: &Args) -> Result<Out> {
         if count > 1 && !a.bool("all").unwrap_or(false) {
             return Err(format!("o trecho aparece {count} vezes; inclua mais contexto ou use all=true"));
         }
-        n.body = from_markdown(&md.replace(find, replace));
+        let mut body = from_markdown(&md.replace(find, replace));
+        crate::markdown::keep_link_meta(&n.body, &mut body);
+        n.body = body;
         save(s, &n)?;
         Ok(Out::Text(format!("Trocado ({count}x). Corpo agora:\n{}", markdown_of(s, &n))))
     })
