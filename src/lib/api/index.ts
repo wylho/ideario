@@ -1,7 +1,7 @@
 // Camada de dados da UI. No app, os comandos Tauri (`invoke`) do núcleo Rust (SQLite local, Fase 1);
 // no navegador (`npm run dev`, prévia) e nos testes e2e, um mock em memória com dados de exemplo.
 import type {
-  Attachment, AttachmentKind, AttachmentRow, KeepReport, Box, McpInfo, OrphanCounts, Millis, Category, Filter, NoteDetail, NoteInput, NotePatch, NoteSort, NoteSummary, Settings, SyncState, SyncStatus, TagCount, Tone, ViewCounts,
+  Attachment, AttachmentKind, AttachmentRow, KeepReport, BackupManifest, BackupReport, BackupStatus, RestoreReport, Box, McpInfo, OrphanCounts, Millis, Category, Filter, NoteDetail, NoteInput, NotePatch, NoteSort, NoteSummary, Settings, SyncState, SyncStatus, TagCount, Tone, ViewCounts,
 } from '../types'
 import { invoke, isTauri } from '@tauri-apps/api/core'
 import { mockApi } from './mock'
@@ -102,6 +102,14 @@ export interface Api {
   inspectTakeout(path: string): Promise<{ notes: number; media: number } | null>
   /** Importa o Takeout (a lista se atualiza no fim). Só no app. */
   importKeep(path: string, onProgress: (done: number, total: number) => void): Promise<KeepReport>
+  /** Backup local (só no app): estado do automático, ligar/desligar e escolher a pasta. */
+  backupStatus(): Promise<BackupStatus>
+  backupSetAuto(enabled: boolean, dir: string | null): Promise<BackupStatus>
+  /** Grava o backup em `path` (arquivo .ideario). */
+  backupExport(path: string, onProgress: (done: number, total: number) => void): Promise<BackupReport>
+  backupInspect(path: string): Promise<BackupManifest>
+  /** Junta o backup com o que está no app (nada é apagado). */
+  backupRestore(path: string, onProgress: (done: number, total: number) => void): Promise<RestoreReport>
   /** Só no app: importa pelo caminho um arquivo arrastado do sistema (lido no núcleo). */
   importPath(path: string): Promise<Attachment>
   /** Salva uma cópia do anexo (no app: na pasta Downloads, e devolve o caminho; no navegador: download, e devolve null). */

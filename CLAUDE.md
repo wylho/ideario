@@ -162,5 +162,10 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
   na tabela temporária `temp.unlocked` (por conexão: fechar o app bloqueia; o MCP nunca vê desbloqueada). `private_clause`
   no `where_clause` tira as notas delas de todas as listas, exceto a categoria escolhida (com PIN, só desbloqueada).
   UI: `app.openCategory` / `askUnlock` / `askPin` (`AppDialogs.svelte`), menu em `menus.ts` (`privacyEntries`).
+- Backup local (`src-tauri/src/backup.rs`, `src/lib/backup.svelte.ts`): `.ideario` = zip (manifest, `notes/<id>.ydoc`,
+  `notes.json` com as datas, `categories.json`, `attachments/` + `thumbs/`, `leitura/*.md`). Restaurar = `apply_update` por
+  nota (merge Yjs) + categorias que faltam; tira a boas-vindas intocada de um app novo. Automático: linha de fundo de hora
+  em hora (`backup_auto`/`backup_dir`/`backup_last` no `sync_state`, local), poda os 4 mais novos pelo nome.
+  MCP: `create_backup`.
 - Filtro "Sem categoria"/"Sem tags": sentinelas `NO_CATEGORY`/`NO_TAGS` (`~none`) no `Filter` (TS e Rust).
 - **Próximo passo: Fase 7 (Android).**

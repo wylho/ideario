@@ -72,6 +72,7 @@ Onde fica o executável:
 | `list_attachments`, `get_attachment` | Anexos; fotos voltam como imagem, textos como texto |
 | `attach_file`, `export_attachment` | Anexar um arquivo do computador; salvar uma cópia |
 | `import_keep` | Importar o zip do Google Takeout |
+| `create_backup` | Backup local completo num arquivo `.ideario` (restaurar é no app) |
 
 As ferramentas que só leem vêm marcadas como só leitura (`readOnlyHint`), e as que apagam como destrutivas. O Claude
 Desktop usa isso para pedir (ou não) a sua confirmação.

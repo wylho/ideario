@@ -268,6 +268,14 @@ fn pin_protected_categories_are_off_limits() {
 }
 
 #[test]
+fn backup_from_the_mcp() {
+    let (core, t) = setup();
+    let out = json_of(&tool(&core, "create_backup", json!({ "folder": t.0.join("bk").display().to_string() }), true));
+    assert_eq!(out["notes"], 1);
+    assert!(std::path::Path::new(out["path"].as_str().unwrap()).is_file());
+}
+
+#[test]
 fn overview_says_what_time_it_is() {
     let (core, _t) = setup();
     let o = json_of(&tool(&core, "app_overview", json!({}), true));

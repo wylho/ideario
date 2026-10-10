@@ -3,7 +3,7 @@
 //   npx tauri build --debug --no-bundle && xvfb-run -a node tests/native/run.mjs
 // Precisa de: WebKitWebDriver (pacote webkit2gtk-driver) e tauri-driver (cargo install tauri-driver).
 import { spawn } from 'node:child_process'
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { DatabaseSync } from 'node:sqlite'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
@@ -484,6 +484,33 @@ try {
     } finally {
       mcp.close()
     }
+  })
+
+  await test('backup local: grava o .ideario, restaurar traz de volta o que foi apagado; o automático grava na pasta', async () => {
+    const call = (cmd, args) => s.execAsync(`window.__TAURI_INTERNALS__.invoke(arguments[0], arguments[1]).then((v) => arguments[2](v), (e) => arguments[2]('erro ' + e))`, cmd, args)
+    const file = join(DATA, 'bk', 'teste.ideario')
+    const r = await call('backup_export', { path: file })
+    if (typeof r !== 'object' || !(r.notes > 3) || !existsSync(file)) throw new Error(JSON.stringify(r))
+    // apaga uma nota de vez e restaura
+    const victim = (await call('list_notes', { filter: { categoryId: null, tags: [] }, box: 'active', query: 'bolo', sort: 'updated' }))[0].id
+    await call('delete_note', { id: victim })
+    const m = await call('backup_inspect', { path: file })
+    if (m.notes !== r.notes) throw new Error(JSON.stringify(m))
+    const rr = await call('backup_restore', { path: file })
+    if (rr.newNotes !== 1) throw new Error(JSON.stringify(rr))
+    await s.waitFor(`return [...document.querySelectorAll('.card')].some((c) => c.getAttribute('aria-label') === 'Bolo da vó')`, 'nota de volta na tela')
+    // automático: ligado com a pasta, o primeiro sai na hora
+    const auto = join(DATA, 'auto')
+    const st = await call('backup_set_auto', { enabled: true, dir: auto })
+    if (!st.auto || st.dir !== auto) throw new Error(JSON.stringify(st))
+    const end = Date.now() + 10000
+    while (Date.now() < end && !(existsSync(auto) && readdirSync(auto).some((f) => f.endsWith('.ideario')))) await sleep(200)
+    if (!readdirSync(auto).some((f) => /^Ideario backup \d{4}-\d{2}-\d{2}\.ideario$/.test(f))) throw new Error(readdirSync(auto).join(', '))
+    // e as Configurações mostram
+    await s.exec(`[...document.querySelectorAll('.sidebar button')].find((b) => b.textContent.includes('Configurações'))?.click(); return true`)
+    await s.waitFor(`return document.querySelector('#backup-auto')?.getAttribute('data-state') === 'checked'`, 'backup automático ligado nas Configurações')
+    await s.exec(`document.querySelector('.sheet [aria-label="Fechar"]').click(); return true`)
+    await call('backup_set_auto', { enabled: false, dir: null })
   })
 
   await test('tema escuro: a janela (barra de título e fundo) acompanha e fica guardado para a próxima abertura', async () => {

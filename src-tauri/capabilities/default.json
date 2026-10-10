@@ -10,6 +10,7 @@
     "core:window:allow-set-theme",
     "core:window:allow-set-background-color",
     "dialog:allow-open",
+    "dialog:allow-save",
     "core:window:allow-close"
   ]
 }

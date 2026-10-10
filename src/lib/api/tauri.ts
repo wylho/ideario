@@ -47,6 +47,17 @@ async function write<T>(cmd: string, args?: Parameters<typeof invoke>[1], option
   return r
 }
 
+/** Ouve o progresso (evento `[feitos, total]`) enquanto a tarefa roda. */
+async function withProgress<T>(event: string, onProgress: (done: number, total: number) => void, run: () => Promise<T>): Promise<T> {
+  const { listen } = await import('@tauri-apps/api/event')
+  const stop = await listen<[number, number]>(event, (e) => onProgress(e.payload[0], e.payload[1]))
+  try {
+    return await run()
+  } finally {
+    stop()
+  }
+}
+
 export const tauriApi: Api = {
   listNotes: ({ filter, box, query, sort }) => invoke('list_notes', { filter, box, query, sort }),
   listReminders: ({ filter, query, includeDone }) => invoke('list_reminders', { filter, query, includeDone }),
@@ -109,6 +120,11 @@ export const tauriApi: Api = {
   pendingPreviews: () => invoke('pending_previews'),
   setPreview: (hash, png) => invoke('set_preview', png, { headers: { 'x-hash': hash } }),
   inspectTakeout: (path) => invoke('inspect_takeout', { path }),
+  backupStatus: () => invoke('backup_status'),
+  backupSetAuto: (enabled, dir) => invoke('backup_set_auto', { enabled, dir }),
+  backupExport: (path, onProgress) => withProgress('backup-progress', onProgress, () => invoke('backup_export', { path })),
+  backupInspect: (path) => invoke('backup_inspect', { path }),
+  backupRestore: (path, onProgress) => withProgress('backup-progress', onProgress, () => write('backup_restore', { path })),
   async importKeep(path, onProgress) {
     const { listen } = await import('@tauri-apps/api/event')
     const stop = await listen<[number, number]>('keep-progress', (e) => onProgress(e.payload[0], e.payload[1]))
