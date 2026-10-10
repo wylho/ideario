@@ -1,5 +1,6 @@
 import { isTauri } from '@tauri-apps/api/core'
 import { api } from './api'
+import { openPdf } from './pdf'
 import type { AttachmentKind } from './types'
 
 // Prévias de PDF (primeira página, pelo pdf.js embutido) e de vídeo (um quadro do começo), feitas aqui na interface,
@@ -44,11 +45,7 @@ function render(url: string, kind: AttachmentKind) {
 }
 
 async function pdfPage(url: string): Promise<Uint8Array | null> {
-  const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs')
-  const worker = (await import('pdfjs-dist/legacy/build/pdf.worker.mjs?url')).default
-  pdfjs.GlobalWorkerOptions.workerSrc = worker
-  const data = new Uint8Array(await (await fetch(url)).arrayBuffer())
-  const doc = await pdfjs.getDocument({ data, isEvalSupported: false }).promise
+  const doc = await openPdf(url)
   try {
     const page = await doc.getPage(1)
     const base = page.getViewport({ scale: 1 })

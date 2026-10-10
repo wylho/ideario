@@ -343,6 +343,25 @@ try {
     if (process.env.IDEARIO_SHOT) writeFileSync(process.env.IDEARIO_SHOT, Buffer.from(await wd('GET', s.p('/screenshot')), 'base64'))
   })
 
+  await test('ler o PDF no app (pdf.js): a página aparece desenhada, também na WebKitGTK', async () => {
+    await s.exec(`document.querySelector('.view-switch button[title="Arquivos"]').click(); return true`)
+    await s.waitFor(`return [...document.querySelectorAll('.f-row, .f-tile')].some((r) => r.textContent.includes('Contrato.pdf'))`, 'PDF em Arquivos')
+    await s.exec(`[...document.querySelectorAll('.f-row, .f-tile')].find((r) => r.textContent.includes('Contrato.pdf')).click(); return true`)
+    // a primeira página é desenhada num canvas com texto (pixels escuros sobre o branco)
+    const ink = await s.waitFor(
+      `const c = document.querySelector('.lightbox .pdf-page canvas'); if (!c || !c.width) return false;
+       const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let dark = 0;
+       for (let i = 0; i < d.length; i += 16) if (d[i] < 128) dark++; return dark > 20 && dark`,
+      'página do PDF desenhada',
+      15000,
+    )
+    if (!(ink > 20)) throw new Error(`página vazia: ${ink}`)
+    if (process.env.IDEARIO_SHOT) writeFileSync(process.env.IDEARIO_SHOT, Buffer.from(await wd('GET', s.p('/screenshot')), 'base64'))
+    await s.exec(`document.querySelector('.lightbox [aria-label="Fechar"]').click(); return true`)
+    await s.exec(`document.querySelector('.view-switch button[title="Notas"]').click(); return true`)
+    await s.waitFor(`return document.querySelectorAll('.card').length > 0`, 'de volta às notas')
+  })
+
   await test('Importar do Keep: soltar o Takeout pergunta, importa e mostra o resumo', async () => {
     const note = (o) => JSON.stringify({ isPinned: false, isArchived: false, isTrashed: false, color: 'DEFAULT', createdTimestampUsec: 1700000000000000, userEditedTimestampUsec: 1700000000000000, ...o })
     const file = join(DATA, 'takeout-keep.zip')

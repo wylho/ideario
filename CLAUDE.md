@@ -81,6 +81,8 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
 - CI (`.github/workflows/build.yml`): verificação + instaladores de macOS (universal), Windows e Linux nos Artifacts.
 - Menus de contexto: `ContextMenu.svelte` (clique direito, Shift+F10, toque longo) + itens em `src/lib/menus.ts`.
   O menu do navegador é bloqueado fora de campos de texto (`main.ts`). Ações com "Desfazer" no toast.
+- Leitor de PDF próprio (`PdfViewer.svelte`, pdf.js de `src/lib/pdf.ts`), igual nos três sistemas (a WebKitGTK não
+  mostra PDF em iframe): páginas desenhadas perto da tela e liberadas longe dela.
 - Prévia dos cards: a projeção entrega `preview` (blocos na ordem do documento) e `label`; a UI não parseia o corpo.
 - Tags: `tags` na nota guarda só as manuais; as `#tags` do corpo são derivadas na projeção (evita gravar tags pela metade
   durante o salvamento contínuo).
@@ -105,8 +107,7 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
   código de propósito, clippy sem avisos no CI) e padrões idiomáticos de Rust (sem `unwrap` em produção, `pub` mínimo).
 - Pedidos do usuário para a fase certa: emoji grande de capa na nota; arrastar card até categoria da lateral; baixar em
   Downloads ou escolher a pasta (diálogo nativo); prévia de PDFs e documentos; bug: card tremendo ao arrastar e cards
-  quebrados ao redimensionar a janela (Masonry). Visualizador de PDF no Linux (a WebKitGTK não mostra PDF no
-  iframe; dá para usar o pdf.js que já está no app).
+  quebrados ao redimensionar a janela (Masonry) — feito.
 - **Importar do Keep (Fase 6, antecipada): concluída.** `keep.rs` lê o zip do Takeout (nomes em UTF-8 sem a marca, como o
   Finder grava; ignora `__MACOSX`, `._*`, `.DS_Store`) e converte cada nota: HTML do texto (parágrafos, h1/h2 → título,
   negrito/itálico pelo `<span style>`), checklist, fotos pelo pipeline, links (anotações) como texto, 1º marcador →

@@ -9,6 +9,7 @@
   import { fmtBytes } from '../lib/format'
   import { KIND_ICONS, KIND_LABELS } from '../lib/file-kinds'
   import AudioPlayer from './AudioPlayer.svelte'
+  import PdfViewer from './PdfViewer.svelte'
 
   const img = $derived(app.lightbox)
 
@@ -34,7 +35,7 @@
         {#if img.kind === 'image'}
           <img class="lb-img" src={api.imageUrl(img.hash, 'full')} alt="" />
         {:else if img.kind === 'pdf' && api.mediaUrl(img.hash)}
-          <iframe class="lb-img lb-doc" src={api.mediaUrl(img.hash)} title={img.name}></iframe>
+          <PdfViewer src={api.mediaUrl(img.hash)} name={img.name} />
         {:else if img.kind === 'video' && api.mediaUrl(img.hash)}
           <!-- svelte-ignore a11y_media_has_caption -->
           <video class="lb-img" src={api.mediaUrl(img.hash)} controls autoplay playsinline></video>
