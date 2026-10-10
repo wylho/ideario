@@ -1285,7 +1285,7 @@ test.describe('blocos no editor', () => {
 
   test('alça do item reordena o checklist (como no Keep)', async ({ page }) => {
     await items(page).nth(2).hover()
-    const h = (await page.locator('.item-handle').boundingBox())!
+    const h = (await page.locator('.blk-handle.item').boundingBox())!
     const t = (await items(page).nth(0).boundingBox())!
     await page.mouse.move(h.x + 8, h.y + 10)
     await page.mouse.down()
@@ -1295,15 +1295,139 @@ test.describe('blocos no editor', () => {
     await expect(items(page).first()).toContainText('Repelente')
   })
 
-  test('menu do bloco: checklist marca todos; mover o bloco para cima', async ({ page }) => {
+  test('uma alça só: no checklist ela é do item; a checklist inteira fica no menu dele', async ({ page }) => {
     await items(page).nth(1).hover()
+    await expect(page.locator('.blk-handle')).toHaveCount(1)
+    await expect(page.locator('.blk-handle')).toHaveClass(/item/)
+    // a alça fica logo à esquerda da caixinha do item, na altura dele
+    const h = (await page.locator('.blk-handle').boundingBox())!
+    const box = (await items(page).nth(1).locator('input[type="checkbox"]').boundingBox())!
+    expect(h.x + h.width).toBeLessThanOrEqual(box.x + 1)
+    expect(Math.abs(h.y + h.height / 2 - (box.y + box.height / 2))).toBeLessThan(6)
     await page.locator('.blk-handle').click()
+    await page.getByRole('menuitem', { name: 'Checklist inteira' }).click()
     await page.getByRole('menuitem', { name: 'Marcar todos', exact: true }).click()
     await expect(page.locator('#corpo ul[data-type="taskList"] > li[data-checked="false"]')).toHaveCount(0)
     await items(page).nth(1).hover()
     await page.locator('.blk-handle').click()
-    await page.getByRole('menuitem', { name: 'Mover para cima' }).click()
+    await page.getByRole('menuitem', { name: 'Checklist inteira' }).click()
+    // o "Mover para cima" do submenu (a checklist), não o do item
+    await page.getByRole('menuitem', { name: 'Mover para cima' }).last().click()
     await expect(page.locator('#corpo > *').first()).toHaveAttribute('data-type', 'taskList')
+  })
+
+  test('subitens no checklist: Tab recua, Shift+Tab volta; marcar o item marca os subitens', async ({ page }) => {
+    await back(page)
+    await newNote(page)
+    await page.getByRole('button', { name: 'Checklist' }).click()
+    await page.keyboard.type('Viagem')
+    await page.keyboard.press('Enter')
+    await page.keyboard.press('Tab')
+    await page.keyboard.type('Passaporte')
+    await page.keyboard.press('Enter')
+    await page.keyboard.press('Tab')
+    await page.keyboard.type('Renovar')
+    await page.keyboard.press('Enter')
+    await page.keyboard.press('Shift+Tab')
+    await page.keyboard.press('Shift+Tab')
+    await page.keyboard.type('Casa')
+    const nested = page.locator('#corpo ul[data-type="taskList"] ul[data-type="taskList"]')
+    await expect(nested.first()).toContainText('Passaporte')
+    await expect(nested.locator('ul[data-type="taskList"]')).toContainText('Renovar')
+    await expect(page.locator('#corpo > ul[data-type="taskList"] > li')).toHaveCount(2)
+    // marcar "Viagem" marca os dois níveis de baixo; "Casa" fica
+    await page.locator('#corpo > ul[data-type="taskList"] > li').first().locator('> label input').check()
+    await expect(page.locator('#corpo li[data-checked="true"]')).toHaveCount(3)
+    await expect(page.locator('#corpo > ul[data-type="taskList"] > li').nth(1)).toHaveAttribute('data-checked', 'false')
+    // o card mostra os níveis recuados
+    await back(page)
+    const card = cards(page).filter({ hasText: 'Passaporte' })
+    await expect(card.locator('.pv-task', { hasText: 'Renovar' })).toHaveAttribute('style', /--depth: 2/)
+  })
+
+  test('Ctrl+A numa nota que é só checklist seleciona tudo, à vista; apagar limpa a nota', async ({ page }) => {
+    await back(page)
+    await newNote(page)
+    await page.getByRole('button', { name: 'Checklist' }).click()
+    await page.keyboard.type('Arroz')
+    await page.keyboard.press('Enter')
+    await page.keyboard.press('Tab')
+    await page.keyboard.type('Integral')
+    await page.keyboard.press('Enter')
+    await page.keyboard.press('Shift+Tab')
+    await page.keyboard.type('Café')
+    await page.locator('#corpo li p', { hasText: 'Integral' }).click()
+    await page.keyboard.press('ControlOrMeta+a')
+    // a seleção do navegador (o que aparece destacado) cobre todos os itens e continua lá depois de soltar a tecla
+    await page.waitForTimeout(100)
+    const shown = await page.evaluate(() => getSelection()?.toString() ?? '')
+    for (const t of ['Arroz', 'Integral', 'Café']) expect(shown).toContain(t)
+    await page.keyboard.press('Backspace')
+    await expect(page.locator('#corpo li')).toHaveCount(0)
+    await expect(page.locator('#corpo')).toHaveText('')
+  })
+
+  test('menu do item: aumentar e diminuir o recuo', async ({ page }) => {
+    await items(page).nth(1).hover()
+    await page.locator('.blk-handle').click()
+    await expect(page.getByRole('menuitem', { name: 'Diminuir recuo' })).toBeDisabled()
+    await page.getByRole('menuitem', { name: 'Aumentar recuo' }).click()
+    await expect(page.locator('#corpo ul[data-type="taskList"] ul[data-type="taskList"] > li')).toHaveCount(1)
+    await page.locator('#corpo ul[data-type="taskList"] ul[data-type="taskList"] > li').hover()
+    await page.locator('.blk-handle').click()
+    await page.getByRole('menuitem', { name: 'Diminuir recuo' }).click()
+    await expect(page.locator('#corpo ul[data-type="taskList"] ul[data-type="taskList"]')).toHaveCount(0)
+  })
+
+  test('transformar em: todas as formas funcionam, sem perder texto nem os níveis', async ({ page }) => {
+    await back(page)
+    await newNote(page)
+    await page.getByRole('button', { name: 'Lista', exact: true }).click()
+    await page.keyboard.type('um')
+    await page.keyboard.press('Enter')
+    await page.keyboard.press('Tab')
+    await page.keyboard.type('dois')
+    await page.keyboard.press('Enter')
+    await page.keyboard.press('Shift+Tab')
+    await page.keyboard.type('três')
+    const first = page.locator('#corpo > *').first()
+    const shape = () => first.evaluate((e) => e.getAttribute('data-type') ?? e.tagName.toLowerCase())
+    /** Abre "Transformar em" do bloco (numa lista, pelo submenu da lista inteira) e escolhe `to`. */
+    const to = async (label: string) => {
+      const item = first.locator('li').first()
+      if (await item.count()) {
+        await item.locator('p').first().hover()
+        await page.locator('.blk-handle').click()
+        await page.getByRole('menuitem', { name: /^(Lista|Checklist) inteira$/ }).click()
+      } else {
+        await first.hover()
+        await page.locator('.blk-handle').click()
+      }
+      await page.getByRole('menuitem', { name: 'Transformar em' }).last().click()
+      await page.getByRole('menuitemcheckbox', { name: label, exact: true }).or(page.getByRole('menuitem', { name: label, exact: true })).last().click()
+    }
+    const text = () => page.locator('#corpo').innerText()
+    // marcadores → checklist: mantém o subitem
+    await to('Checklist')
+    expect(await shape()).toBe('taskList')
+    await expect(page.locator('#corpo ul[data-type="taskList"] ul[data-type="taskList"]')).toContainText('dois')
+    // checklist → marcadores, de volta
+    await to('Lista')
+    expect(await shape()).toBe('ul')
+    await expect(page.locator('#corpo > ul > li li')).toContainText('dois')
+    // lista → texto: uma linha por item
+    await to('Texto')
+    expect(await shape()).toBe('p')
+    await expect(page.locator('#corpo > p')).toHaveCount(3)
+    // texto → título, título → código, código → checklist
+    await to('Título')
+    expect(await shape()).toBe('h3')
+    await to('Código')
+    expect(await shape()).toBe('pre')
+    await expect(page.locator('#corpo pre')).toContainText('um')
+    await to('Checklist')
+    expect(await shape()).toBe('taskList')
+    for (const w of ['um', 'dois', 'três']) expect(await text()).toContain(w)
   })
 
   test('arrastar um bloco pela alça', async ({ page }) => {

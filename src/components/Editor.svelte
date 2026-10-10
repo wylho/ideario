@@ -7,9 +7,11 @@
     Archive, ArchiveRestore, ArrowLeft, Bold, Camera, Check, ChevronDown, ChevronLeft, ChevronRight, Columns2, Heading, Image, Italic, List,
     ListChecks, Mic, MoreVertical, SquareCode, Palette, Paperclip, Pin, PinOff, Plus, Redo2, Rows2, Square, Tag, Trash2, Undo2, X,
     ArrowDown, ArrowUp, Copy, CopyPlus, Download, Eye, GripVertical, ListTodo, Pilcrow, Scissors, SquareCheck, SquareDashed, ExternalLink,
+    ListIndentDecrease, ListIndentIncrease,
   } from '@lucide/svelte'
   import {
-    blockAt, canMove, checkAll, clipNode, deleteChecked, deleteNode, duplicateNode, moveNode, startNodeDrag, type BlockHit,
+    blockAt, canIndent, canMove, checkAll, checkCount, clipNode, convertBlock, deleteChecked, deleteNode, duplicateNode, moveNode, shapeOf,
+    startNodeDrag, type BlockHit, type Shape,
   } from '../lib/editor/blocks'
   import { SEP, type MenuEntry } from '../lib/menu'
   import MenuAt from './MenuAt.svelte'
@@ -336,10 +338,16 @@
 
   function onBodyMove(e: PointerEvent) {
     if (!editor || e.pointerType !== 'mouse' || handleDragging || e.buttons) return
-    if ((e.target as Element).closest('.blk-handle, .item-handle')) return
-    hover = blockAt(editor.view, e.clientY)
+    if ((e.target as Element).closest('.blk-handle')) return
+    hover = blockAt(editor.view, e.clientY, e.clientX)
   }
   const topOf = (dom: HTMLElement) => (blocksEl ? dom.getBoundingClientRect().top - blocksEl.getBoundingClientRect().top : 0)
+  /** Logo à esquerda do começo do bloco ou item (a caixinha do checklist, o marcador da lista). */
+  function handleLeft(dom: HTMLElement, isItem: boolean) {
+    if (!blocksEl) return 8
+    const marker = isItem && dom.parentElement?.getAttribute('data-type') !== 'taskList' ? parseFloat(getComputedStyle(dom.parentElement!).paddingLeft) || 0 : 0
+    return Math.max(4, dom.getBoundingClientRect().left - blocksEl.getBoundingClientRect().left - marker - 26)
+  }
 
   function dragFromHandle(e: DragEvent, pos: number, dom: HTMLElement) {
     if (!editor) return
@@ -348,15 +356,9 @@
   }
 
   const TEXTISH = new Set(['paragraph', 'heading', 'bulletList', 'orderedList', 'taskList', 'codeBlock'])
-  type Shape = 'paragraph' | 'heading' | 'bullet' | 'task' | 'code'
   function transform(pos: number, to: Shape) {
-    const node = editor?.state.doc.nodeAt(pos)
-    if (!editor || !node) return
-    const c = editor.chain().focus().setTextSelection({ from: pos + 1, to: pos + node.nodeSize - 1 }).clearNodes()
-    ;(to === 'heading' ? c.setHeading({ level: 3 }) : to === 'bullet' ? c.toggleBulletList() : to === 'task' ? c.toggleTaskList() : to === 'code' ? c.setCodeBlock() : c).run()
+    if (editor) convertBlock(editor.view, pos, to)
   }
-  const shapeOf = (name: string): Shape | null =>
-    ({ paragraph: 'paragraph', heading: 'heading', bulletList: 'bullet', taskList: 'task', codeBlock: 'code' })[name] as Shape | null
 
   /** Menu de um bloco (ou de um item de lista), com as ações gerais e as do tipo. */
   function nodeEntries(pos: number, clicked?: Element): MenuEntry[] {
@@ -387,11 +389,18 @@
         SEP,
       )
     }
-    if (name === 'taskList') {
-      let checked = 0
-      node.forEach((i) => void (i.attrs.checked && checked++))
+    if (isItem) {
+      // Subitens: recuar vira subitem do item de cima; voltar sobe um nível (Tab e Shift+Tab fazem o mesmo).
       out.push(
-        { label: 'Marcar todos', icon: SquareCheck, disabled: checked === node.childCount, onSelect: () => checkAll(view, pos, true) },
+        { label: 'Aumentar recuo', icon: ListIndentIncrease, hint: 'Tab', disabled: !canIndent(view, pos, 1), onSelect: () => indent(pos, 1) },
+        { label: 'Diminuir recuo', icon: ListIndentDecrease, hint: '⇧ Tab', disabled: !canIndent(view, pos, -1), onSelect: () => indent(pos, -1) },
+        SEP,
+      )
+    }
+    if (name === 'taskList') {
+      const [checked, total] = checkCount(node)
+      out.push(
+        { label: 'Marcar todos', icon: SquareCheck, disabled: checked === total, onSelect: () => checkAll(view, pos, true) },
         { label: 'Desmarcar todos', icon: SquareDashed, disabled: checked === 0, onSelect: () => checkAll(view, pos, false) },
         { label: 'Apagar itens marcados', icon: Trash2, disabled: checked === 0, onSelect: () => deleteChecked(view, pos) },
         SEP,
@@ -413,8 +422,23 @@
         sub: [opt('Texto', Pilcrow, 'paragraph'), opt('Título', Heading, 'heading'), opt('Lista', List, 'bullet'), opt('Checklist', ListTodo, 'task'), opt('Código', SquareCode, 'code')],
       })
     }
+    if (isItem) {
+      // A lista ou checklist inteira (marcar todos, mover, transformar…) fica num submenu do item.
+      const listPos = view.state.doc.resolve(pos).before()
+      const list = view.state.doc.nodeAt(listPos)
+      if (list) out.push(SEP, { label: list.type.name === 'taskList' ? 'Checklist inteira' : 'Lista inteira', icon: list.type.name === 'taskList' ? ListTodo : List, sub: nodeEntries(listPos) })
+    }
     out.push(SEP, { label: isItem ? 'Apagar item' : 'Apagar', icon: Trash2, danger: true, onSelect: () => deleteNode(view, pos) })
     return out
+  }
+
+  /** Recua (vira subitem do item de cima) ou volta um nível. */
+  function indent(pos: number, dir: 1 | -1) {
+    const node = editor?.state.doc.nodeAt(pos)
+    if (!editor || !node) return
+    editor.chain().focus().setTextSelection(pos + 2).run()
+    if (dir > 0) editor.commands.sinkListItem(node.type.name)
+    else editor.commands.liftListItem(node.type.name)
   }
 
   function openNodeMenu(pos: number, x: number, y: number, clicked?: Element) {
@@ -570,32 +594,22 @@
           >
             <div class="ed-body prose" {@attach mountEditor}></div>
             {#if hover}
-              {@const b = hover.block}
+              <!-- Uma alça só: dentro de uma lista ou checklist ela é do item (a lista inteira fica no menu dele);
+                   fora, do bloco. Sempre logo à esquerda do que ela move, na altura da primeira linha. -->
+              {@const t = hover.item ?? hover.block}
+              {@const isItem = !!hover.item}
               <button
                 class="blk-handle"
-                style:top="{topOf(b.dom)}px"
+                class:item={isItem}
+                style:top="{topOf(t.dom)}px"
+                style:left="{handleLeft(t.dom, isItem)}px"
                 draggable="true"
-                aria-label="Bloco: arraste para mover ou clique para o menu"
-                title="Arraste para mover · clique para o menu"
-                ondragstart={(e) => dragFromHandle(e, b.pos, b.dom)}
+                aria-label={isItem ? 'Item: arraste para reordenar ou clique para o menu' : 'Bloco: arraste para mover ou clique para o menu'}
+                title={isItem ? 'Arraste para reordenar · clique para o menu' : 'Arraste para mover · clique para o menu'}
+                ondragstart={(e) => dragFromHandle(e, t.pos, t.dom)}
                 ondragend={() => ((handleDragging = false), (hover = null))}
-                onclick={(e) => openNodeMenu(b.pos, e.clientX, e.clientY)}
-                onpointerenter={() => hover?.item && (hover = { ...hover, item: null })}
+                onclick={(e) => openNodeMenu(t.pos, e.clientX, e.clientY)}
               ><GripVertical size={16} /></button>
-              {#if hover.item}
-                {@const it = hover.item}
-                <button
-                  class="item-handle"
-                  style:top="{topOf(it.dom)}px"
-                  style:left="{it.dom.getBoundingClientRect().left - (blocksEl?.getBoundingClientRect().left ?? 0) - 18}px"
-                  draggable="true"
-                  aria-label="Item: arraste para reordenar ou clique para o menu"
-                  title="Arraste para reordenar · clique para o menu"
-                  ondragstart={(e) => dragFromHandle(e, it.pos, it.dom)}
-                  ondragend={() => ((handleDragging = false), (hover = null))}
-                  onclick={(e) => openNodeMenu(it.pos, e.clientX, e.clientY)}
-                ><GripVertical size={14} /></button>
-              {/if}
             {/if}
           </div>
           <MenuAt bind:this={blockMenu} />
