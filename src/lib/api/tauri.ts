@@ -60,6 +60,7 @@ export const tauriApi: Api = {
   deleteCategory: (id) => write('delete_category', { id }),
   restoreCategory: (id, noteIds) => write('restore_category', { id, noteIds }),
   listTags: () => invoke('list_tags'),
+  orphanCounts: () => invoke('orphan_counts'),
   renameTag: (from, to) => write('rename_tag', { from, to }),
 
   getNote: (id) => invoke('get_note', { id }),

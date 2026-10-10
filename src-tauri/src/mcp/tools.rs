@@ -10,7 +10,7 @@ use serde_json::{json, Map, Value};
 
 use crate::commands::Core;
 use crate::markdown::{from_markdown, to_markdown, ATT};
-use crate::store::{Attachment, Filter, Millis, NoteInput, Result, Store, REPEATS};
+use crate::store::{Attachment, Filter, Millis, NoteInput, Result, Store, NO_CATEGORY, NO_TAGS, REPEATS};
 use crate::text::{fold, normalize_tag};
 use crate::{attachments, reminders};
 
@@ -86,6 +86,8 @@ fn defs() -> Vec<Def> {
                 "query": s("palavras a buscar no título, no texto e nas tags"),
                 "category": s("nome ou id da categoria"),
                 "tag": s("tag (sem #)"),
+                "no_category": b("só notas sem categoria"),
+                "no_tags": b("só notas sem tag nenhuma"),
                 "where": one_of(&["active", "archived", "trash", "all"], "active (padrão) = notas da tela principal; archived = Arquivo; trash = Lixeira; all = ativas e arquivadas"),
                 "sort": one_of(&["updated", "created", "title", "custom"], "ordem (padrão: editadas por último primeiro; custom = a ordem arrastada no app)"),
                 "limit": n("quantas (padrão 20, até 100)"),
@@ -860,10 +862,16 @@ fn summary_json(s: &Store, n: &crate::store::NoteSummary, cats: &HashMap<String,
 
 fn search(core: &Core, a: &Args) -> Result<Out> {
     core.with(|s| {
-        let filter = Filter {
+        let mut filter = Filter {
             category_id: a.str("category").filter(|c| !c.is_empty()).map(|c| category_id(s, c)).transpose()?,
             tags: a.str("tag").map(normalize_tag).filter(|t| !t.is_empty()).into_iter().collect(),
         };
+        if a.bool("no_category") == Some(true) {
+            filter.category_id = Some(NO_CATEGORY.into());
+        }
+        if a.bool("no_tags") == Some(true) {
+            filter.tags = vec![NO_TAGS.into()];
+        }
         let box_ = match a.str("where").unwrap_or("active") {
             "archived" => "archive",
             "trash" => "trash",

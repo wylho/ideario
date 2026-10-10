@@ -2,6 +2,7 @@
   import { Archive, ChevronDown, Hash, LayoutGrid, Plus, Settings, Trash2 } from '@lucide/svelte'
   import { app } from '../lib/app.svelte'
   import { categoryMenu, newCategory, tagMenu } from '../lib/menus'
+  import { NO_CATEGORY, NO_TAGS } from '../lib/types'
   import ContextMenu from './ContextMenu.svelte'
 
   // Só filtra (o que ver). A visão (como ver) fica na barra de baixo.
@@ -23,7 +24,9 @@
       // sem armazenamento: vale só nesta sessão
     }
   }
-  const total = $derived(app.categories.reduce((s, c) => s + c.noteCount, 0))
+  // "Sem categoria" e "Sem tags" só aparecem quando há o que mostrar (sem categorias criadas, seria tudo).
+  const showNoCategory = $derived(app.filter.categoryId === NO_CATEGORY || (app.orphans.uncategorized > 0 && app.categories.length > 0))
+  const showNoTags = $derived(app.filter.tags.includes(NO_TAGS) || (app.orphans.untagged > 0 && app.tags.length > 0))
   const pickCategory = (id: string | null) => {
     if (id === null) app.filter.categoryId = null
     else app.setCategory(id)
@@ -60,6 +63,21 @@
       {/snippet}
     </ContextMenu>
   {/each}
+  {#if showNoCategory}
+    <button
+      class="d-item"
+      class:on={app.filter.categoryId === NO_CATEGORY && app.box === 'active'}
+      class:drop-target={app.dropCategory === NO_CATEGORY}
+      data-drop-category={NO_CATEGORY}
+      aria-pressed={app.filter.categoryId === NO_CATEGORY}
+      onclick={() => pickCategory(NO_CATEGORY)}
+      title="Sem categoria"
+    >
+      <i class="dot lg none"></i>
+      <span class="grow">Sem categoria</span>
+      <span class="count">{app.orphans.uncategorized}</span>
+    </button>
+  {/if}
 
   <div class="d-sep"></div>
   <!-- No trilho recolhido as tags viram um ícone que expande a barra. -->
@@ -83,6 +101,11 @@
         {/snippet}
       </ContextMenu>
     {/each}
+    {#if showNoTags}
+      <button class="chip no-tags" class:on={app.filter.tags.includes(NO_TAGS)} aria-pressed={app.filter.tags.includes(NO_TAGS)} onclick={() => app.toggleTag(NO_TAGS)}>
+        Sem tags<span class="count">{app.orphans.untagged}</span>
+      </button>
+    {/if}
   </div>
   {/if}
 

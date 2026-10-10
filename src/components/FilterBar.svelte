@@ -4,17 +4,22 @@
   import { app } from '../lib/app.svelte'
   import { categoryMenu } from '../lib/menus'
   import ContextMenu from './ContextMenu.svelte'
+  import { NO_CATEGORY, NO_TAGS } from '../lib/types'
 
   // O que está sendo visto. No desktop: título com a categoria e as tags ativas.
   // No celular: linha de categorias sempre à mão e as tags numa folha.
   let tagsOpen = $state(false)
   const cat = $derived(app.category(app.filter.categoryId))
+  const noCategory = $derived(app.filter.categoryId === NO_CATEGORY)
+  const showNoCategory = $derived(noCategory || (app.orphans.uncategorized > 0 && app.categories.length > 0))
+  const showNoTags = $derived(app.filter.tags.includes(NO_TAGS) || (app.orphans.untagged > 0 && app.tags.length > 0))
+  const tagLabel = (t: string) => (t === NO_TAGS ? 'Sem tags' : `#${t}`)
   const boxLabel = $derived(app.box === 'archive' ? 'Arquivo' : app.box === 'trash' ? 'Lixeira' : null)
 </script>
 
 {#snippet activeTags()}
   {#each app.filter.tags as t (t)}
-    <button class="chip on" onclick={() => app.toggleTag(t)} aria-label="Tirar #{t} do filtro">#{t}<X size={13} /></button>
+    <button class="chip on" onclick={() => app.toggleTag(t)} aria-label="Tirar {tagLabel(t)} do filtro">{tagLabel(t)}<X size={13} /></button>
   {/each}
 {/snippet}
 
@@ -29,10 +34,10 @@
 {:else if app.wide}
   {#if app.hasFilter}
     <div class="filter-bar">
-      {#if cat}
+      {#if cat || noCategory}
         <h1 class="filter-title">
-          <i class="dot" style:background={cat.color}></i>{cat.name}
-          <button class="icon-btn sm" aria-label="Tirar {cat.name} do filtro" onclick={() => (app.filter.categoryId = null)}><X size={16} /></button>
+          {#if cat}<i class="dot" style:background={cat.color}></i>{cat.name}{:else}<i class="dot none"></i>Sem categoria{/if}
+          <button class="icon-btn sm" aria-label="Tirar {cat?.name ?? 'Sem categoria'} do filtro" onclick={() => (app.filter.categoryId = null)}><X size={16} /></button>
         </h1>
       {:else}
         <span class="filter-hint">Filtrando:</span>
@@ -53,6 +58,9 @@
         {/snippet}
       </ContextMenu>
     {/each}
+    {#if showNoCategory}
+      <button class="chip" class:on={noCategory} aria-pressed={noCategory} onclick={() => app.setCategory(NO_CATEGORY)}><i class="dot none"></i>Sem categoria</button>
+    {/if}
     <button class="chip" class:on={app.filter.tags.length > 0} onclick={() => (tagsOpen = true)}>
       <Hash size={14} />Tags{#if app.filter.tags.length}<span class="count">{app.filter.tags.length}</span>{/if}
     </button>
@@ -77,6 +85,11 @@
               #{t.name}<span class="count">{t.count}</span>
             </button>
           {/each}
+          {#if showNoTags}
+            <button class="chip no-tags" class:on={app.filter.tags.includes(NO_TAGS)} aria-pressed={app.filter.tags.includes(NO_TAGS)} onclick={() => app.toggleTag(NO_TAGS)}>
+              Sem tags<span class="count">{app.orphans.untagged}</span>
+            </button>
+          {/if}
         </div>
         <div class="sheet-actions">
           {#if app.filter.tags.length}<button class="btn ghost" onclick={() => (app.filter.tags = [])}>Limpar tags</button>{/if}

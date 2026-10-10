@@ -8,6 +8,7 @@ import type {
 } from '../../types'
 import * as Y from 'yjs'
 import { uuidv7 } from '../../uuid'
+import { NO_CATEGORY, NO_TAGS } from '../../types'
 import { noteToState, stateToNote } from './ydoc'
 import { fakeImageSrc } from './fake-images'
 import { DAY, SEED_CATEGORIES, SEED_FILES, SEED_IMAGES, seedNotes } from './seed'
@@ -255,11 +256,14 @@ function inBox(n: StoredNote, box: Box) {
   return isLive(n)
 }
 
+/** Sem categoria: nenhuma, ou uma que foi apagada (como no núcleo). */
+const uncategorized = (n: StoredNote) => !n.categoryId || !liveCategories().some((c) => c.id === n.categoryId)
+
 function passes(n: StoredNote, f: Filter) {
-  if (f.categoryId && n.categoryId !== f.categoryId) return false
+  if (f.categoryId === NO_CATEGORY ? !uncategorized(n) : f.categoryId && n.categoryId !== f.categoryId) return false
   if (!f.tags.length) return true
   const tags = tagsOf(n)
-  return f.tags.every((t) => tags.includes(t))
+  return f.tags.every((t) => (t === NO_TAGS ? tags.length === 0 : tags.includes(t)))
 }
 
 /** Notas ativas que passam no filtro, as mais recentes primeiro. */
@@ -496,6 +500,11 @@ export const mockApi: Api = {
     }
     if (count) changed()
     return done(count)
+  },
+
+  orphanCounts() {
+    const live = [...notes.values()].filter(isLive)
+    return done({ uncategorized: live.filter(uncategorized).length, untagged: live.filter((n) => tagsOf(n).length === 0).length })
   },
 
   listTags() {

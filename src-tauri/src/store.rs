@@ -41,6 +41,23 @@ pub fn now() -> Millis {
 
 // ---------- tipos (mesmo formato de src/lib/types.ts) ----------
 
+/// Filtro "Sem categoria" (em `Filter::category_id`) e "Sem tags" (em `Filter::tags`): não é um id nem uma tag
+/// possível (`~` não entra em tag). O mesmo valor de `NO_CATEGORY`/`NO_TAGS` em src/lib/types.ts.
+pub const NO_CATEGORY: &str = "~none";
+pub const NO_TAGS: &str = "~none";
+
+/// Quantas notas ativas estão sem categoria e sem tags (a lateral mostra ao lado de "Sem categoria" e "Sem tags").
+#[derive(Debug, Serialize, PartialEq)]
+pub struct OrphanCounts {
+    pub uncategorized: i64,
+    pub untagged: i64,
+}
+
+/// SQL: a nota não tem categoria (ou a dela foi apagada).
+const UNCATEGORIZED: &str = "(n.category_id IS NULL OR n.category_id NOT IN (SELECT id FROM categories WHERE deleted = 0))";
+/// SQL: a nota não tem tag nenhuma (nem manual nem `#tag` do texto).
+const UNTAGGED: &str = "NOT EXISTS (SELECT 1 FROM note_tags t WHERE t.note_id = n.id)";
+
 #[derive(Debug, Clone, Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Filter {
@@ -449,11 +466,19 @@ impl Store {
             "live" => "n.trashed_at IS NULL".to_string(),
             _ => "n.archived = 0 AND n.trashed_at IS NULL".to_string(),
         }];
-        if let Some(c) = &filter.category_id {
-            args.push(c.clone().into());
-            w.push(format!("n.category_id = ?{}", args.len()));
+        match filter.category_id.as_deref() {
+            Some(NO_CATEGORY) => w.push(UNCATEGORIZED.into()),
+            Some(c) => {
+                args.push(c.to_string().into());
+                w.push(format!("n.category_id = ?{}", args.len()));
+            }
+            None => {}
         }
         for t in &filter.tags {
+            if t == NO_TAGS {
+                w.push(UNTAGGED.into());
+                continue;
+            }
             args.push(t.clone().into());
             w.push(format!("EXISTS (SELECT 1 FROM note_tags t WHERE t.note_id = n.id AND t.tag = ?{})", args.len()));
         }
@@ -704,6 +729,19 @@ impl Store {
 
     pub fn category_note_ids(&self, id: &str) -> Result<Vec<String>> {
         self.ids("SELECT id FROM notes WHERE category_id = ?1", params![id])
+    }
+
+    pub fn orphan_counts(&self) -> Result<OrphanCounts> {
+        self.conn
+            .query_row(
+                &format!(
+                    "SELECT COALESCE(SUM({UNCATEGORIZED}), 0), COALESCE(SUM({UNTAGGED}), 0) FROM notes n \
+                     WHERE n.archived = 0 AND n.trashed_at IS NULL"
+                ),
+                [],
+                |r| Ok(OrphanCounts { uncategorized: r.get(0)?, untagged: r.get(1)? }),
+            )
+            .map_err(err)
     }
 
     pub fn list_tags(&self) -> Result<Vec<TagCount>> {
@@ -1702,6 +1740,41 @@ mod tests {
         let f = Filter { category_id: None, tags: vec!["cozinha".into()] };
         assert_eq!(titles(&s.list_notes(&f, "active", "", "updated").unwrap()), vec!["Pão de queijo"]);
         assert_eq!(s.list_tags().unwrap()[0].name, "cozinha");
+    }
+
+    #[test]
+    fn without_category_and_without_tags() {
+        let s = Store::memory();
+        let casa = s.create_category("Casa", "#C26A3D").unwrap();
+        let mut a = note("a", "Com tudo", "lista #mercado");
+        a.category_id = Some(casa.id.clone());
+        let mut b = note("b", "Só tag manual", "x");
+        b.tags = vec!["casa".into()];
+        let c = note("c", "Nada", "y");
+        let d = note("d", "Categoria que sumiu", "z");
+        for n in [&a, &b, &c, &d] {
+            s.save_note(n).unwrap();
+        }
+        // categoria apagada em outro aparelho: a nota aparece como sem categoria
+        s.conn.execute("UPDATE notes SET category_id = 'sumiu' WHERE id = 'd'", []).unwrap();
+        let list = |f: Filter| {
+            let mut t: Vec<String> = s.list_notes(&f, "active", "", "updated").unwrap().into_iter().map(|n| n.label).collect();
+            t.sort();
+            t
+        };
+        let no_cat = || Filter { category_id: Some(NO_CATEGORY.into()), tags: vec![] };
+        let no_tags = || Filter { category_id: None, tags: vec![NO_TAGS.into()] };
+        assert_eq!(list(no_cat()), vec!["Categoria que sumiu", "Nada", "Só tag manual"]);
+        assert_eq!(list(no_tags()), vec!["Categoria que sumiu", "Nada"], "nem manual nem #tag do texto");
+        assert_eq!(list(Filter { category_id: Some(NO_CATEGORY.into()), tags: vec![NO_TAGS.into()] }), vec!["Categoria que sumiu", "Nada"]);
+        assert_eq!(s.orphan_counts().unwrap(), OrphanCounts { uncategorized: 3, untagged: 2 });
+        // arquivada e na lixeira não contam (como nas categorias)
+        let mut p = Map::new();
+        p.insert("archived".into(), json!(true));
+        s.update_note("c", &p).unwrap();
+        assert_eq!(s.orphan_counts().unwrap(), OrphanCounts { uncategorized: 2, untagged: 1 });
+        // os outros lugares que filtram também entendem (lembretes, contagens)
+        assert_eq!(s.view_counts(&no_tags(), "").unwrap().notes, 1);
     }
 
     #[test]
