@@ -312,6 +312,23 @@ try {
     await s.waitFor(`return [...document.querySelectorAll('.card')].some((c) => c.getAttribute('aria-label') === 'Bem-vindo ao Ideario' && c.querySelector('.pv-task.done'))`, 'card com o item feito')
   })
 
+  await test('Ctrl+A numa nota que é só checklist: a WebKit mostra tudo selecionado; apagar limpa', async () => {
+    await s.exec(`document.querySelector('[aria-label="Criar"]').click(); return true`)
+    await s.waitFor(`return !!document.querySelector('[role=menuitem]')`, 'leque')
+    await s.clickText('[role=menuitem]', 'Nota')
+    await s.waitFor(`return document.activeElement?.id === 'corpo'`, 'editor')
+    await s.exec(`document.querySelector('[aria-label="Checklist"]').click(); return true`)
+    await s.keys('Arroz\uE007\uE004Integral\uE007\uE007Café') // Enter no subitem vazio volta um nível
+    await s.waitFor(`return document.querySelectorAll('#corpo ul[data-type="taskList"] ul[data-type="taskList"] li').length === 1`, 'subitem')
+    await wd('POST', s.p('/actions'), { actions: [{ type: 'key', id: 'k', actions: [{ type: 'keyDown', value: '' }, { type: 'keyDown', value: 'a' }, { type: 'keyUp', value: 'a' }, { type: 'keyUp', value: '' }] }] })
+    await sleep(200)
+    const shown = await s.exec(`return getSelection().toString()`)
+    if (!['Arroz', 'Integral', 'Café'].every((t) => shown.includes(t))) throw new Error(`selecionado: ${JSON.stringify(shown)}`)
+    await s.keys('\uE003') // Backspace
+    await s.waitFor(`return !document.querySelector('#corpo li')`, 'nota vazia depois de apagar')
+    await s.exec(`document.querySelector('[aria-label="Voltar e salvar"]').click(); return true`)
+  })
+
   await test('Fase 3: foto grande entra reduzida em WebP, com miniatura, paleta e tom', async () => {
     const file = join(DATA, 'praia.png')
     writeFileSync(file, noisyPng(2600, 1700))

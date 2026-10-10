@@ -14,10 +14,12 @@ export interface BlockHit {
   item: { pos: number; node: PMNode; dom: HTMLElement } | null
 }
 
-/** Bloco (e item de lista) na altura `y` do editor. */
-export function blockAt(view: EditorView, y: number): BlockHit | null {
+/** Bloco (e item de lista) sob o ponteiro. Na margem esquerda (onde fica a alça) vale a linha; dentro do texto, o
+ *  ponto exato (um subitem fica mais à direita que o item de cima). */
+export function blockAt(view: EditorView, y: number, x?: number): BlockHit | null {
   const r = view.dom.getBoundingClientRect()
-  const res = view.posAtCoords({ left: r.left + Math.min(40, r.width / 2), top: y })
+  const left = Math.min(Math.max(x ?? 0, r.left + Math.min(40, r.width / 2)), r.right - 4)
+  const res = view.posAtCoords({ left, top: y })
   if (!res) return null
   const doc = view.state.doc
   const p = res.inside >= 0 ? res.inside : res.pos
@@ -107,27 +109,115 @@ export function clipNode(view: EditorView, pos: number, how: 'copy' | 'cut') {
   return document.execCommand(how)
 }
 
-/** Checklist: marca ou desmarca todos os itens. */
+/** Checklist: marca ou desmarca todos os itens (subitens inclusive). */
 export function checkAll(view: EditorView, pos: number, checked: boolean) {
   const list = view.state.doc.nodeAt(pos)
   if (!list) return
   const tr = view.state.tr
-  list.forEach((item, offset) => {
+  list.descendants((item, offset) => {
     if (item.type.name === 'taskItem' && item.attrs.checked !== checked) tr.setNodeMarkup(pos + 1 + offset, undefined, { ...item.attrs, checked })
   })
   view.dispatch(tr)
 }
 
-/** Checklist: apaga os itens marcados (e o checklist, se não sobrar nenhum). */
+/** Itens marcados e quantos são (subitens inclusive): (marcados, total). */
+export function checkCount(list: PMNode): [number, number] {
+  let done = 0
+  let total = 0
+  list.descendants((n) => {
+    if (n.type.name !== 'taskItem') return
+    total++
+    if (n.attrs.checked) done++
+  })
+  return [done, total]
+}
+
+/** Checklist: apaga os itens marcados (com os subitens deles) e o checklist, se não sobrar nenhum. */
 export function deleteChecked(view: EditorView, pos: number) {
   const list = view.state.doc.nodeAt(pos)
   if (!list) return
   const tr = view.state.tr
   const ranges: [number, number][] = []
-  list.forEach((item, offset) => {
-    if (item.attrs.checked) ranges.push([pos + 1 + offset, pos + 1 + offset + item.nodeSize])
+  let kept = 0
+  list.descendants((item, offset) => {
+    if (item.type.name !== 'taskItem') return
+    if (item.attrs.checked) {
+      ranges.push([pos + 1 + offset, pos + 1 + offset + item.nodeSize])
+      return false // os subitens saem junto
+    }
+    kept++
   })
-  if (ranges.length === list.childCount) tr.delete(pos, pos + list.nodeSize)
+  if (!kept) tr.delete(pos, pos + list.nodeSize)
   else for (const [a, b] of ranges.reverse()) tr.delete(a, b)
   view.dispatch(tr)
+}
+
+/** Recuo de um item de lista ou checklist: dá para recuar se há um item antes dele (vira subitem desse); dá para
+ *  voltar se ele já é subitem. */
+export function canIndent(view: EditorView, pos: number, dir: 1 | -1) {
+  const $p = view.state.doc.resolve(pos)
+  if (dir > 0) return $p.index() > 0
+  return $p.depth >= 2 && ITEMS.has($p.node($p.depth - 1).type.name)
+}
+
+/** Formas que um bloco de texto pode tomar ("Transformar em"). */
+export type Shape = 'paragraph' | 'heading' | 'bullet' | 'task' | 'code'
+
+const LISTS: Record<'bullet' | 'task', [string, string]> = { bullet: ['bulletList', 'listItem'], task: ['taskList', 'taskItem'] }
+
+export const shapeOf = (name: string): Shape | null =>
+  (({ paragraph: 'paragraph', heading: 'heading', bulletList: 'bullet', orderedList: 'bullet', taskList: 'task', codeBlock: 'code' }) as Record<string, Shape>)[name] ??
+  null
+
+/** Linhas de texto de um bloco, na ordem: os parágrafos dos itens (subitens inclusive) ou as linhas do código. */
+function lines(node: PMNode): PMNode[] {
+  const schema = node.type.schema
+  if (node.type.name === 'codeBlock') {
+    return node.textContent.split('\n').map((l) => schema.nodes.paragraph.create(null, l ? schema.text(l) : null))
+  }
+  if (node.isTextblock) return [node]
+  const out: PMNode[] = []
+  node.forEach((child) => out.push(...lines(child)))
+  return out
+}
+
+/** Lista na forma `to`, mantendo os níveis (subitens) e, entre checklists, o marcado. */
+function relist(list: PMNode, to: 'bullet' | 'task'): PMNode {
+  const schema = list.type.schema
+  const [listType, itemType] = LISTS[to]
+  const items: PMNode[] = []
+  list.forEach((item) => {
+    const content: PMNode[] = []
+    item.forEach((c) => content.push(c.type.name in { bulletList: 1, orderedList: 1, taskList: 1 } ? relist(c, to) : c.isTextblock && c.type.name !== 'paragraph' ? schema.nodes.paragraph.create(null, c.content) : c))
+    const attrs = to === 'task' ? { checked: item.type.name === 'taskItem' ? !!item.attrs.checked : false } : null
+    items.push(schema.nodes[itemType].create(attrs, content))
+  })
+  return schema.nodes[listType].create(null, items)
+}
+
+/** "Transformar em": troca a forma do bloco em `pos` sem perder texto (nem os níveis, de lista para lista). */
+export function convertBlock(view: EditorView, pos: number, to: Shape) {
+  const node = view.state.doc.nodeAt(pos)
+  if (!node) return false
+  const schema = node.type.schema
+  const isList = ['bulletList', 'orderedList', 'taskList'].includes(node.type.name)
+  let out: PMNode[]
+  if ((to === 'bullet' || to === 'task') && isList) out = [relist(node, to)]
+  else {
+    const ls = lines(node)
+    if (to === 'paragraph') out = ls.map((l) => schema.nodes.paragraph.create(null, l.content))
+    else if (to === 'heading') out = ls.map((l) => schema.nodes.heading.create({ level: 3 }, l.content))
+    else if (to === 'code') out = [schema.nodes.codeBlock.create(null, ls.length && ls.some((l) => l.textContent) ? schema.text(ls.map((l) => l.textContent).join('\n')) : null)]
+    else {
+      const [listType, itemType] = LISTS[to]
+      const items = (ls.length ? ls : [schema.nodes.paragraph.create()]).map((l) =>
+        schema.nodes[itemType].create(to === 'task' ? { checked: false } : null, schema.nodes.paragraph.create(null, l.content)),
+      )
+      out = [schema.nodes[listType].create(null, items)]
+    }
+  }
+  const tr = view.state.tr.replaceWith(pos, pos + node.nodeSize, out)
+  view.dispatch(tr.scrollIntoView())
+  view.focus()
+  return true
 }

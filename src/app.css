@@ -481,19 +481,18 @@ button { cursor: pointer; }
 .ed-body { min-height: 160px; font-size: 16px; line-height: 1.6; }
 /* blocos: a alça fica na margem esquerda; a área do corpo inclui essa margem para o mouse não "sair" ao ir até ela */
 .ed-blocks { position: relative; }
-.blk-handle, .item-handle {
-  position: absolute; z-index: 3; display: grid; place-items: center; border-radius: 6px; color: var(--muted);
-  cursor: grab; opacity: .75; animation: fade .12s ease;
+/* alça: uma só, logo à esquerda do bloco ou item, na altura da primeira linha */
+.blk-handle {
+  position: absolute; z-index: 3; width: 20px; height: 26px; display: grid; place-items: center; border-radius: 6px;
+  color: var(--muted); opacity: .55; cursor: grab; transition: opacity .12s, background-color .12s, color .12s; animation: fade .12s ease;
 }
-.blk-handle { left: 8px; width: 22px; height: 26px; }
-.item-handle { width: 16px; height: 26px; }
-.blk-handle:hover, .item-handle:hover { opacity: 1; background: var(--raised); color: var(--fg); }
+.blk-handle:hover, .blk-handle:focus-visible { opacity: 1; background: var(--raised); color: var(--fg); }
+.blk-handle:active { cursor: grabbing; }
 @media (hover: hover) and (pointer: fine) {
   .ed-scroll { padding-inline: 44px; }
   .ed-blocks { margin-left: -36px; padding-left: 36px; }
   /* espaço para a alça de cada item, à esquerda da caixinha ou do marcador */
-  .prose ul[data-type="taskList"] { padding-left: 20px; }
-  .prose ul:not([data-type="taskList"]), .prose ol { padding-left: calc(1.3em + 18px); }
+  /* a alça fica na margem (o gutter de 36 px), não empurra a lista */
 }
 .ed-body .tiptap { min-height: 160px; outline: 0; }
 .ed-body .tiptap p.is-editor-empty:first-child::before {
@@ -576,6 +575,8 @@ button { cursor: pointer; }
 .prose ul[data-type="taskList"] li { display: flex; align-items: flex-start; gap: 10px; min-height: 30px; }
 .prose ul[data-type="taskList"] li > label { flex: none; display: grid; place-items: center; height: 25.6px; padding-left: 2px; user-select: none; }
 .prose ul[data-type="taskList"] li > div { flex: 1; min-width: 0; padding-top: 0; }
+/* subitens: a lista de dentro começa sob o texto do item de cima */
+.prose ul[data-type="taskList"] ul[data-type="taskList"] { margin-top: 2px; }
 .prose ul[data-type="taskList"] input[type="checkbox"] {
   appearance: none; -webkit-appearance: none; margin: 0; width: 20px; height: 20px; border-radius: 6px; border: 2px solid var(--muted); cursor: pointer;
 }

@@ -70,8 +70,12 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
   aberta entram nela (no ponto do texto ou no fim); sem nota aberta viram nota nova.
 - Linux: a WebKitGTK vem com microfone/câmera desligados; `lib.rs` (`linux_media`) liga e aceita os pedidos de áudio e
   vídeo. O AppImage leva o GStreamer (`bundleMediaFramework`), senão não há player nem gravador. "+" em leque (`FabMenu`) com atalhos.
-- Blocos (`src/lib/editor/blocks.ts`): cada nó de primeiro nível é um bloco, como no Notion. Alça ⋮⋮ no hover arrasta
-  e abre o menu do bloco (`MenuAt`); itens de lista/checklist têm alça própria (reordenar como no Keep). Clique direito
+- Blocos (`src/lib/editor/blocks.ts`): cada nó de primeiro nível é um bloco, como no Notion. Uma alça ⋮⋮ só, no hover,
+  colada ao que está sob o ponteiro (`blockAt` usa x e y): arrasta e abre o menu (`MenuAt`). Em lista/checklist ela é do
+  item (reordenar como no Keep; menu com Aumentar/Diminuir recuo e o submenu "Checklist inteira"/"Lista inteira").
+  Checklist com subitens em vários níveis (Tab/Shift+Tab; marcar o item marca os subitens, `CheckCascade`).
+  "Transformar em" passa por `convertBlock` (lista↔checklist mantém níveis e marcados). Ctrl/⌘+A: `SelectAllDom`
+  ancora a seleção do DOM no texto (senão, nota que começa/termina com checklist ou anexo não mostra a seleção). Clique direito
   em foto/anexo abre o mesmo menu. Copiar/colar entre notas leva fotos e anexos. Anexos são sempre blocos do texto.
 - Seleção múltipla (Notas): check no canto (hover), Ctrl/Shift+clique, retângulo com o mouse (`marquee.ts`), Ctrl+A, Esc;
   a barra superior vira `SelectionBar` com ações em lote e Desfazer.
