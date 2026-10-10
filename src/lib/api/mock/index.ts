@@ -413,9 +413,9 @@ export const mockApi: Api = {
     return done(activeIn(filter).flatMap((n) => rowsFor(n, [...project(n.body).images, ...project(n.body).files, ...n.files])).filter(fileMatches(query)))
   },
 
-  listImages({ filter, query, tone }) {
+  listImages({ filter, query, tone, archived }) {
     return done(
-      activeIn(filter)
+      (archived ? notTrashed(filter) : activeIn(filter))
         .filter((n) => matches(n, query))
         .flatMap((n) => rowsFor(n, project(n.body).images))
         .filter((r) => !tone || r.tone === tone),

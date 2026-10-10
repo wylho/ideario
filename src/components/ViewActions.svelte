@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { CheckCheck, File as FileIcon, FileAudio, FileText, FileVideoCamera, Image, BrushCleaning } from '@lucide/svelte'
+  import { Archive, CheckCheck, File as FileIcon, FileAudio, FileText, FileVideoCamera, Image, BrushCleaning } from '@lucide/svelte'
   import SortMenu from './SortMenu.svelte'
   import LayoutToggle from './LayoutToggle.svelte'
   import FilterGroup from './FilterGroup.svelte'
@@ -72,6 +72,16 @@
   <LayoutToggle value={app.filesLayout} onchange={(v) => (app.filesLayout = v)} />
 {:else}
   <FilterGroup label="Tom das imagens" all="Todos os tons" options={TONES} value={app.moodTone} onchange={(v) => (app.moodTone = v)} />
+  <button
+    class="icon-btn"
+    class:on={app.moodArchived}
+    aria-pressed={app.moodArchived}
+    aria-label="Mostrar arquivados"
+    title={app.moodArchived ? 'Ocultar fotos das notas arquivadas' : 'Mostrar também as fotos das notas arquivadas'}
+    onclick={() => (app.moodArchived = !app.moodArchived)}
+  >
+    <Archive size={19} />
+  </button>
 {/if}
 
 <ConfirmDialog

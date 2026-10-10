@@ -249,6 +249,28 @@ test('moodboard: filtro por tom e visualizador', async ({ page }) => {
   await expect(page.locator('#titulo')).toHaveValue('Paleta outono')
 })
 
+test('moodboard: o menu dinâmico mostra também as fotos das notas arquivadas', async ({ page }) => {
+  await tab(page, 'Moodboard')
+  const tiles = page.locator('.mood-tile')
+  await expect(tiles).toHaveCount(15)
+  const all = await tiles.count()
+  // arquiva a nota da paleta
+  await tab(page, 'Notas')
+  await cards(page).filter({ hasText: 'Paleta outono' }).first().click({ button: 'right' })
+  await page.getByRole('menuitem', { name: 'Arquivar' }).click()
+  await tab(page, 'Moodboard')
+  await expect(tiles).not.toHaveCount(all)
+  await expect(page.locator('.mood-tile', { hasText: 'Paleta outono' })).toHaveCount(0)
+  const toggle = page.getByRole('button', { name: 'Mostrar arquivados' })
+  await toggle.click()
+  await expect(toggle).toHaveAttribute('aria-pressed', 'true')
+  // as da paleta voltam, e as de outra nota que já estava arquivada também aparecem
+  await expect(page.locator('.mood-tile', { hasText: 'Paleta outono' }).first()).toBeVisible()
+  expect(await tiles.count()).toBeGreaterThan(all)
+  await toggle.click()
+  await expect(page.locator('.mood-tile', { hasText: 'Paleta outono' })).toHaveCount(0)
+})
+
 test('atalhos: Ctrl+F busca, Ctrl+N nota nova, Esc fecha', async ({ page }) => {
   await page.keyboard.press('Control+f')
   await expect(page.locator('#busca')).toBeFocused()
