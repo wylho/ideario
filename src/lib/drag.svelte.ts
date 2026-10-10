@@ -5,6 +5,8 @@ import { app } from './app.svelte'
 const START_DISTANCE = 6
 const TOUCH_HOLD_MS = 280
 const EDGE = 64
+/** Quanto o ponteiro precisa andar depois de uma troca para poder trocar de novo (px). */
+const SETTLE_DISTANCE = 12
 
 interface Options {
   /** Pode arrastar agora? */
@@ -49,6 +51,7 @@ export function createCardDrag(opts: Options) {
       let scrollFrame = 0
       let last = { x: 0, y: 0 }
       let lastSlot = ''
+      let moved: { x: number; y: number } | null = null
       let startIds: string[] = []
 
       const scroller = () => el.closest<HTMLElement>('.content')
@@ -107,18 +110,39 @@ export function createCardDrag(opts: Options) {
         scrollFrame = requestAnimationFrame(autoScroll)
       }
 
+      /** Card sob o ponteiro pela posição final de cada um na grade, não pela da animação (senão o card que está
+       *  deslizando passa por baixo do ponteiro e a ordem fica indo e voltando). */
+      function cardAt(x: number, y: number) {
+        for (const it of el.querySelectorAll<HTMLElement>('.m-item[data-key]')) {
+          const grid = it.parentElement!.getBoundingClientRect()
+          const top = grid.top + Number(it.dataset.y)
+          const left = grid.left + Number(it.dataset.x)
+          if (x >= left && x < left + it.offsetWidth && y >= top && y < top + it.offsetHeight) {
+            return { id: it.dataset.key!, top, height: it.offsetHeight }
+          }
+        }
+        return null
+      }
+
       function reorderAt(x: number, y: number) {
-        const hit = document.elementFromPoint(x, y)?.closest<HTMLElement>('[data-note-id]')
-        if (!hit || !el.contains(hit) || hit.dataset.noteId === start!.id || !override) return
-        const r = hit.getBoundingClientRect()
-        const after = y > r.top + r.height / 2
-        const slot = hit.dataset.noteId + (after ? '+' : '-')
+        if (!override) return
+        // Depois de mudar a ordem, só muda de novo quando o ponteiro andar: a grade se rearranja em volta dele, e o
+        // card que cai embaixo não pode desfazer a troca sozinho.
+        if (moved && Math.hypot(x - moved.x, y - moved.y) < SETTLE_DISTANCE) return
+        const hit = cardAt(x, y)
+        if (!hit || hit.id === start!.id) return
+        const after = y > hit.top + hit.height / 2
+        const slot = hit.id + (after ? '+' : '-')
         if (slot === lastSlot) return
         lastSlot = slot
         const rest = override.ids.filter((id) => id !== start!.id)
-        const i = rest.indexOf(hit.dataset.noteId!)
+        const i = rest.indexOf(hit.id)
+        if (i < 0) return
         rest.splice(after ? i + 1 : i, 0, start!.id)
-        if (rest.join() !== override.ids.join()) override = { key, ids: rest }
+        if (rest.join() !== override.ids.join()) {
+          override = { key, ids: rest }
+          moved = { x, y }
+        }
       }
 
       function autoScroll() {
@@ -129,6 +153,7 @@ export function createCardDrag(opts: Options) {
           if (dy) {
             sc.scrollTop += dy
             lastSlot = ''
+            moved = null
             reorderAt(last.x, last.y)
           }
         }
@@ -178,6 +203,7 @@ export function createCardDrag(opts: Options) {
         armed = false
         start = null
         lastSlot = ''
+        moved = null
         window.removeEventListener('pointermove', onMove)
         window.removeEventListener('pointerup', onUp)
         window.removeEventListener('pointercancel', cancel)
