@@ -396,6 +396,9 @@ fn pin_hash(category: &str, pin: &str) -> String {
     digest.iter().map(|b| format!("{b:02x}")).collect()
 }
 
+/// Nota no backup: id, estado Yjs, criação e última edição.
+pub type BackupNote = (String, Vec<u8>, Millis, Millis);
+
 /// Mudança feita por outro processo no banco (o MCP).
 #[derive(Debug, Clone, PartialEq)]
 pub struct ExternalChange {
@@ -1685,6 +1688,47 @@ impl Store {
             note_count: notes,
             cache_used_bytes: bytes,
         })
+    }
+
+    // ---------- backup local ----------
+
+    /// Todas as notas (inclusive arquivadas e na lixeira) com o estado Yjs e as datas, para o backup.
+    pub fn backup_notes(&self) -> Result<Vec<BackupNote>> {
+        let mut st = self.conn.prepare_cached("SELECT id, ydoc, created_at, updated_at FROM notes WHERE ydoc IS NOT NULL").map_err(err)?;
+        let rows = st.query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?))).map_err(err)?;
+        rows.collect::<std::result::Result<_, _>>().map_err(err)
+    }
+
+    /// Todos os anexos (o backup leva os que estão neste computador).
+    pub fn all_attachments(&self) -> Result<Vec<Attachment>> {
+        let mut st = self.conn.prepare_cached(&format!("SELECT {ATTACHMENT_COLS} FROM attachments a ORDER BY a.added_at")).map_err(err)?;
+        let rows = st.query_map([], attachment_row).map_err(err)?;
+        rows.collect::<std::result::Result<_, _>>().map_err(err)
+    }
+
+    /// Restaurar junta: categoria que não existe aqui entra; apagada aqui e viva no backup volta. As que existem ficam
+    /// como estão. Conta como mudança local (o sync leva). Devolve quantas entraram ou voltaram.
+    pub fn merge_backup_categories(&self, rows: &[CategoryRow]) -> Result<usize> {
+        let local: HashMap<String, CategoryRow> = self.category_rows()?.into_iter().map(|c| (c.id.clone(), c)).collect();
+        let mut n = 0;
+        for c in rows.iter().filter(|c| !c.deleted) {
+            match local.get(&c.id) {
+                Some(l) if !l.deleted => continue,
+                Some(_) => {
+                    self.conn.execute("UPDATE categories SET deleted = 0, updated_at = ?2 WHERE id = ?1", params![c.id, now()]).map_err(err)?;
+                }
+                None => {
+                    self.conn
+                        .execute(
+                            "INSERT INTO categories (id, name, color, sort, deleted, hidden, pin_hash, updated_at) VALUES (?1, ?2, ?3, ?4, 0, ?5, ?6, ?7)",
+                            params![c.id, c.name, c.color, c.sort, c.hidden, c.pin, now()],
+                        )
+                        .map_err(err)?;
+                }
+            }
+            n += 1;
+        }
+        Ok(n)
     }
 
     // ---------- mudanças de outro processo (MCP) ----------

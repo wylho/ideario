@@ -8,10 +8,11 @@
   import { paletteColors, theme, type ThemePref } from '../lib/theme.svelte'
   import { background } from '../lib/background.svelte'
   import { pickKeepTakeout } from '../lib/keep.svelte'
+  import { backupNow, pickBackupDir, restoreBackup } from '../lib/backup.svelte'
   import { isTauri } from '@tauri-apps/api/core'
   import { DESKTOPS, PALETTES, type DesktopId, type PaletteId } from '../lib/palettes'
   import Picker from './Picker.svelte'
-  import type { McpInfo, PhotoQuality, Settings, SyncStatus } from '../lib/types'
+  import type { BackupStatus, McpInfo, PhotoQuality, Settings, SyncStatus } from '../lib/types'
 
   let settings = $state<Settings | null>(null)
   let status = $state.raw<SyncStatus | null>(null)
@@ -36,6 +37,26 @@
     void app.sync
     void app.revision
     if (app.settingsOpen) void loadStatus()
+  })
+
+  // ---------- backup local ----------
+  let backup = $state.raw<BackupStatus | null>(null)
+  $effect(() => {
+    void app.revision
+    if (app.settingsOpen && isTauri()) untrack(() => api.backupStatus().then((b) => (backup = b)).catch(() => (backup = null)))
+  })
+  async function setAutoBackup(on: boolean) {
+    backup = await api.backupSetAuto(on, null)
+    if (on) app.say('Backup automático ligado: o primeiro sai agora, depois um por semana')
+  }
+  async function changeBackupDir() {
+    const dir = await pickBackupDir()
+    if (dir) backup = await api.backupSetAuto(backup?.auto ?? true, dir)
+  }
+  const backupLine = $derived.by(() => {
+    if (!backup?.auto) return 'Uma cópia de tudo por semana numa pasta deste computador (ou de um HD externo), guardando as 4 últimas.'
+    const last = backup.last ? `último ${ago(backup.last)}` : 'o primeiro sai em instantes'
+    return `Guarda os 4 últimos · ${last}`
   })
 
   // ---------- Claude (MCP) ----------
@@ -206,7 +227,7 @@
           </section>
 
           <section class="set-group">
-            <h3>Sincronização</h3>
+            <h3>Google Drive</h3>
             {#if status && !status.configured}
               <div class="sync-card off">
                 <CloudOff size={22} />
@@ -284,6 +305,30 @@
           {/if}
 
           {#if isTauri()}
+            <section class="set-group">
+              <h3>Backup local</h3>
+              <div class="set-row">
+                <span><b>Fazer backup agora</b><small>Um arquivo .ideario com as notas, categorias e anexos, e uma cópia em Markdown para ler sem o app.</small></span>
+                <button class="btn ghost" onclick={() => { app.settingsOpen = false; void backupNow() }}>Fazer backup…</button>
+              </div>
+              <div class="set-row">
+                <span><b>Restaurar</b><small>Junta o backup com o que está aqui: nada é apagado, e o que você escreveu depois continua.</small></span>
+                <button class="btn ghost" onclick={() => { app.settingsOpen = false; void restoreBackup() }}>Restaurar…</button>
+              </div>
+              {#if backup}
+                <label class="set-row" for="backup-auto">
+                  <span><b>Backup automático toda semana</b><small>{backupLine}</small></span>
+                  <Switch.Root id="backup-auto" class="switch" checked={backup.auto} onCheckedChange={(v) => void setAutoBackup(v)}><Switch.Thumb class="thumb" /></Switch.Root>
+                </label>
+                {#if backup.auto}
+                  <div class="set-row">
+                    <span><b>Pasta dos backups</b><small>{backup.dir}</small></span>
+                    <button class="btn ghost" onclick={() => void changeBackupDir()}>Mudar…</button>
+                  </div>
+                {/if}
+              {/if}
+            </section>
+
             <section class="set-group">
               <h3>Importar</h3>
               <div class="set-row">

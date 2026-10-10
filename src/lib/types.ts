@@ -239,6 +239,36 @@ export interface McpInfo {
 }
 
 /** Resumo de uma importação do Google Keep. */
+/** Backup local feito. */
+export interface BackupReport {
+  path: string
+  notes: number
+  attachments: number
+  /** Anexos que não estão neste computador (só no Drive) e ficaram de fora. */
+  skippedAttachments: number
+  bytes: number
+}
+/** O que tem num arquivo de backup. */
+export interface BackupManifest {
+  format: number
+  appVersion: string
+  createdAt: Millis
+  notes: number
+  attachments: number
+}
+export interface RestoreReport {
+  newNotes: number
+  mergedNotes: number
+  categories: number
+  attachments: number
+}
+/** Backup automático: ligado, pasta e quando foi o último. */
+export interface BackupStatus {
+  auto: boolean
+  dir: string | null
+  last: Millis | null
+}
+
 export interface KeepReport {
   notes: number
   /** Já tinham entrado antes. */

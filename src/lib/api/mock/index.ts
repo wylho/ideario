@@ -4,7 +4,7 @@
 import type { Api } from '..'
 import { fold, hashTags, normalizeTag } from '../../format'
 import type {
-  Attachment, AttachmentKind, AttachmentRow, Box, Category, Filter, McpInfo, NoteInput, NotePatch, NoteSort, NoteSummary, PreviewBlock, RichDoc, RichNode, Settings, SyncState, TagCount,
+  Attachment, AttachmentKind, AttachmentRow, BackupStatus, Box, Category, Filter, McpInfo, NoteInput, NotePatch, NoteSort, NoteSummary, PreviewBlock, RichDoc, RichNode, Settings, SyncState, TagCount,
 } from '../../types'
 import * as Y from 'yjs'
 import { uuidv7 } from '../../uuid'
@@ -367,6 +367,7 @@ function saveNote(input: NoteInput) {
   changed()
 }
 
+let backupState: BackupStatus = { auto: false, dir: '~/Documentos/Ideario backups', last: null }
 let mcpInstalled = false
 const MCP_COMMAND = '/Applications/Ideario.app/Contents/MacOS/ideario'
 const mcpMock = (): McpInfo => ({
@@ -745,6 +746,15 @@ export const mockApi: Api = {
 
   // Importar do Keep lê o zip pelo caminho: só no app.
   inspectTakeout: () => done(null),
+  // Backup local: só no app (a prévia não grava arquivos); o estado do automático fica na memória.
+  backupStatus: () => done({ ...backupState }),
+  backupSetAuto(enabled, dir) {
+    backupState = { ...backupState, auto: enabled, dir: dir ?? backupState.dir }
+    return done({ ...backupState })
+  },
+  backupExport: () => Promise.reject(new Error('o backup local só existe no app')),
+  backupInspect: () => Promise.reject(new Error('o backup local só existe no app')),
+  backupRestore: () => Promise.reject(new Error('o backup local só existe no app')),
   importKeep: () => Promise.reject(new Error('importar do Keep só existe no app')),
 
   // Prévias de PDF e vídeo são feitas só no app (o mock não guarda o conteúdo dos exemplos).

@@ -679,6 +679,7 @@ button { cursor: pointer; }
 .set-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border-radius: 16px; background: var(--surface); border: 1px solid var(--card-edge); cursor: pointer; }
 .set-row > span:first-child { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .set-row small, .cache small, .import small { font-size: 12.5px; color: var(--muted); line-height: 1.35; }
+.set-row > .btn { flex: none; white-space: nowrap; }
 .mcp-code { cursor: default; }
 .mcp-code code { margin-top: 4px; padding: 6px 8px; border-radius: 8px; background: var(--raised); font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; overflow-wrap: anywhere; user-select: text; -webkit-user-select: text; }
 .cache { display: flex; flex-direction: column; gap: 10px; padding: 14px; border-radius: 16px; background: var(--surface); border: 1px solid var(--card-edge); }

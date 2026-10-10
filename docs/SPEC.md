@@ -109,6 +109,10 @@ O Automerge foi considerado e **descartado** em favor do Yjs por causa do editor
 - Fotos: qualidade (Econômica 1280px, Equilibrada 2048px como padrão, Alta 3072px, Original sem compressão) — quem quer a foto intacta escolhe Original. Só fotos são comprimidas; PDFs, documentos, áudio e vídeo ficam como foram anexados.
 - Cache: barra de uso e slider de limite (0,5 a 5 GB).
 - Importar do Google Keep.
+- **Backup local** (seção própria, entre Google Drive e Importar): "Fazer backup agora" grava um `.ideario` (zip com o
+  Y.Doc de cada nota, categorias, anexos deste computador e uma cópia em Markdown em `leitura/`); "Restaurar" **junta**
+  com o que existe (a mesma nota se junta pelo Y.Doc; apagada volta; nada some); automático semanal numa pasta
+  escolhida, guardando os 4 últimos.
 - Claude: ligar o Ideario no Claude Desktop (um botão) e o comando pronto para o Claude Code (ver §3.11).
 
 ### 3.11 Claude (MCP)

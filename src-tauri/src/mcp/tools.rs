@@ -404,6 +404,15 @@ fn defs() -> Vec<Def> {
             destructive: false,
         },
         Def {
+            name: "create_backup",
+            title: "Fazer backup local",
+            description: "Grava um backup completo (notas, categorias, anexos e uma cópia em Markdown) num arquivo .ideario. Restaurar é no app (Configurações → Backup local) e junta com o que existe.",
+            params: json!({ "folder": s("pasta onde gravar (padrão: a pasta de backups das Configurações, ou Documentos/Ideario backups)") }),
+            required: &[],
+            read_only: false,
+            destructive: false,
+        },
+        Def {
             name: "import_keep",
             title: "Importar do Google Keep",
             description: "Importa o .zip do Google Takeout com as notas do Keep (fotos, checklists, marcadores, cores, arquivadas). Notas já importadas são puladas.",
@@ -602,6 +611,14 @@ fn run(core: &Core, name: &str, a: &Args) -> Result<Out> {
         "get_attachment" => get_attachment(core, a),
         "attach_file" => attach(core, a),
         "export_attachment" => export(core, a),
+        "create_backup" => {
+            let folder = match a.str("folder") {
+                Some(f) => PathBuf::from(f),
+                None => PathBuf::from(core.with(crate::backup::status)?.dir.ok_or("não achei uma pasta para o backup; diga qual (folder)")?),
+            };
+            let r = crate::backup::export(core, &crate::backup::auto_name(&folder, crate::store::now()), |_, _| ())?;
+            Ok(Out::Json(serde_json::to_value(r).map_err(|e| e.to_string())?))
+        }
         "import_keep" => {
             let report = core.import_keep(Path::new(a.need("path")?), |_, _| ())?;
             core.with(|s| s.log_external(None, false))?;

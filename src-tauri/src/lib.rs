@@ -5,6 +5,7 @@
 #![cfg_attr(not(test), deny(clippy::unwrap_used, clippy::expect_used))]
 
 mod attachments;
+mod backup;
 mod background;
 mod commands;
 mod keep;
@@ -69,6 +70,8 @@ pub fn run() {
             sync::start(app.handle());
             // O que o Claude (MCP, outro processo) muda no banco aparece na tela na hora.
             mcp::watch::start(app.handle().clone());
+            // Backup local automático (se ligado): um por semana, os 4 últimos.
+            backup::start(app.handle().clone());
 
             // A janela é criada aqui (e não pelo tauri.conf.json) para receber as fontes e as cores do
             // sistema antes de a página carregar, sem troca visível de fonte ou de cor.
@@ -153,6 +156,11 @@ pub fn run() {
             commands::get_attachments,
             commands::import_file,
             commands::download_attachment,
+            backup::backup_status,
+            backup::backup_set_auto,
+            backup::backup_export,
+            backup::backup_inspect,
+            backup::backup_restore,
             mcp::setup::mcp_info,
             mcp::setup::mcp_install,
             mcp::setup::mcp_uninstall,
