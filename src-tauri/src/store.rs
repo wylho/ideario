@@ -24,6 +24,8 @@ const DAY: Millis = 24 * 60 * 60 * 1000;
 const TRASH_DAYS: Millis = 30;
 /// Espaço entre posições da ordem personalizada; mover usa o meio entre vizinhos.
 const STEP: f64 = 1024.0;
+/// Repetições de lembrete que existem.
+pub const REPEATS: [&str; 4] = ["day", "week", "month", "year"];
 /// Cores das categorias (as mesmas de src/lib/colors.ts).
 const CATEGORY_COLORS: [&str; 10] = ["#C26A3D", "#B8901F", "#4F8A3E", "#3E8E7E", "#3D63D6", "#8A6BC4", "#C2557A", "#C0392B", "#8B5E3C", "#5F7380"];
 /// Formato da projeção gravada (2: blocos de arquivo levam o hash, para a miniatura).
@@ -87,6 +89,8 @@ pub struct NoteSummary {
     pub trashed_at: Option<Millis>,
     pub reminder_at: Option<Millis>,
     pub reminder_done: bool,
+    /// Repetição do lembrete: "day" | "week" | "month" | "year" (None = uma vez).
+    pub reminder_repeat: Option<String>,
     pub tags: Vec<String>,
     pub created_at: Millis,
     pub updated_at: Millis,
@@ -132,6 +136,7 @@ pub struct NoteDetail {
     pub trashed_at: Option<Millis>,
     pub reminder_at: Option<Millis>,
     pub reminder_done: bool,
+    pub reminder_repeat: Option<String>,
     pub tags: Vec<String>,
     pub files: Vec<Attachment>,
     pub media: Vec<Attachment>,
@@ -153,7 +158,19 @@ pub struct NoteInput {
     pub reminder_at: Option<Millis>,
     pub reminder_done: bool,
     #[serde(default)]
+    pub reminder_repeat: Option<String>,
+    #[serde(default)]
     pub tags: Vec<String>,
+}
+
+/// Lembrete vencido, para o agendador avisar.
+#[derive(Debug)]
+pub struct DueReminder {
+    pub id: String,
+    /// Rótulo da nota (título, ou a primeira linha).
+    pub title: String,
+    pub at: Millis,
+    pub repeat: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -259,6 +276,12 @@ const MIGRATIONS: &[&str] = &[
     // As notas da Fase 1 ganham o estado logo depois (Store::backfill_ydocs).
     r#"
     ALTER TABLE notes ADD COLUMN ydoc BLOB;
+    "#,
+    // 3 — Fase 4: lembrete que se repete (projeção do meta do Y.Doc) e quando este aparelho já avisou (local, não
+    // sincroniza: cada aparelho avisa uma vez).
+    r#"
+    ALTER TABLE notes ADD COLUMN reminder_repeat TEXT;
+    ALTER TABLE notes ADD COLUMN notified_at INTEGER;
     "#,
 ];
 
@@ -380,7 +403,7 @@ impl Store {
     }
 
     const SUMMARY_COLS: &'static str = "n.id, n.title, n.label, NULL, n.preview_json, n.cover_json, n.image_count, n.file_count, \
-        n.category_id, n.color, n.pinned, n.archived, n.trashed_at, n.reminder_at, n.reminder_done, n.created_at, n.updated_at, n.position";
+        n.category_id, n.color, n.pinned, n.archived, n.trashed_at, n.reminder_at, n.reminder_done, n.created_at, n.updated_at, n.position, n.reminder_repeat";
 
     fn summaries(&self, sql: &str, args: &[rusqlite::types::Value]) -> Result<Vec<NoteSummary>> {
         let mut st = self.conn.prepare_cached(sql).map_err(err)?;
@@ -413,6 +436,7 @@ impl Store {
             trashed_at: r.get(12)?,
             reminder_at: r.get(13)?,
             reminder_done: r.get(14)?,
+            reminder_repeat: r.get(18)?,
             tags: Vec::new(),
             created_at: r.get(15)?,
             updated_at: r.get(16)?,
@@ -623,7 +647,7 @@ impl Store {
     fn note_input(&self, id: &str) -> Result<Option<NoteInput>> {
         self.conn
             .query_row(
-                "SELECT id, title, body_json, category_id, color, pinned, archived, trashed_at, reminder_at, reminder_done FROM notes WHERE id = ?1",
+                "SELECT id, title, body_json, category_id, color, pinned, archived, trashed_at, reminder_at, reminder_done, reminder_repeat FROM notes WHERE id = ?1",
                 [id],
                 |r| {
                     Ok(NoteInput {
@@ -637,6 +661,7 @@ impl Store {
                         trashed_at: r.get(7)?,
                         reminder_at: r.get(8)?,
                         reminder_done: r.get(9)?,
+                        reminder_repeat: r.get(10)?,
                         tags: Vec::new(),
                     })
                 },
@@ -676,6 +701,7 @@ impl Store {
             trashed_at: n.trashed_at,
             reminder_at: n.reminder_at,
             reminder_done: n.reminder_done,
+            reminder_repeat: n.reminder_repeat,
             tags: n.tags,
             files: atts(false)?,
             media: atts(true)?,
@@ -747,13 +773,14 @@ impl Store {
         let tx = self.conn.unchecked_transaction().map_err(err)?;
         tx.execute(
             "INSERT INTO notes (id, body_json, title, label, label_fold, body_text, preview_json, cover_json, image_count, file_count, \
-             category_id, color, pinned, archived, trashed_at, reminder_at, reminder_done, position, created_at, updated_at, ydoc, dirty) \
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, 1) \
+             category_id, color, pinned, archived, trashed_at, reminder_at, reminder_done, position, created_at, updated_at, ydoc, reminder_repeat, dirty) \
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, 1) \
              ON CONFLICT(id) DO UPDATE SET ydoc = excluded.ydoc, body_json = excluded.body_json, title = excluded.title, label = excluded.label, \
              label_fold = excluded.label_fold, body_text = excluded.body_text, preview_json = excluded.preview_json, \
              cover_json = excluded.cover_json, image_count = excluded.image_count, file_count = excluded.file_count, \
              category_id = excluded.category_id, color = excluded.color, pinned = excluded.pinned, archived = excluded.archived, \
              trashed_at = excluded.trashed_at, reminder_at = excluded.reminder_at, reminder_done = excluded.reminder_done, \
+             reminder_repeat = excluded.reminder_repeat, \
              updated_at = excluded.updated_at, dirty = 1",
             params![
                 n.id,
@@ -777,6 +804,7 @@ impl Store {
                 created,
                 updated,
                 state,
+                n.reminder_repeat,
             ],
         )
         .map_err(err)?;
@@ -821,6 +849,34 @@ impl Store {
         self.patch_note(id, &patch, false)
     }
 
+    /// Lembretes vencidos até `now` que este aparelho ainda não avisou.
+    /// Só notas ativas ou arquivadas (lixeira não avisa) e não concluídas.
+    pub fn due_reminders(&self, now: Millis) -> Result<Vec<DueReminder>> {
+        let mut st = self
+            .conn
+            .prepare_cached(
+                "SELECT id, label, reminder_at, reminder_repeat FROM notes \
+                 WHERE reminder_at IS NOT NULL AND reminder_at <= ?1 AND reminder_done = 0 AND trashed_at IS NULL \
+                 AND (notified_at IS NULL OR notified_at < reminder_at) ORDER BY reminder_at",
+            )
+            .map_err(err)?;
+        let rows = st
+            .query_map([now], |r| Ok(DueReminder { id: r.get(0)?, title: r.get(1)?, at: r.get(2)?, repeat: r.get(3)? }))
+            .map_err(err)?;
+        rows.collect::<std::result::Result<_, _>>().map_err(err)
+    }
+
+    /// Este aparelho já avisou o lembrete marcado para `at` (local: não sincroniza).
+    pub fn mark_notified(&self, id: &str, at: Millis) -> Result<()> {
+        self.conn.execute("UPDATE notes SET notified_at = ?2 WHERE id = ?1", params![id, at]).map_err(err)?;
+        Ok(())
+    }
+
+    /// Muda o lembrete sem contar como edição da nota (próxima vez de um lembrete que se repete).
+    pub fn reschedule(&self, id: &str, patch: &Map<String, Value>) -> Result<bool> {
+        self.patch_note(id, patch, false)
+    }
+
     /// Muda metadados sem abrir o editor (menus de contexto). Só as chaves presentes mudam; `null` limpa.
     pub fn update_note(&self, id: &str, patch: &Map<String, Value>) -> Result<bool> {
         self.patch_note(id, patch, true)
@@ -838,6 +894,7 @@ impl Store {
                 "trashedAt" => n.trashed_at = v.as_i64(),
                 "reminderAt" => n.reminder_at = v.as_i64(),
                 "reminderDone" => n.reminder_done = v.as_bool().unwrap_or(n.reminder_done),
+                "reminderRepeat" => n.reminder_repeat = v.as_str().filter(|r| REPEATS.contains(r)).map(str::to_string),
                 _ => {}
             }
         }
@@ -1132,6 +1189,7 @@ fn same_content(a: &NoteInput, b: &NoteInput) -> bool {
         && a.trashed_at == b.trashed_at
         && a.reminder_at == b.reminder_at
         && a.reminder_done == b.reminder_done
+        && a.reminder_repeat == b.reminder_repeat
         && a.tags == b.tags
 }
 
@@ -1214,6 +1272,7 @@ mod tests {
             trashed_at: None,
             reminder_at: None,
             reminder_done: false,
+            reminder_repeat: None,
             tags: vec![],
         }
     }
@@ -1385,7 +1444,7 @@ mod tests {
             let s = Store::open(&path).unwrap();
             s.save_note(&note("m1", "Antiga", "corpo da fase 1")).unwrap();
             // Como era na Fase 1: sem a coluna do estado Yjs, esquema na versão 1.
-            s.conn.execute_batch("ALTER TABLE notes DROP COLUMN ydoc; PRAGMA user_version = 1").unwrap();
+            s.conn.execute_batch("ALTER TABLE notes DROP COLUMN ydoc; ALTER TABLE notes DROP COLUMN reminder_repeat; ALTER TABLE notes DROP COLUMN notified_at; PRAGMA user_version = 1").unwrap();
         }
         let s = Store::open(&path).unwrap();
         let backup = path.with_extension("db.v1.bak");
@@ -1422,6 +1481,7 @@ mod bench {
                 trashed_at: None,
                 reminder_at: None,
                 reminder_done: false,
+                reminder_repeat: None,
                 tags: vec![],
             })
             .unwrap();

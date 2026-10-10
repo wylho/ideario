@@ -183,6 +183,33 @@ test('lembrete definido no editor aparece na aba', async ({ page }) => {
   await expect(page.locator('.r-group', { hasText: 'Amanhã' }).locator('.r-title')).toContainText(['Referências tipográficas'])
 })
 
+test('lembrete que se repete: escolher no editor, ver o ícone e não ter "Concluir"', async ({ page }) => {
+  await cards(page).filter({ hasText: 'Referências tipográficas' }).click()
+  await page.getByLabel('Lembrete', { exact: true }).click()
+  await page.locator('.quick button', { hasText: 'Amanhã de manhã' }).click()
+  // abre a pílula e escolhe a repetição
+  await page.getByLabel(/^Alterar lembrete/).click()
+  await page.locator('#lembrete-repetir').click()
+  await page.getByRole('option', { name: 'Toda semana' }).click()
+  await expect(page.locator('#lembrete-repetir')).toContainText('Toda semana')
+  await expect(page.locator('.pop-actions').getByRole('button', { name: 'Concluir' })).toHaveCount(0)
+  await page.keyboard.press('Escape')
+  await expect(page.locator('.ed-meta .pill [aria-label="se repete"]')).toBeVisible()
+  await back(page)
+  await expect(cards(page).filter({ hasText: 'Referências tipográficas' }).locator('[aria-label="se repete"]')).toBeVisible()
+  await tab(page, 'Lembretes')
+  await expect(page.locator('.r-item', { hasText: 'Referências tipográficas' }).locator('[aria-label="se repete"]')).toBeVisible()
+  // reabre: continua semanal; tirar o lembrete tira a repetição
+  await page.locator('.r-item', { hasText: 'Referências tipográficas' }).locator('.r-main').click()
+  await page.getByLabel(/^Alterar lembrete/).click()
+  await expect(page.locator('#lembrete-repetir')).toContainText('Toda semana')
+  await page.locator('.pop-actions').getByRole('button', { name: 'Remover' }).click()
+  await page.getByLabel('Lembrete', { exact: true }).click()
+  await page.locator('.quick button', { hasText: 'Amanhã de manhã' }).click()
+  await page.getByLabel(/^Alterar lembrete/).click()
+  await expect(page.locator('#lembrete-repetir')).toContainText('Não repetir')
+})
+
 test('arquivos: tipos, ordenação, grade e nota de origem', async ({ page }) => {
   await tab(page, 'Arquivos')
   await expect(page.locator('.stats b').first()).toHaveText('26')

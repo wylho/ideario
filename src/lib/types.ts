@@ -3,6 +3,8 @@
 // para exibir (trecho, capa, contagens) e nunca parseia o corpo da nota.
 
 export type NoteColor = 'none' | 'sand' | 'sage' | 'sky' | 'rose' | 'lilac' | 'butter'
+/** Repetição do lembrete (todo dia, semana, mês, ano). */
+export type RepeatKind = 'day' | 'week' | 'month' | 'year'
 export type Tone = 'quente' | 'frio' | 'verde' | 'rosa' | 'neutro'
 export type AttachmentKind = 'image' | 'pdf' | 'doc' | 'sheet' | 'audio' | 'video' | 'other'
 /** Grupos do filtro de Arquivos: planilhas e o resto entram em "Outros documentos". */
@@ -64,6 +66,7 @@ export interface NoteSummary {
   trashedAt: Millis | null
   reminderAt: Millis | null
   reminderDone: boolean
+  reminderRepeat: RepeatKind | null
   tags: string[]
   createdAt: Millis
   updatedAt: Millis
@@ -115,6 +118,7 @@ export interface NoteDetail {
   trashedAt: Millis | null
   reminderAt: Millis | null
   reminderDone: boolean
+  reminderRepeat: RepeatKind | null
   /** Tags manuais. As `#tags` do corpo são derivadas e não ficam aqui. */
   tags: string[]
   /** Anexos que não aparecem no corpo (arquivos). */
@@ -126,7 +130,7 @@ export interface NoteDetail {
 }
 
 /** Campos que os menus de contexto mudam sem abrir o editor. */
-export type NotePatch = Partial<Pick<NoteInput, 'pinned' | 'color' | 'categoryId' | 'archived' | 'trashedAt' | 'reminderAt' | 'reminderDone'>>
+export type NotePatch = Partial<Pick<NoteInput, 'pinned' | 'color' | 'categoryId' | 'archived' | 'trashedAt' | 'reminderAt' | 'reminderDone' | 'reminderRepeat'>>
 
 export interface NoteInput {
   id: string
@@ -139,6 +143,7 @@ export interface NoteInput {
   trashedAt: Millis | null
   reminderAt: Millis | null
   reminderDone: boolean
+  reminderRepeat: RepeatKind | null
   tags: string[]
 }
 

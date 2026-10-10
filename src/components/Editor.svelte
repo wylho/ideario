@@ -24,6 +24,7 @@
   import { noteExtensions } from '../lib/editor/extensions'
   import { readMeta, writeMeta, type NoteMeta } from '../lib/ydoc'
   import { makePreviews } from '../lib/previews.svelte'
+  import { reminderSet } from '../lib/notify.svelte'
   import { ago, fmtBytes, hashTags, normalizeTag } from '../lib/format'
   import ReminderPopover from './ReminderPopover.svelte'
   import type { Attachment, NoteColor, NoteInput, RichDoc, RichNode } from '../lib/types'
@@ -74,7 +75,7 @@
   if (isNew) {
     meta = {
       title: '', categoryId: defaults?.categoryId ?? null, color: 'none', pinned: false, archived: false,
-      trashedAt: null, reminderAt: null, reminderDone: false, tags: defaults?.tags ?? [],
+      trashedAt: null, reminderAt: null, reminderDone: false, reminderRepeat: null, tags: defaults?.tags ?? [],
     }
   } else {
     Promise.all([api.getNoteState(id), api.getNote(id)]).then(([state, n]) => {
@@ -89,6 +90,14 @@
   }
 
   const cat = $derived(app.category(meta?.categoryId))
+  /** Lembrete marcado (ou tirado): reabre, e sem lembrete não há repetição. */
+  function setReminder(v: number | null) {
+    if (!meta) return
+    meta.reminderAt = v
+    meta.reminderDone = false
+    if (v == null) meta.reminderRepeat = null
+    else void reminderSet()
+  }
   const NEW_CATEGORY = '__new'
   /** Seletor de categoria; "Nova categoria…" cria e já põe a nota nela. */
   function pickCategory(v: string) {
@@ -428,7 +437,12 @@
           <button class="icon-btn" aria-label={meta.pinned ? 'Desafixar' : 'Fixar'} aria-pressed={meta.pinned} onclick={() => meta && (meta.pinned = !meta.pinned)}>
             {#if meta.pinned}<PinOff size={19} />{:else}<Pin size={19} />{/if}
           </button>
-          <ReminderPopover value={meta.reminderAt} onchange={(v) => meta && ((meta.reminderAt = v), (meta.reminderDone = false))} />
+          <ReminderPopover
+            value={meta.reminderAt}
+            repeat={meta.reminderRepeat}
+            onchange={setReminder}
+            onrepeat={(r) => meta && (meta.reminderRepeat = r)}
+          />
           <DropdownMenu.Root>
             <DropdownMenu.Trigger class="icon-btn" aria-label="Mais opções"><MoreVertical size={19} /></DropdownMenu.Trigger>
             <DropdownMenu.Portal>
@@ -548,8 +562,10 @@
                 variant="pill"
                 value={meta.reminderAt}
                 done={meta.reminderDone}
-                onchange={(v) => meta && ((meta.reminderAt = v), (meta.reminderDone = false))}
+                repeat={meta.reminderRepeat}
+                onchange={setReminder}
                 ondone={(d) => meta && (meta.reminderDone = d)}
+                onrepeat={(r) => meta && (meta.reminderRepeat = r)}
               />
             {/if}
           </div>

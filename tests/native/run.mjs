@@ -4,12 +4,14 @@
 // Precisa de: WebKitWebDriver (pacote webkit2gtk-driver) e tauri-driver (cargo install tauri-driver).
 import { spawn } from 'node:child_process'
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { DatabaseSync } from 'node:sqlite'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import zlib from 'node:zlib'
 
 const APP = resolve(process.env.IDEARIO_APP ?? 'src-tauri/target/debug/ideario')
 const DATA = mkdtempSync(join(tmpdir(), 'ideario-native-'))
+const IDENTIFIER = 'app.ideario.desktop'
 const PORT = 4444
 let failures = 0
 
@@ -358,6 +360,23 @@ try {
     await s.waitFor(`const c = [...document.querySelectorAll('.card')].find((c) => c.getAttribute('aria-label') === 'Lista do Keep'); return c && c.querySelector('.pv-task.done') && c.textContent.includes('Hospital')`, 'card importado com checklist e categoria')
   })
 
+  await test('Fase 4: lembrete vence e avisa sozinho (atrasado também); Adiar reagenda', async () => {
+    const note = (id, title, at) => ({ id, title, body: { type: 'doc', content: [{ type: 'paragraph' }] }, categoryId: null, color: 'none', pinned: false, archived: false, trashedAt: null, reminderAt: at, reminderDone: false, reminderRepeat: null, tags: [] })
+    const now = Date.now()
+    await s.execAsync(`Promise.all([
+      window.__TAURI_INTERNALS__.invoke('save_note', { input: arguments[0] }),
+      window.__TAURI_INTERNALS__.invoke('save_note', { input: arguments[1] }),
+    ]).then(() => arguments[2](true), (e) => arguments[2]('erro ' + e))`, note('01990000-0000-7000-8000-000000000001', 'Tomar o remédio', now + 3000), note('01990000-0000-7000-8000-000000000002', 'Ligar para a clínica', now - 3 * 3600_000))
+    // o agendador confere a cada 10 s: os dois aparecem, o de 3 h atrás marcado como atrasado
+    const shown = await s.waitFor(`const a = [...document.querySelectorAll('.alert')].map((e) => e.textContent); return a.length >= 2 && a.join(' | ')`, 'avisos na janela', 25000)
+    if (!shown.includes('Tomar o remédio') || !/Ligar para a clínica.*Atrasado/.test(shown)) throw new Error(shown)
+    await s.exec(`[...document.querySelectorAll('.alert')].find((e) => e.textContent.includes('Tomar o remédio')).querySelector('[aria-label="Adiar 10 minutos"]').click(); return true`)
+    await s.waitFor(`return ![...document.querySelectorAll('.alert')].some((e) => e.textContent.includes('Tomar o remédio'))`, 'aviso sai depois de adiar')
+    const later = await s.execAsync(`window.__TAURI_INTERNALS__.invoke('get_note', { id: arguments[0] }).then((n) => arguments[1](n.reminderAt))`, '01990000-0000-7000-8000-000000000001')
+    if (!(later > Date.now() + 9 * 60_000)) throw new Error(`reagendado para ${new Date(later)}`)
+    await s.exec(`document.querySelectorAll('.alert [aria-label="Fechar aviso"]').forEach((b) => b.click()); return true`)
+  })
+
   await test('fechar e reabrir: tudo continua lá, na hora', async () => {
     await s.end()
     s = await Session.start()
@@ -427,7 +446,23 @@ try {
     await s.waitFor(`return [...document.querySelectorAll('.card')].some((c) => c.getAttribute('aria-label') === 'Bolo da vó')`, 'no Arquivo')
   })
 
-  await s.end()
+  await test('Fase 4: com a janela fechada (segundo plano), o lembrete ainda vence e avisa', async () => {
+    const id = '01990000-0000-7000-8000-000000000003'
+    await s.execAsync(`window.__TAURI_INTERNALS__.invoke('set_background', { enabled: true }).then(() => arguments[0](true), (e) => arguments[0]('erro ' + e))`)
+    await s.execAsync(`window.__TAURI_INTERNALS__.invoke('save_note', { input: { id: arguments[0], title: 'Reunião às 15h', body: { type: 'doc', content: [{ type: 'paragraph' }] }, categoryId: null, color: 'none', pinned: false, archived: false, trashedAt: null, reminderAt: Date.now() + 4000, reminderDone: false, reminderRepeat: null, tags: [] } }).then(() => arguments[1](true))`, id)
+    // fecha a janela como no X (pedido de fechar): com o segundo plano ligado, o app continua e a janela só some
+    await s.execAsync(`window.__TAURI_INTERNALS__.invoke('plugin:window|close', { label: 'main' }).then(() => arguments[0](true), (e) => arguments[0]('erro ' + e))`)
+    await sleep(800)
+    const visible = await s.execAsync(`window.__TAURI_INTERNALS__.invoke('plugin:window|is_visible', { label: 'main' }).then(arguments[0], (e) => arguments[0]('erro ' + e))`)
+    if (visible !== false) throw new Error(`a janela devia ter sumido: ${visible}`)
+    await sleep(16000)
+    const db = new DatabaseSync(join(DATA, IDENTIFIER, 'ideario.db'), { readOnly: true })
+    const row = db.prepare('SELECT reminder_at, notified_at FROM notes WHERE id = ?').get(id)
+    db.close()
+    if (!row || row.notified_at !== row.reminder_at) throw new Error(`não avisou com a janela fechada: ${JSON.stringify(row)}`)
+  })
+
+  await s.end().catch(() => {})
 } catch (e) {
   failures++
   console.log(`  ✘ ${e.message}`)

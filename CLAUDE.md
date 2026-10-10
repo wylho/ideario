@@ -31,7 +31,7 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
 - D3 continua em aberto (SPEC §11); decidir antes da Fase 5.
 
 ## Estado atual
-- **Fases 0, 1, 2 e 3 concluídas.** No app, a UI fala com o núcleo Rust (`src/lib/api/tauri.ts` → `src-tauri/src/commands.rs`):
+- **Fases 0, 1, 2, 3 e 4 concluídas (e a importação do Keep).** No app, a UI fala com o núcleo Rust (`src/lib/api/tauri.ts` → `src-tauri/src/commands.rs`):
   SQLite com FTS5 (`store.rs`: migrações por `user_version`; antes de migrar guarda `ideario.db.vN.bak`).
   **Cada nota é um Y.Doc** (`ydoc.rs` com yrs; `src/lib/ydoc.ts` no front): `meta` (Y.Map) + `body` (Y.XmlFragment no formato
   do y-prosemirror). A coluna `notes.ydoc` é a fonte da verdade; `body_json` e as demais colunas são projeção dela.
@@ -72,6 +72,7 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
   a barra superior vira `SelectionBar` com ações em lote e Desfazer.
 - Segundo plano (opção do aparelho, `background.svelte.ts` + `src-tauri/src/background.rs`): ao fechar a janela, fica com
   ícone na bandeja (barra de menus no Mac; no GNOME precisa do AppIndicator). Desligado por padrão. Sem atalho global por ora.
+  `core:window:allow-close` = o mesmo que o X (os testes nativos fecham a janela assim).
 - CI (`.github/workflows/build.yml`): verificação + instaladores de macOS (universal), Windows e Linux nos Artifacts.
 - Menus de contexto: `ContextMenu.svelte` (clique direito, Shift+F10, toque longo) + itens em `src/lib/menus.ts`.
   O menu do navegador é bloqueado fora de campos de texto (`main.ts`). Ações com "Desfazer" no toast.
@@ -110,4 +111,13 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
   zip, `FileDrop`) ou Configurações → Importar (diálogo nativo, `tauri-plugin-dialog`). Validado no Takeout real do
   usuário (447 notas, 1,2 s); teste `real_takeout` (ignorado, `IDEARIO_TAKEOUT=…`) mostra só contagens.
   Os dados do usuário não vão para o repositório: os testes usam um Takeout inventado no mesmo formato.
-- **Próximo passo: Fase 4 (lembretes com notificação e captura).**
+- **Fase 4 (concluída): lembretes que avisam.** `reminders.rs` (regra pura): a cada 10 s o núcleo pega o que venceu e
+  ainda não avisou neste aparelho (`notes.notified_at`, local, não sincroniza), marca, e reagenda os que se repetem
+  (`reminderRepeat` no meta do Y.Doc: day/week/month/year; mês e ano contam da data original, mesmo horário local,
+  horário de verão certo via chrono). Atrasados (app fechado ou computador desligado) avisam ao abrir, marcados
+  "atrasado"; mais de 3 de uma vez viram um resumo. `notify.rs`: notificação do sistema pelo notify-rust (macOS,
+  Windows, Linux) com Abrir / Adiar 10 min / Concluir (lembrete que se repete não tem Concluir); evento `reminders`
+  para o aviso dentro do app (`ReminderAlerts.svelte`, `notify.svelte.ts`) e `core-changed` para a UI recarregar.
+  Com a janela fechada avisa se o segundo plano estiver ligado; ao marcar o primeiro lembrete o app sugere ligar
+  (uma vez). Atalho global continua fora (decisão do usuário).
+- **Próximo passo: Fase 5 (Sync com o Google Drive). Antes: decidir D3 (pasta oculta do app ou pasta visível em Markdown).**

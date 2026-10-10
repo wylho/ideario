@@ -1,6 +1,6 @@
 <script lang="ts">
   import { KIND_ICONS } from '../lib/file-kinds'
-  import { Bell, Check, Paperclip, Pin, PinOff } from '@lucide/svelte'
+  import { Bell, Check, Paperclip, Pin, PinOff, Repeat } from '@lucide/svelte'
   import { api } from '../lib/api'
   import { app } from '../lib/app.svelte'
   import { fmtReminder, isOverdue, withHashtags } from '../lib/format'
@@ -106,7 +106,7 @@
     {#if hasMeta}
       <div class="card-meta">
         {#if n.reminderAt != null}
-          <span class="pill" class:late={isOverdue(n)} class:done={n.reminderDone}><Bell size={11} />{fmtReminder(n.reminderAt)}</span>
+          <span class="pill" class:late={isOverdue(n)} class:done={n.reminderDone}><Bell size={11} />{fmtReminder(n.reminderAt)}{#if n.reminderRepeat}<Repeat size={11} aria-label="se repete" />{/if}</span>
         {/if}
         {#if cat}
           <button class="pill cat" title="Filtrar por {cat.name}" onclick={(e) => { e.stopPropagation(); app.setCategory(cat.id) }}>
