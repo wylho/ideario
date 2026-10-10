@@ -45,7 +45,10 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
 - Layout responsivo (pedido do usuário: desktop primeiro): < 640 px = protótipo de celular; 640–959 px = gaveta + abas,
   largura total; ≥ 960 px = como o Google Keep: barra superior fixa (☰ e marca à esquerda; ações e visões ancoradas à direita, visões no canto; nuvem e campo de busca só crescem na folga, sem mover nada) e, abaixo, lateral (`NavList`)
   que recolhe para um trilho de ícones (o topo não se move), editor e configurações como diálogo central.
-  Masonry é JS (`Masonry.svelte` + `estimateCard`), porque a WebKitGTK não equilibra `columns:` do CSS.
+  Masonry é JS (`Masonry.svelte` + `estimateCard`), porque a WebKitGTK não equilibra `columns:` do CSS. Cada card é
+  posicionado por coordenadas numa lista só (nunca é recriado ao redimensionar ou reordenar; só desliza). O arraste
+  (`drag.svelte.ts`) acha o card sob o ponteiro pela posição final (`data-x`/`data-y`), não pela animada, e só troca de
+  novo depois que o ponteiro anda 12 px (senão os cards tremem). Sonda no app nativo: `tests/native/probe-grid.mjs`.
 - Princípio de design: só mostrar o que tem motivo para aparecer (ex.: nuvem do sync só ao sincronizar, sem
   conexão ou com erro; nada de controles que ainda não funcionam).
 - Navegação (proposta A): `app.view` (como ver) e `app.filter` (categoria + tags, o que ver) são independentes; `app.box`

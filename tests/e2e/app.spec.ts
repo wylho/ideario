@@ -266,19 +266,19 @@ test('sem erros no console ao navegar pelas abas', async ({ page }) => {
 })
 
 test.describe('responsivo', () => {
-  const cols = (page: Page) => page.locator('.masonry').last().locator('.m-col')
+  const cols = (page: Page) => page.locator('.masonry').last()
 
   test('celular: gaveta, abas embaixo e 2 colunas', async ({ page }) => {
     await page.setViewportSize({ width: 400, height: 820 })
     await expect(page.locator('.tabbar')).toBeVisible()
     await expect(page.locator('.sidebar')).toHaveCount(0)
-    await expect(cols(page)).toHaveCount(2)
+    await expect(cols(page)).toHaveAttribute('data-cols', '2')
   })
 
   test('janela média: abas embaixo e mais colunas', async ({ page }) => {
     await page.setViewportSize({ width: 800, height: 900 })
     await expect(page.locator('.tabbar')).toBeVisible()
-    await expect(cols(page)).toHaveCount(3)
+    await expect(cols(page)).toHaveAttribute('data-cols', '3')
   })
 
   test('desktop: barra lateral fixa, sem abas, editor e configurações centrais', async ({ page }) => {
@@ -286,7 +286,7 @@ test.describe('responsivo', () => {
     await expect(page.locator('.sidebar')).toBeVisible()
     await expect(page.locator('.tabbar')).toHaveCount(0)
     await expect(page.getByLabel('Abrir menu')).toHaveCount(0)
-    await expect(cols(page)).toHaveCount(4)
+    await expect(cols(page)).toHaveAttribute('data-cols', '4')
 
     await page.locator('.sidebar').getByRole('button', { name: 'Hospital 2' }).click()
     await expect(cards(page)).toHaveCount(2)
@@ -576,6 +576,58 @@ test('Google Drive nas configurações: conta, sair, cancelar e entrar de novo',
   await page.getByRole('button', { name: 'Entrar com Google' }).click()
   await expect(card).toContainText('voce@gmail.com')
   await expect(page.locator('.toast')).toContainText('Conectado ao Google Drive')
+})
+
+test('redimensionar a janela só move os cards: nenhum é recriado nem fica por cima de outro', async ({ page }) => {
+  await page.setViewportSize({ width: 1300, height: 900 })
+  await page.evaluate(() => {
+    const w = window as unknown as { __recriados: number }
+    w.__recriados = 0
+    new MutationObserver((m) => {
+      for (const x of m) for (const n of x.addedNodes) if (n instanceof Element && n.querySelector('.card')) w.__recriados++
+    }).observe(document.body, { childList: true, subtree: true })
+  })
+  for (let w = 1300; w >= 700; w -= 40) await page.setViewportSize({ width: w, height: 900 })
+  for (let w = 700; w <= 1100; w += 40) await page.setViewportSize({ width: w, height: 900 })
+  expect(await page.evaluate(() => (window as unknown as { __recriados: number }).__recriados)).toBe(0)
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const r = [...document.querySelectorAll('.masonry [data-key]')].map((e) => e.getBoundingClientRect())
+        let n = 0
+        for (let i = 0; i < r.length; i++)
+          for (let j = i + 1; j < r.length; j++) if (r[i].left < r[j].right - 1 && r[j].left < r[i].right - 1 && r[i].top < r[j].bottom - 1 && r[j].top < r[i].bottom - 1) n++
+        return n
+      }),
+    )
+    .toBe(0)
+})
+
+test('segurar o card arrastado quase parado não fica trocando a ordem (sem tremer)', async ({ page }) => {
+  await page.setViewportSize({ width: 1300, height: 2400 })
+  const section = page.locator('.drag-section').last()
+  const order = () => section.locator('[data-key]').evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.key).join())
+  const a = (await section.locator('.card').nth(0).boundingBox())!
+  let changes = 0
+  for (const target of [2, 4, 6, 8]) {
+    const t = (await section.locator('.card').nth(target).boundingBox())!
+    await page.mouse.move(a.x + 60, a.y + 40)
+    await page.mouse.down()
+    await page.mouse.move(a.x + 80, a.y + 60, { steps: 4 })
+    await page.mouse.move(t.x + t.width / 2, t.y + t.height * 0.45, { steps: 12 })
+    await page.waitForTimeout(300)
+    let prev = await order()
+    for (let i = 0; i < 30; i++) {
+      await page.mouse.move(t.x + t.width / 2 + (i % 2 ? 4 : -4), t.y + t.height * 0.45 + ((i % 5) - 2) * 2)
+      await page.waitForTimeout(20)
+      const o = await order()
+      if (o !== prev) changes++
+      prev = o
+    }
+    await page.keyboard.press('Escape')
+    await page.mouse.up()
+  }
+  expect(changes).toBe(0)
 })
 
 test.describe('ordenar e arrastar', () => {

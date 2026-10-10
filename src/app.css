@@ -164,8 +164,11 @@ button { cursor: pointer; }
 .banner { margin-block: 4px; padding: 10px 14px; border-radius: 12px; background: var(--raised); color: var(--muted); font-size: 13px; }
 
 /* notas */
-.masonry { display: flex; align-items: flex-start; gap: var(--gap); }
-.m-col { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--gap); }
+.masonry { position: relative; }
+.m-item { position: absolute; left: 0; top: 0; min-width: 0; }
+/* enquanto se arrasta um card, os outros deslizam até o lugar novo */
+.masonry.animate .m-item { transition: transform .22s cubic-bezier(.2, .8, .2, 1); }
+@media (prefers-reduced-motion: reduce) { .masonry.animate .m-item { transition: none; } }
 .stack { display: flex; flex-direction: column; gap: 10px; }
 .card {
   container-type: inline-size;
@@ -834,7 +837,6 @@ button { cursor: pointer; }
   position: fixed; left: 0; top: 0; z-index: 60; margin: 0; pointer-events: none;
   box-shadow: 0 18px 48px rgb(0 0 0 / .22), 0 2px 6px rgb(0 0 0 / .08); transition: none; will-change: transform;
 }
-.m-item { min-width: 0; }
 .stack { display: flex; flex-direction: column; gap: 10px; }
 .menu-heading { padding: 8px 12px 4px; font-size: 11px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); }
 .menu-check.hidden { visibility: hidden; }

@@ -1,13 +1,15 @@
 <script lang="ts" generics="T">
-  import { tick } from 'svelte'
   import type { Snippet } from 'svelte'
 
-  // Grade masonry em colunas reais: cada item vai para a coluna mais baixa, na ordem da lista
-  // (os mais recentes ficam no topo, como no Keep). Substitui `columns: N` do CSS, que a WebKitGTK não equilibra.
+  // Grade masonry: cada item vai para a coluna mais baixa, na ordem da lista (os mais recentes ficam no topo, como
+  // no Keep). Substitui `columns: N` do CSS, que a WebKitGTK não equilibra.
   //
-  // Virtualizada (SPEC §4.1) a partir de 200 itens: só os itens perto da área visível existem no DOM; o resto vira espaço reservado.
+  // Cada item é posicionado por coordenadas (transform), numa lista só: quando a ordem ou a largura muda, o item
+  // desliza para o lugar novo, mas o elemento é sempre o mesmo. Nada é recriado ao redimensionar a janela (as fotos
+  // não piscam) nem ao reordenar.
+  //
+  // Virtualizada (SPEC §4.1) a partir de 200 itens: só os itens perto da área visível existem no DOM.
   // A altura de cada item vem de uma estimativa até ele aparecer; aí passa a valer a altura medida.
-  // Assim 5 mil notas abrem e rolam como 50.
   let {
     items, key, estimate, item, flip = false, minWidth = 220, gap = 10, minCols = 2, columns: fixedCols,
   }: {
@@ -16,7 +18,7 @@
     /** Altura aproximada do item, em px, para uma coluna de largura `colWidth`. */
     estimate: (it: T, colWidth: number) => number
     item: Snippet<[T]>
-    /** Anima os itens até a nova posição quando a ordem muda (FLIP), inclusive entre colunas. */
+    /** Anima os itens até a nova posição quando a ordem muda (enquanto se arrasta um card). */
     flip?: boolean
     minWidth?: number
     gap?: number
@@ -34,29 +36,33 @@
   const cols = $derived(fixedCols ?? Math.max(minCols, Math.floor((width + gap) / (minWidth + gap))))
   const colWidth = $derived(width ? (width - gap * (cols - 1)) / cols : minWidth)
 
-  // Alturas medidas, por item, para a largura atual da coluna.
-  const measured = new Map<string, number>()
-  let measuredWidth = 0
+  // Alturas medidas, com a largura em que foram medidas. Com outra largura, a medida antiga corrige a estimativa
+  // (o texto quebra diferente, mas a proporção entre o real e o estimado se mantém) até o item ser medido de novo.
+  const measured = new Map<string, { h: number; w: number }>()
   let measureTick = $state(0)
 
-  type Placed = { it: T; key: string; top: number; height: number }
+  function heightOf(it: T, k: string, w: number) {
+    const m = measured.get(k)
+    if (!m) return estimate(it, w)
+    if (Math.abs(m.w - w) < 0.5) return m.h
+    const before = estimate(it, m.w)
+    return before > 0 ? (estimate(it, w) * m.h) / before : m.h
+  }
+
+  type Placed = { it: T; key: string; col: number; top: number; height: number }
   const layout = $derived.by(() => {
     void measureTick
-    if (Math.abs(colWidth - measuredWidth) > 0.5) {
-      measured.clear()
-      measuredWidth = colWidth
-    }
-    const out: Placed[][] = Array.from({ length: cols }, () => [])
     const heights = new Array<number>(cols).fill(0)
+    const placed: Placed[] = []
     for (const it of items) {
-      let i = 0
-      for (let c = 1; c < cols; c++) if (heights[c] < heights[i]) i = c
+      let c = 0
+      for (let i = 1; i < cols; i++) if (heights[i] < heights[c]) c = i
       const k = key(it)
-      const h = measured.get(k) ?? estimate(it, colWidth)
-      out[i].push({ it, key: k, top: heights[i], height: h })
-      heights[i] += h + gap
+      const h = heightOf(it, k, colWidth)
+      placed.push({ it, key: k, col: c, top: heights[c], height: h })
+      heights[c] += h + gap
     }
-    return { columns: out, heights: heights.map((h) => Math.max(0, h - gap)) }
+    return { placed, height: Math.max(0, ...heights.map((h) => h - gap)) }
   })
 
   // Janela visível, nas coordenadas da grade.
@@ -65,7 +71,7 @@
   let viewHeight = $state(typeof innerHeight === 'number' ? innerHeight : 900)
 
   $effect(() => {
-    if (!host) return
+    if (!host || items.length <= VIRTUAL_FROM) return
     const scroller = host.closest<HTMLElement>('.content') ?? document.scrollingElement
     if (!scroller) return
     let frame = 0
@@ -87,74 +93,51 @@
     }
   })
 
-  /** Primeiro índice cujo fim passa de `y` (busca binária: as colunas já estão em ordem de altura). */
-  function firstVisible(col: Placed[], y: number) {
-    let lo = 0
-    let hi = col.length
-    while (lo < hi) {
-      const mid = (lo + hi) >> 1
-      if (col[mid].top + col[mid].height < y) lo = mid + 1
-      else hi = mid
-    }
-    return lo
-  }
-
-  const windows = $derived.by(() => {
-    if (items.length <= VIRTUAL_FROM) return layout.columns.map((col) => ({ items: col, pad: 0 }))
+  const shown = $derived.by(() => {
+    if (items.length <= VIRTUAL_FROM) return layout.placed
     const from = viewTop - OVERSCAN
     const to = viewTop + viewHeight + OVERSCAN
-    return layout.columns.map((col) => {
-      const a = firstVisible(col, from)
-      let b = a
-      while (b < col.length && col[b].top <= to) b++
-      return { items: col.slice(a, b), pad: a < col.length ? col[a].top : 0 }
-    })
+    return layout.placed.filter((p) => p.top + p.height >= from && p.top <= to)
   })
 
-  // Mede cada item desenhado; se a altura real for outra, refaz a grade (num quadro só, para vários de uma vez).
-  let pending = 0
+  // Mede cada item desenhado; se a altura real for outra, refaz a grade. O ResizeObserver avisa antes de a tela ser
+  // pintada, então o item já aparece no lugar certo, sem sobrepor o vizinho.
   function measure(el: HTMLElement) {
     const k = el.dataset.key!
     const ro = new ResizeObserver(() => {
       const h = el.offsetHeight
-      if (!h || Math.abs((measured.get(k) ?? -1) - h) < 1) return
-      measured.set(k, h)
-      pending ||= requestAnimationFrame(() => {
-        pending = 0
-        measureTick++
-      })
+      const w = el.offsetWidth
+      const m = measured.get(k)
+      if (!h || (m && Math.abs(m.h - h) < 1 && Math.abs(m.w - w) < 0.5)) return
+      measured.set(k, { h, w })
+      measureTick++
     })
     ro.observe(el)
     return () => ro.disconnect()
   }
 
-  const reduced = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches
-
-  // FLIP: guarda onde cada item estava antes da mudança e anima a partir de lá.
-  $effect.pre(() => {
-    void layout
-    if (!flip || reduced || !host) return
-    const before = new Map<string, DOMRect>()
-    for (const el of host.querySelectorAll<HTMLElement>('[data-key]')) before.set(el.dataset.key!, el.getBoundingClientRect())
-    tick().then(() => {
-      for (const el of host!.querySelectorAll<HTMLElement>('[data-key]')) {
-        const from = before.get(el.dataset.key!)
-        if (!from) continue
-        const to = el.getBoundingClientRect()
-        const dx = from.left - to.left
-        const dy = from.top - to.top
-        if (Math.abs(dx) < 1 && Math.abs(dy) < 1) continue
-        el.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'none' }], { duration: 220, easing: 'cubic-bezier(.2, .8, .2, 1)' })
-      }
-    })
-  })
+  const x = (col: number) => col * (colWidth + gap)
 </script>
 
-<div class="masonry" bind:this={host} bind:clientWidth={width} style:--gap="{gap}px">
-  {#each windows as w, i (i)}
-    <!-- espaço reservado em cima (itens fora da tela) e altura total da coluna -->
-    <div class="m-col" style:padding-top="{w.pad}px" style:min-height="{layout.heights[i]}px">
-      {#each w.items as p (p.key)}<div class="m-item" data-key={p.key} {@attach measure}>{@render item(p.it)}</div>{/each}
+<div
+  class="masonry"
+  class:animate={flip}
+  bind:this={host}
+  bind:clientWidth={width}
+  data-cols={cols}
+  style:height="{layout.height}px"
+>
+  {#each shown as p (p.key)}
+    <div
+      class="m-item"
+      data-key={p.key}
+      data-x={x(p.col)}
+      data-y={p.top}
+      style:width="{colWidth}px"
+      style:transform="translate({x(p.col)}px, {p.top}px)"
+      {@attach measure}
+    >
+      {@render item(p.it)}
     </div>
   {/each}
 </div>
