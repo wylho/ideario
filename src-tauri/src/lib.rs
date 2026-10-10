@@ -69,15 +69,29 @@ pub fn run() {
                 .find(|w| w.label == "main")
                 .cloned()
                 .ok_or("janela main ausente no tauri.conf.json")?;
-            WebviewWindowBuilder::from_config(app.handle(), &config)?
+            // Nasce com a aparência escolhida da última vez (barra de título e fundo), não com a do sistema.
+            let (look, bg) = app
+                .state::<Core>()
+                .with(|s| Ok((s.sync_value("window_theme")?, s.sync_value("window_bg")?)))
+                .unwrap_or_default();
+            let mut window = WebviewWindowBuilder::from_config(app.handle(), &config)?
                 .initialization_script(format!("{}\n{}", system_fonts::init_script(), system_theme::init_script()))
-                .build()?;
+                .theme(match look.as_deref() {
+                    Some("dark") => Some(tauri::Theme::Dark),
+                    Some("light") => Some(tauri::Theme::Light),
+                    _ => None,
+                });
+            if let Some(color) = bg.as_deref().and_then(commands::parse_hex) {
+                window = window.background_color(color);
+            }
+            window.build()?;
             #[cfg(target_os = "linux")]
             linux_media(app)?;
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
             commands::import_path,
+            commands::set_window_look,
             commands::pending_previews,
             commands::inspect_takeout,
             commands::import_keep,

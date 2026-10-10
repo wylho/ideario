@@ -132,16 +132,26 @@ class Theme {
   private apply() {
     const root = document.documentElement
     const mode = this.mode
-    for (const [k, v] of Object.entries(cssVars(paletteColors(this.palette, mode, this.system), mode))) root.style.setProperty(k, v)
+    const colors = paletteColors(this.palette, mode, this.system)
+    for (const [k, v] of Object.entries(cssVars(colors, mode))) root.style.setProperty(k, v)
     // color-scheme (barras de rolagem, campos nativos) e o seletor [data-theme] do CSS.
     if (this.pref === 'system') root.removeAttribute('data-theme')
     else root.setAttribute('data-theme', this.pref)
     root.style.colorScheme = mode
     // Barra de título e controles nativos da janela acompanham a aparência.
+    // O fundo da própria janela também (aparece ao redimensionar e antes de a página pintar): sem ele, o escuro
+    // mostra uma faixa clara nas bordas.
     if (this.native) {
       const pref = this.pref
       import('@tauri-apps/api/window')
-        .then(({ getCurrentWindow }) => getCurrentWindow().setTheme(pref === 'system' ? null : pref))
+        .then(({ getCurrentWindow }) => {
+          const w = getCurrentWindow()
+          return Promise.all([w.setTheme(pref === 'system' ? null : pref), w.setBackgroundColor(colors.bg)])
+        })
+        .catch(() => {})
+      // Guardada no núcleo: na próxima abertura a janela já nasce assim.
+      import('@tauri-apps/api/core')
+        .then(({ invoke }) => invoke('set_window_look', { theme: pref, background: colors.bg }))
         .catch(() => {})
     }
   }
