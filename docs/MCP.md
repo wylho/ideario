@@ -6,6 +6,8 @@ próprio app, que grava no mesmo banco local; o Drive recebe as mudanças pelo s
 
 - Funciona com o app **aberto ou fechado**. Com ele aberto, a mudança aparece na hora, até na nota que está aberta no editor.
 - **Apagar manda para a Lixeira** (30 dias para restaurar). Apagar para sempre só funciona para notas que já estão na Lixeira.
+- **Categorias com PIN ficam fora do alcance do Claude**: as notas delas não aparecem na busca e não podem ser lidas nem
+  mudadas; a categoria não pode ser renomeada nem apagada pelo Claude. Categorias ocultas só aparecem pedindo por elas.
 
 ## Ligar
 

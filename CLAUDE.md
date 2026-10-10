@@ -32,6 +32,13 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
 - **MCP (pedido do usuário: "funcione completamente"):** o executável com `--mcp` é o servidor (stdio). Funciona com o
   app aberto ou fechado. Faz tudo o que o app faz; apagar vai para a Lixeira e apagar para sempre só vale para o que já
   está nela. Ligar pelas Configurações (botão do Claude Desktop + comando do Claude Code).
+- **Privacidade de categoria:** ocultar (menu de contexto, ícone do olho cortado) tira as notas dela de Tudo, busca e
+  demais visões (abrir a categoria mostra). PIN: esconde do mesmo jeito e pede o PIN para abrir; vale em todos os
+  aparelhos e esconde também do MCP. Não é criptografia (decisão do usuário, ciente disso).
+- **Exportar nota:** Markdown/HTML num `.zip` com a pasta de anexos (no HTML áudio/vídeo tocam; no Markdown, link);
+  PDF com áudio/vídeo como cartão (nome e duração). Nota sem anexo sai num arquivo só.
+- **Backup local:** manual ("Fazer backup agora") + automático semanal numa pasta escolhida, guardando os 4 últimos.
+  Restaurar **junta** com o que existe (como o sync), nada se perde.
 
 ## Estado atual
 - **Fases 0 a 5 concluídas (e a importação do Keep).** No app, a UI fala com o núcleo Rust (`src/lib/api/tauri.ts` → `src-tauri/src/commands.rs`):
@@ -151,4 +158,9 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
   `external_changes` (migração 6); o app aberto olha o `PRAGMA data_version` (`mcp/watch.rs`) e emite os eventos do sync.
   Configurações → Claude: `mcp/setup.rs` grava `mcpServers.ideario` no `claude_desktop_config.json` (AppImage: usa
   `$APPIMAGE`). Teste nativo "MCP:" roda o processo de verdade com o app aberto.
+- Privacidade de categoria (`store.rs`): colunas `hidden`/`pin_hash` (migração 7, vão no `categories.ydoc`), desbloqueio
+  na tabela temporária `temp.unlocked` (por conexão: fechar o app bloqueia; o MCP nunca vê desbloqueada). `private_clause`
+  no `where_clause` tira as notas delas de todas as listas, exceto a categoria escolhida (com PIN, só desbloqueada).
+  UI: `app.openCategory` / `askUnlock` / `askPin` (`AppDialogs.svelte`), menu em `menus.ts` (`privacyEntries`).
+- Filtro "Sem categoria"/"Sem tags": sentinelas `NO_CATEGORY`/`NO_TAGS` (`~none`) no `Filter` (TS e Rust).
 - **Próximo passo: Fase 7 (Android).**

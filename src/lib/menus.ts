@@ -1,7 +1,6 @@
 // Menus de contexto de cada tipo de elemento. Um lugar só, para o mesmo item se comportar igual em todo o app.
 import {
-  Archive, ArchiveRestore, Bell, BellOff, Check, CircleCheck, Copy, Pencil, Download, ExternalLink, Files, Filter, FilterX, Image, Palette, Pin, PinOff,
-  FileText, Play, Plus, RotateCcw, Tag, Trash2, AlarmClock,
+  Archive, ArchiveRestore, Bell, BellOff, Check, CircleCheck, Copy, Pencil, Download, ExternalLink, Files, Filter, FilterX, Image, Palette, Pin, PinOff, FileText, Play, Plus, RotateCcw, Tag, Trash2, AlarmClock, Eye, EyeOff, Lock, LockOpen, KeyRound,
 } from '@lucide/svelte'
 import { api } from './api'
 import { app } from './app.svelte'
@@ -10,7 +9,7 @@ import { CATEGORY_COLORS, COLOR_NAMES, nextCategoryColor } from './colors'
 import { SEP, type MenuEntry } from './menu'
 import { quickTimes, snoozeTimes } from './reminders'
 import { reminderSet } from './notify.svelte'
-import type { AttachmentRow, NoteColor, NotePatch, NoteSummary } from './types'
+import type { AttachmentRow, Category, NoteColor, NotePatch, NoteSummary } from './types'
 
 export const NOTE_COLORS: { id: NoteColor; label: string; css: string }[] = [
   { id: 'none', label: 'Padrão', css: 'var(--surface)' },
@@ -185,9 +184,81 @@ export function newCategory(then?: (id: string, name: string) => void) {
   })
 }
 
+/** Categoria com PIN e bloqueada: o menu só oferece abrir (nada de renomear, apagar ou ver o que tem dentro). */
+function lockedMenu(c: Category): MenuEntry[] {
+  return [{ label: 'Abrir com o PIN…', icon: Lock, onSelect: () => app.askUnlock(c, () => { app.setCategory(c.id); app.drawerOpen = false }) }]
+}
+
+function privacyEntries(c: Category): MenuEntry[] {
+  const hide: MenuEntry = c.hidden
+    ? { label: 'Mostrar nas listas', icon: Eye, onSelect: () => void api.setCategoryHidden(c.id, false).then(() => app.say(`${c.name} volta a aparecer em Tudo`)) }
+    : {
+        label: 'Ocultar das listas', icon: EyeOff, hint: 'some de Tudo',
+        onSelect: () => void api.setCategoryHidden(c.id, true).then(() => app.say(`${c.name} oculta: as notas dela não aparecem em Tudo nem na busca`)),
+      }
+  if (!c.locked) {
+    return [
+      hide,
+      {
+        label: 'Proteger com PIN…', icon: Lock,
+        onSelect: () => app.askPin({
+          title: `Proteger ${c.name} com PIN`,
+          text: 'As notas dela somem de Tudo, da busca, dos lembretes e do Claude; para abrir, clique na categoria e digite o PIN. Vale em todos os aparelhos. Não é criptografia: protege de olhares, não de quem mexe nos arquivos do computador.',
+          fields: ['PIN (4 a 8 números)', 'Repita o PIN'],
+          confirm: 'Proteger',
+          submit: async ([pin, again]) => {
+            if (pin !== again) return 'Os dois PINs não são iguais.'
+            await api.setCategoryPin(c.id, null, pin)
+            app.say(`${c.name} protegida com PIN`)
+            return null
+          },
+        }),
+      },
+    ]
+  }
+  return [
+    {
+      label: 'Bloquear agora', icon: Lock,
+      onSelect: () => void api.lockCategory(c.id).then(() => {
+        if (app.filter.categoryId === c.id) app.filter.categoryId = null
+        app.say(`${c.name} bloqueada`)
+      }),
+    },
+    {
+      label: 'Mudar o PIN…', icon: KeyRound,
+      onSelect: () => app.askPin({
+        title: `Mudar o PIN de ${c.name}`,
+        fields: ['PIN atual', 'PIN novo', 'Repita o PIN novo'],
+        confirm: 'Mudar',
+        submit: async ([current, pin, again]) => {
+          if (pin !== again) return 'Os dois PINs novos não são iguais.'
+          await api.setCategoryPin(c.id, current, pin)
+          app.say('PIN mudado')
+          return null
+        },
+      }),
+    },
+    {
+      label: 'Tirar o PIN…', icon: LockOpen,
+      onSelect: () => app.askPin({
+        title: `Tirar o PIN de ${c.name}`,
+        text: 'A categoria volta a ser como as outras (se estiver oculta, continua oculta).',
+        fields: ['PIN atual'],
+        confirm: 'Tirar o PIN',
+        submit: async ([current]) => {
+          await api.setCategoryPin(c.id, current, null)
+          app.say(`${c.name} sem PIN`)
+          return null
+        },
+      }),
+    },
+  ]
+}
+
 export function categoryMenu(id: string): MenuEntry[] {
   const c = app.category(id)
   if (!c) return []
+  if (c.locked && !c.unlocked) return lockedMenu(c)
   const on = app.filter.categoryId === id
   const remove = async () => {
     const notes = await api.deleteCategory(id)
@@ -197,7 +268,7 @@ export function categoryMenu(id: string): MenuEntry[] {
   return [
     on
       ? { label: `Tirar filtro ${c.name}`, icon: FilterX, onSelect: () => app.setCategory(id) }
-      : { label: `Filtrar por ${c.name}`, icon: Filter, onSelect: () => { if (!on) app.setCategory(id); app.drawerOpen = false } },
+      : { label: `Filtrar por ${c.name}`, icon: Filter, onSelect: () => { if (!on) app.openCategory(id); app.drawerOpen = false } },
     {
       label: `Nova nota em ${c.name}`, icon: Plus,
       onSelect: () => { app.drawerOpen = false; app.openNew({ categoryId: id, tags: [] }) },
@@ -215,6 +286,9 @@ export function categoryMenu(id: string): MenuEntry[] {
       label: 'Cor', icon: Palette,
       sub: CATEGORY_COLORS.map((col) => ({ label: COLOR_NAMES[col] ?? col, swatch: col, checked: c.color.toLowerCase() === col.toLowerCase(), onSelect: () => void api.updateCategory(id, { color: col }) })),
     },
+    SEP,
+    ...privacyEntries(c),
+    SEP,
     { label: 'Apagar categoria', icon: Trash2, danger: true, hint: c.noteCount ? 'as notas ficam' : undefined, onSelect: () => void remove() },
   ]
 }

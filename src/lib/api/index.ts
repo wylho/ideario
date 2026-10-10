@@ -22,6 +22,15 @@ export interface Api {
   /** Apaga a categoria (as notas ficam sem categoria). Devolve as notas que estavam nela, para o Desfazer. */
   deleteCategory(id: string): Promise<string[]>
   restoreCategory(id: string, noteIds: string[]): Promise<void>
+  /** Oculta (ou mostra) a categoria nas listas. */
+  setCategoryHidden(id: string, hidden: boolean): Promise<void>
+  /** Põe, troca ou tira (`pin` nulo) o PIN; se já tem PIN, `current` precisa conferir (senão rejeita). */
+  setCategoryPin(id: string, current: string | null, pin: string | null): Promise<void>
+  /** Desbloqueia até o app fechar. Devolve se o PIN conferiu. */
+  unlockCategory(id: string, pin: string): Promise<boolean>
+  lockCategory(id: string): Promise<void>
+  /** A nota está numa categoria com PIN ainda bloqueada. */
+  noteLocked(id: string): Promise<boolean>
   listTags(): Promise<TagCount[]>
   /** Notas ativas sem categoria e sem tag nenhuma. */
   orphanCounts(): Promise<OrphanCounts>

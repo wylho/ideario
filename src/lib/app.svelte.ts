@@ -29,7 +29,18 @@ export interface InfoDialog {
   title: string
   lines: string[]
 }
-export type AppDialog = NameDialog | ConfirmAsk | InfoDialog
+/** Pede um ou mais PINs (desbloquear, pôr, trocar ou tirar o PIN de uma categoria). */
+export interface PinDialog {
+  kind: 'pin'
+  title: string
+  text?: string
+  /** Um campo por PIN pedido, na ordem (ex.: "PIN atual", "PIN novo", "Repita o PIN novo"). */
+  fields: string[]
+  confirm: string
+  /** Devolve um erro para mostrar (o diálogo fica aberto) ou null (fecha). */
+  submit: (values: string[]) => Promise<string | null>
+}
+export type AppDialog = NameDialog | ConfirmAsk | InfoDialog | PinDialog
 
 /** Tarefa longa em andamento (ex.: importar do Keep): mostrada com barra de progresso. */
 export interface Task {
@@ -199,6 +210,34 @@ class AppState {
     this.dialog = { kind: 'info', ...d }
   }
 
+  askPin(d: Omit<PinDialog, 'kind'>) {
+    this.dialog = { kind: 'pin', ...d }
+  }
+
+  /** Pede o PIN da categoria; certo, desbloqueia (até o app fechar) e segue. */
+  askUnlock(c: Category, then: () => void) {
+    this.askPin({
+      title: `${c.name} está protegida`,
+      text: 'Digite o PIN para abrir. Ela fica aberta até você fechar o app ou bloquear de novo.',
+      fields: ['PIN'],
+      confirm: 'Abrir',
+      submit: async ([pin]) => {
+        if (!(await api.unlockCategory(c.id, pin))) return 'PIN errado.'
+        await this.loadShared()
+        then()
+        return null
+      },
+    })
+  }
+
+  /** Abre a categoria no filtro; com PIN e bloqueada, pede o PIN antes. */
+  openCategory(id: string) {
+    const c = this.category(id)
+    const selecting = this.filter.categoryId !== id
+    if (c && selecting && c.locked && !c.unlocked) this.askUnlock(c, () => this.setCategory(id))
+    else this.setCategory(id)
+  }
+
   task = $state<Task | null>(null)
 
   // ---------- seleção múltipla (visão Notas) ----------
@@ -308,7 +347,20 @@ class AppState {
 
   openNote(id: string) {
     this.lightbox = null
-    this.editor = { id, isNew: false }
+    // Sem categoria bloqueada (o normal), abre na hora, sem perguntar ao núcleo.
+    if (!this.categories.some((c) => c.locked && !c.unlocked)) {
+      this.editor = { id, isNew: false }
+      return
+    }
+    // Nota de categoria com PIN (aberta por uma notificação, por exemplo): pede o PIN antes.
+    void api.noteLocked(id).then(async (locked) => {
+      if (!locked) {
+        this.editor = { id, isNew: false }
+        return
+      }
+      const c = this.category((await api.getNote(id))?.categoryId)
+      if (c) this.askUnlock(c, () => (this.editor = { id, isNew: false }))
+    })
   }
 
   say(msg: string, action?: { label: string; run: () => void }) {

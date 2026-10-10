@@ -62,6 +62,12 @@ O Automerge foi considerado e **descartado** em favor do Yjs por causa do editor
 - **Categorias** substituem os "marcadores" do Keep. Cada nota tem **no máximo uma**. Cada categoria tem nome, cor e (futuramente) ícone. Ficam listadas no menu lateral com contagem.
 - **Tags** são livres e várias por nota. Cruzam categorias. Aparecem como nuvem no menu lateral.
 - Todas as abas aceitam filtro por categoria ou tag. Quando há filtro ativo, ele aparece como pílula removível sob a busca.
+- **Sem categoria** (último item das categorias) e **Sem tags** (último chip das tags) filtram o que está sem.
+- **Ocultar** uma categoria (menu de contexto; ícone do olho cortado): as notas dela saem de Tudo, da busca, das tags e
+  das outras visões; clicar na categoria mostra. **PIN** (4 a 8 números, o mesmo em todos os aparelhos): também some de
+  tudo, e abrir pede o PIN (fica aberta até fechar o app ou "Bloquear agora"); o Claude (MCP) não acessa; o aviso do
+  lembrete diz só "Nota protegida". Não é criptografia: protege de olhares (print, tela compartilhada).
+- Ao pôr uma tag na nota, o campo sugere as que já existem (sem acento, por prefixo e por trecho).
 
 ### 3.4 Lembretes
 - O lembrete é **um campo da nota** (`reminder_at`, `reminder_done`). A aba Lembretes é um **filtro salvo** com visual próprio.

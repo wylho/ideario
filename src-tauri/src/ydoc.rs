@@ -195,11 +195,13 @@ pub(crate) fn write_categories(state: &[u8], rows: &[CategoryRow]) -> Result<Vec
     {
         let mut txn = doc.transact_mut();
         for c in rows {
-            let fields: [(&str, Any); 4] = [
+            let fields: [(&str, Any); 6] = [
                 ("name", Any::from(c.name.as_str())),
                 ("color", Any::from(c.color.as_str())),
                 ("sort", Any::Number(Number::Float(c.sort as f64))),
                 ("deleted", Any::Bool(c.deleted)),
+                ("hidden", Any::Bool(c.hidden)),
+                ("pin", opt_str(&c.pin)),
             ];
             match root.get(&txn, &c.id) {
                 Some(Out::YMap(m)) => {
@@ -241,6 +243,9 @@ pub(crate) fn read_categories(state: &[u8]) -> Result<Vec<CategoryRow>> {
                 color: s("color").unwrap_or_default(),
                 sort,
                 deleted: matches!(m.get(&txn, "deleted"), Some(Out::Any(Any::Bool(true)))),
+                // (categorias de antes da migração 7 não têm estes campos)
+                hidden: matches!(m.get(&txn, "hidden"), Some(Out::Any(Any::Bool(true)))),
+                pin: s("pin"),
             })
         })
         .collect();
@@ -737,7 +742,7 @@ mod tests {
     }
 
     fn cat(id: &str, name: &str, color: &str) -> CategoryRow {
-        CategoryRow { id: id.into(), name: name.into(), color: color.into(), sort: 0, deleted: false }
+        CategoryRow { id: id.into(), name: name.into(), color: color.into(), sort: 0, deleted: false, hidden: false, pin: None }
     }
 
     #[test]
@@ -753,6 +758,15 @@ mod tests {
         let merged = apply(&a, &b).unwrap();
         assert_eq!(read_categories(&merged).unwrap(), vec![cat("c1", "Lar", "#4F8A3E"), gone]);
         assert_eq!(read_categories(&merged).unwrap(), read_categories(&apply(&b, &a).unwrap()).unwrap());
+        // ocultar num aparelho e pôr PIN no outro: os dois ficam
+        let mut hidden = cat("c1", "Lar", "#4F8A3E");
+        hidden.hidden = true;
+        let x = write_categories(&merged, &[hidden]).unwrap();
+        let mut locked = cat("c1", "Lar", "#4F8A3E");
+        locked.pin = Some("abc".into());
+        let y = write_categories(&merged, &[locked]).unwrap();
+        let both = read_categories(&apply(&x, &y).unwrap()).unwrap();
+        assert!(both[0].hidden && both[0].pin.as_deref() == Some("abc"), "{both:?}");
     }
 
     #[test]

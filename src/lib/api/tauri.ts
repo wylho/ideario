@@ -61,6 +61,11 @@ export const tauriApi: Api = {
   restoreCategory: (id, noteIds) => write('restore_category', { id, noteIds }),
   listTags: () => invoke('list_tags'),
   orphanCounts: () => invoke('orphan_counts'),
+  setCategoryHidden: (id, hidden) => write('set_category_hidden', { id, hidden }),
+  setCategoryPin: (id, current, pin) => write('set_category_pin', { id, current, pin }),
+  unlockCategory: (id, pin) => write('unlock_category', { id, pin }),
+  lockCategory: (id) => write('lock_category', { id }),
+  noteLocked: (id) => invoke('note_locked', { id }),
   renameTag: (from, to) => write('rename_tag', { from, to }),
 
   getNote: (id) => invoke('get_note', { id }),
