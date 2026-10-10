@@ -79,6 +79,7 @@ fn welcome(store: &Store) -> Result<()> {
         trashed_at: None,
         reminder_at: None,
         reminder_done: false,
+        reminder_repeat: None,
         tags: vec![],
     };
     store.save_note(&note)?;
@@ -402,6 +403,7 @@ impl Core {
                 trashed_at: n.is_trashed.then(crate::store::now),
                 reminder_at: None,
                 reminder_done: false,
+                reminder_repeat: None,
                 tags,
             };
             self.with(|s| {

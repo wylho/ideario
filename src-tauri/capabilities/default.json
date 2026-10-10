@@ -1,13 +1,14 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Permissões da janela principal",
+  "description": "Permissões da janela principal. allow-close = o mesmo que o X da janela (com o segundo plano ligado, só esconde); os testes no app nativo usam.",
   "windows": [
     "main"
   ],
   "permissions": [
     "core:default",
     "core:window:allow-set-theme",
-    "dialog:allow-open"
+    "dialog:allow-open",
+    "core:window:allow-close"
   ]
 }

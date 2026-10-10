@@ -6,7 +6,9 @@ mod background;
 mod commands;
 mod keep;
 mod media;
+mod notify;
 mod projection;
+mod reminders;
 mod store;
 mod system_fonts;
 mod system_theme;
@@ -43,6 +45,8 @@ pub fn run() {
             // Fotos antigas (sem miniatura e paleta): em segundo plano, sem atrasar a lista.
             let handle = app.handle().clone();
             std::thread::spawn(move || handle.state::<Core>().backfill_media());
+            // Lembretes: notificação na hora (e os atrasados, logo ao abrir).
+            notify::start(app.handle().clone());
 
             // A janela é criada aqui (e não pelo tauri.conf.json) para receber as fontes e as cores do
             // sistema antes de a página carregar, sem troca visível de fonte ou de cor.

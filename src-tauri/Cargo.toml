@@ -29,6 +29,10 @@ fast_image_resize = { version = "5", features = ["image"] }
 webp = "0.3"
 zip = { version = "2", default-features = false, features = ["deflate"] }
 tauri-plugin-dialog = "2.8"
+# Notificações dos lembretes (com botões Abrir, Adiar, Concluir nos três sistemas).
+notify-rust = "4.18"
+# Hora local dos lembretes (repetir todo mês/ano no mesmo horário, com horário de verão).
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
 
 [profile.release]
 codegen-units = 1

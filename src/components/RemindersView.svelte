@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Check } from '@lucide/svelte'
+  import { Check, Repeat } from '@lucide/svelte'
   import { api } from '../lib/api'
   import { app, live } from '../lib/app.svelte'
   import { dayDiff, fmtShortDate, fmtTime, isOverdue } from '../lib/format'
@@ -49,7 +49,7 @@
       </span>
     </button>
     <span class="r-time" class:late={isOverdue(n)}>
-      <b>{fmtTime(n.reminderAt!)}</b>
+      <b>{fmtTime(n.reminderAt!)}{#if n.reminderRepeat}<Repeat size={12} aria-label="se repete" />{/if}</b>
       {#if Math.abs(dd) > 1}<small>{fmtShortDate(n.reminderAt!)}</small>{/if}
       {#if dd === -1}<small>ontem</small>{/if}
       {#if dd === 1 && n.reminderDone}<small>amanhã</small>{/if}

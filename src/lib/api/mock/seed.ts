@@ -41,6 +41,7 @@ export interface SeedNote {
   pinned: boolean
   reminderAt: number | null
   reminderDone?: boolean
+  reminderRepeat?: import('../../types').RepeatKind
   archived?: boolean
   trashedDaysAgo?: number
   updatedAt: number

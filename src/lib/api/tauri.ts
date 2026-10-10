@@ -5,6 +5,9 @@ import type { Api } from '.'
 const listeners = new Set<() => void>()
 const changed = () => listeners.forEach((fn) => fn())
 
+// O núcleo também muda dados sozinho (lembrete que se repete, botões da notificação, importação): avisa a UI.
+void import('@tauri-apps/api/event').then(({ listen }) => listen('core-changed', changed)).catch(() => {})
+
 /** Comando que muda dados: avisa a UI para recarregar as listas quando termina. */
 async function write<T>(cmd: string, args?: Parameters<typeof invoke>[1], options?: Parameters<typeof invoke>[2]): Promise<T> {
   const r = await invoke<T>(cmd, args, options)

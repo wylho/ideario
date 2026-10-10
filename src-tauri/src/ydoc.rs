@@ -98,6 +98,7 @@ pub(crate) fn to_note(id: &str, state: &[u8]) -> Result<NoteInput> {
         trashed_at: ms("trashedAt"),
         reminder_at: ms("reminderAt"),
         reminder_done: b("reminderDone"),
+        reminder_repeat: s("reminderRepeat"),
         tags,
     })
 }
@@ -148,6 +149,7 @@ fn write_meta(meta: &MapRef, txn: &mut TransactionMut, n: &NoteInput, prev: Opti
     set("trashedAt", num(n.trashed_at), p.is_some_and(|p| p.trashed_at != n.trashed_at));
     set("reminderAt", num(n.reminder_at), p.is_some_and(|p| p.reminder_at != n.reminder_at));
     set("reminderDone", Any::Bool(n.reminder_done), p.is_some_and(|p| p.reminder_done != n.reminder_done));
+    set("reminderRepeat", opt_str(&n.reminder_repeat), p.is_some_and(|p| p.reminder_repeat != n.reminder_repeat));
     let tags: Vec<Any> = n.tags.iter().map(|t| Any::from(t.as_str())).collect();
     set("tags", Any::Array(tags.into()), p.is_some_and(|p| p.tags != n.tags));
 }
@@ -308,6 +310,7 @@ mod tests {
             trashed_at: None,
             reminder_at: Some(1_791_573_277_130),
             reminder_done: false,
+            reminder_repeat: None,
             tags: vec!["casa".into()],
         }
     }
@@ -410,6 +413,7 @@ pub(crate) fn tests_note() -> NoteInput {
         trashed_at: None,
         reminder_at: None,
         reminder_done: false,
+        reminder_repeat: None,
         tags: vec![],
     }
 }
@@ -481,6 +485,7 @@ mod props {
             trashed_at: when,
             reminder_at: when,
             reminder_done: false,
+            reminder_repeat: None,
             tags,
         }
     }

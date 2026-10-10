@@ -859,3 +859,16 @@ button { cursor: pointer; }
 .task-bar i { position: absolute; left: 0; bottom: 0; height: 3px; background: var(--accent); transition: width .2s; }
 .shell.wide .task-bar { bottom: 32px; }
 .info-lines { margin: 4px 0 0; padding-left: 18px; display: grid; gap: 4px; font-size: 14px; color: var(--muted); }
+
+/* lembretes que acabaram de vencer: cartões no canto, acima do "+" */
+.alerts { position: fixed; right: 16px; bottom: 96px; z-index: 70; display: grid; gap: 8px; width: min(360px, calc(100vw - 32px)); }
+.alert {
+  display: flex; align-items: center; gap: 10px; padding: 10px 8px 10px 12px; border-radius: 14px;
+  background: var(--surface); box-shadow: 0 8px 28px rgb(0 0 0 / .16); outline: 1px solid var(--card-edge); animation: fab-in .2s ease both;
+}
+.alert-ico { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; flex: none; background: var(--accent-soft); color: var(--accent); }
+.alert-ico.late { background: var(--late-soft); color: var(--late); }
+.alert-text { flex: 1; min-width: 0; display: grid; text-align: left; }
+.alert-text b { font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.alert-text small { font-size: 12px; color: var(--muted); }
+.alert-actions { display: flex; }
