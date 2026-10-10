@@ -280,7 +280,7 @@ export const MediaLayout = Extension.create<{
         props: {
           handleDOMEvents: {
             contextmenu(view, e) {
-              const el = (e.target as Element | null)?.closest?.('img[data-hash], .note-file')
+              const el = (e.target as Element | null)?.closest?.('img[data-hash], .note-file, .link-card')
               if (!el || !onMenu || !view.dom.contains(el)) return false
               let pos: number | null = null
               view.state.doc.descendants((n, p) => {

@@ -49,6 +49,8 @@ export type PreviewBlock =
   | { kind: 'file'; text: string; fileKind: AttachmentKind; hash: string }
   /** Bloco de código: as primeiras linhas, sem formatação. */
   | { kind: 'code'; text: string }
+  /** Cartão de link: título (ou endereço) e o site. */
+  | { kind: 'link'; text: string; url: string; site: string }
   /** Tarefas que não couberam na prévia (máx. 4) ou texto cortado. */
   | { kind: 'more'; count: number }
 
@@ -248,6 +250,16 @@ export interface BackupReport {
   skippedAttachments: number
   bytes: number
 }
+/** Prévia de um link (da própria página). */
+export interface LinkPreview {
+  url: string
+  title: string | null
+  description: string | null
+  site: string | null
+  /** Miniatura da imagem da página, como data:image/webp. */
+  image: string | null
+}
+
 /** Nota exportada. */
 export interface ExportReport {
   path: string

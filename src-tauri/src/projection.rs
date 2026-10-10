@@ -26,6 +26,8 @@ pub enum Block {
     /// `hash`: para a interface pedir a miniatura (foto, primeira página do PDF, quadro do vídeo).
     File { text: String, file_kind: String, hash: String },
     Code { text: String },
+    /// Cartão de link: o título (ou o endereço) e o site.
+    Link { text: String, url: String, site: String },
     More { count: usize },
 }
 
@@ -33,7 +35,7 @@ impl Block {
     fn text(&self) -> Option<&str> {
         match self {
             Block::Heading { text } | Block::Text { text } | Block::Bullet { text, .. } | Block::Ordered { text, .. } => Some(text),
-            Block::Task { text, .. } | Block::File { text, .. } | Block::Code { text } => Some(text),
+            Block::Task { text, .. } | Block::File { text, .. } | Block::Code { text } | Block::Link { text, .. } => Some(text),
             Block::More { .. } => None,
         }
     }
@@ -53,6 +55,8 @@ pub struct Projection {
     pub blocks: Vec<Block>,
     pub preview: Vec<Block>,
     pub hash_tags: Vec<String>,
+    /// Texto que entra só na busca (descrição e endereço dos links), sem virar tag.
+    extra: Vec<String>,
 }
 
 /// `file` resolve um anexo pelo hash: (nome, tipo). Anexos desconhecidos ficam de fora da prévia.
@@ -66,6 +70,9 @@ pub fn project(body: &Value, file: &dyn Fn(&str) -> Option<(String, String)>) ->
     p.text = p.blocks.iter().filter_map(Block::text).collect::<Vec<_>>().join(" ").split_whitespace().collect::<Vec<_>>().join(" ");
     p.preview = preview_of(&p.blocks);
     p.hash_tags = hash_tags(&p.text);
+    if !p.extra.is_empty() {
+        p.text = format!("{} {}", p.text, p.extra.join(" ")).trim().to_string();
+    }
     p
 }
 
@@ -146,6 +153,18 @@ fn block(n: &Value, depth: u32, p: &mut Projection, file: &dyn Fn(&str) -> Optio
             }
             p.images.extend(row);
         }
+        "linkCard" => {
+            let attr = |k: &str| n.get("attrs").and_then(|a| a.get(k)).and_then(Value::as_str).unwrap_or("").to_string();
+            let url = attr("url");
+            if !url.is_empty() {
+                let site = Some(attr("site")).filter(|s| !s.is_empty()).unwrap_or_else(|| host(&url));
+                let title = attr("title");
+                let text = if title.is_empty() { url.clone() } else { title };
+                p.extra.push(attr("description"));
+                p.extra.push(url.clone());
+                p.blocks.push(Block::Link { text, url, site });
+            }
+        }
         "noteFile" => {
             if let Some(h) = hash_attr(n) {
                 if let Some((name, file_kind)) = file(&h) {
@@ -160,6 +179,12 @@ fn block(n: &Value, depth: u32, p: &mut Projection, file: &dyn Fn(&str) -> Optio
             }
         }
     }
+}
+
+/// O site do endereço ("https://www.exemplo.com/x" → "exemplo.com").
+fn host(url: &str) -> String {
+    let rest = url.split_once("://").map(|(_, r)| r).unwrap_or(url);
+    rest.split(['/', '?', '#']).next().unwrap_or("").trim_start_matches("www.").to_string()
 }
 
 /// Prévia do card, na ordem do documento, com limites folgados (o card corta pela altura).
@@ -226,6 +251,21 @@ pub fn plain_text(title: &str, p: &Projection) -> String {
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn link_cards_in_the_preview_and_search() {
+        let body = json!({"type":"doc","content":[
+            {"type":"linkCard","attrs":{"url":"https://www.exemplo.com/receita","title":"Bolo de fubá","description":"Fofinho #nao-e-tag"}},
+            {"type":"linkCard","attrs":{"url":"https://site.org/x"}}
+        ]});
+        let p = project(&body, &|_| None);
+        assert_eq!(p.preview, vec![
+            Block::Link { text: "Bolo de fubá".into(), url: "https://www.exemplo.com/receita".into(), site: "exemplo.com".into() },
+            Block::Link { text: "https://site.org/x".into(), url: "https://site.org/x".into(), site: "site.org".into() },
+        ]);
+        assert!(p.text.contains("Fofinho") && p.text.contains("exemplo.com/receita"), "descrição e endereço entram na busca");
+        assert!(p.hash_tags.is_empty(), "a #palavra da descrição de um site não vira tag");
+    }
 
     fn none(_: &str) -> Option<(String, String)> {
         None

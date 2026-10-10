@@ -117,6 +117,13 @@ fn block(nasty: bool) -> BoxedStrategy<Value> {
         1 => prop::collection::vec(hash(), 2..5)
             .prop_map(|hs| json!({"type": "imageRow", "content": hs.iter().map(|h| json!({"type": "noteImage", "attrs": {"hash": h}})).collect::<Vec<_>>()})),
         1 => hash().prop_map(|h| json!({"type": "noteFile", "attrs": {"hash": h}})),
+        1 => ("https://[a-z]{1,8}\\.com/[a-z0-9_-]{0,8}", prop::option::of(words(nasty))).prop_map(|(url, title)| {
+            let mut attrs = json!({"url": url});
+            if let Some(t) = title {
+                attrs["title"] = json!(t);
+            }
+            json!({"type": "linkCard", "attrs": attrs})
+        }),
     ]
     .boxed()
 }

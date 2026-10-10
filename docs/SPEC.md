@@ -65,6 +65,15 @@ O Automerge foi considerado e **descartado** em favor do Yjs por causa do editor
   HTML, áudio e vídeo tocam com player; no Markdown viram link). **PDF**: impressão do sistema ("Salvar como PDF"),
   com só a nota no papel; áudio e vídeo saem como cartão com o nome e a duração.
 
+### 3.2.2 Bloco de link
+- Colar um endereço (http/https) **sozinho numa linha vazia** vira um cartão: título, descrição, imagem e site da
+  página. O cartão aparece na hora com o site; a prévia chega depois (o núcleo busca a página: Open Graph, senão
+  `<title>`; a imagem vira miniatura WebP guardada no próprio cartão). Sem rede, fica só com o endereço. Colado no meio
+  do texto, continua texto. Também pelo "+" → **Link…**.
+- Clicar abre no navegador do sistema. Menu do bloco: Abrir link, Copiar endereço, Atualizar prévia.
+- No card da lista aparece como uma linha com o ícone de link e o título; a busca acha pelo título e pela descrição.
+  Exportar: no HTML vira cartão com link; no Markdown, `[🔗 título](endereço)`.
+
 ### 3.3 Categorias e tags
 - **Categorias** substituem os "marcadores" do Keep. Cada nota tem **no máximo uma**. Cada categoria tem nome, cor e (futuramente) ícone. Ficam listadas no menu lateral com contagem.
 - **Tags** são livres e várias por nota. Cruzam categorias. Aparecem como nuvem no menu lateral.

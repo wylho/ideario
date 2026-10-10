@@ -887,6 +887,63 @@ test('modo documento: a nota vira página inteira, e ela lembra; imprimir deixa 
   await expect(ed).not.toHaveAttribute('data-doc', '')
 })
 
+test('bloco de link: colar o endereço numa linha vazia vira cartão com prévia; também pelo "+"', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 })
+  await page.evaluate(() => {
+    ;(window as unknown as { opened: string[] }).opened = []
+    window.open = ((u: string) => {
+      ;(window as unknown as { opened: string[] }).opened.push(u)
+      return null
+    }) as typeof window.open
+  })
+  await newNote(page)
+  await page.locator('#titulo').fill('Leituras')
+  await page.locator('#corpo').click()
+  // colar um endereço sozinho numa linha vazia
+  await page.locator('#corpo').evaluate((el) => {
+    const dt = new DataTransfer()
+    dt.setData('text/plain', 'https://www.exemplo.com.br/artigo')
+    el.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }))
+  })
+  const card = page.locator('#corpo .link-card')
+  await expect(card).toHaveCount(1)
+  await expect(card.locator('.lc-title')).toHaveText('Página de exemplo.com.br')
+  await expect(card.locator('.lc-site')).toHaveText('exemplo.com.br')
+  await expect(card.locator('.lc-desc')).toContainText('Prévia de exemplo')
+  // o cursor fica na linha de baixo: digitar não apaga o cartão; colado no meio do texto, continua texto
+  await page.keyboard.type('veja ')
+  await page.locator('#corpo').evaluate((el) => {
+    const dt = new DataTransfer()
+    dt.setData('text/plain', 'https://outro.org/x')
+    el.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }))
+  })
+  await expect(card).toHaveCount(1)
+  await expect(page.locator('#corpo')).toContainText('veja https://outro.org/x')
+  // pelo "+": Link…
+  await page.getByRole('button', { name: 'Inserir' }).click()
+  await page.getByRole('menuitem', { name: 'Link…' }).click()
+  await page.getByLabel('Endereço (https://…)').fill('wikipedia.org')
+  await page.keyboard.press('Enter')
+  await expect(card).toHaveCount(2)
+  await expect(card.nth(1).locator('.lc-title')).toHaveText('Página de wikipedia.org')
+  // clicar abre no navegador; o menu do bloco tem as ações do link
+  await card.first().click()
+  expect(await page.evaluate(() => (window as unknown as { opened: string[] }).opened)).toEqual(['https://www.exemplo.com.br/artigo'])
+  await card.first().click({ button: 'right' })
+  await expect(page.getByRole('menuitem', { name: 'Abrir link' })).toBeVisible()
+  await expect(page.getByRole('menuitem', { name: 'Copiar endereço' })).toBeVisible()
+  await expect(page.getByRole('menuitem', { name: 'Atualizar prévia' })).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('menuitem', { name: 'Abrir link' })).toHaveCount(0)
+  // no card da lista: o link aparece na prévia; a busca acha pelo título da página
+  await back(page)
+  const c = cards(page).filter({ hasText: 'Leituras' })
+  await expect(c.locator('.pv-link').first()).toContainText('Página de exemplo.com.br')
+  await page.getByRole('button', { name: 'Buscar' }).first().click()
+  await page.keyboard.type('wikipedia')
+  await expect(cards(page).filter({ hasText: 'Leituras' })).toHaveCount(1)
+})
+
 test.describe('ordenar e arrastar', () => {
   const titles = (page: Page, section = 1) =>
     page.locator('.drag-section').nth(section).locator('.card').evaluateAll((els) => els.map((e) => e.getAttribute('aria-label')))

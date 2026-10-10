@@ -3,6 +3,7 @@
 //   npx tauri build --debug --no-bundle && xvfb-run -a node tests/native/run.mjs
 // Precisa de: WebKitWebDriver (pacote webkit2gtk-driver) e tauri-driver (cargo install tauri-driver).
 import { spawn } from 'node:child_process'
+import { createServer } from 'node:http'
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { DatabaseSync } from 'node:sqlite'
 import { tmpdir } from 'node:os'
@@ -525,6 +526,32 @@ try {
     await call('export_note_cmd', { id: plain.id, format: 'md', path: md })
     const text = readFileSync(md, 'utf8')
     if (!text.startsWith('# ')) throw new Error(text.slice(0, 200))
+  })
+
+  await test('bloco de link: colar o endereço busca título e imagem no núcleo (site de mentira na máquina)', async () => {
+    const site = createServer((req, res) => {
+      if (req.url === '/capa.png') return res.writeHead(200, { 'content-type': 'image/png' }).end(png())
+      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' })
+      res.end('<html><head><title>fallback</title><meta property="og:title" content="Receita de pão &amp; café"><meta name="description" content="Fermentação natural"><meta property="og:image" content="/capa.png"></head></html>')
+    })
+    await new Promise((r) => site.listen(0, '127.0.0.1', r))
+    const url = `http://127.0.0.1:${site.address().port}/receita`
+    try {
+      await s.exec(`document.querySelector('[aria-label="Criar"]').click(); return true`)
+      await s.waitFor(`return !!document.querySelector('[role=menuitem]')`, 'leque')
+      await s.clickText('[role=menuitem]', 'Nota')
+      await s.waitFor(`return document.activeElement?.id === 'corpo'`, 'editor')
+      await s.type('#titulo', 'Link do pão')
+      await s.exec(`document.getElementById('corpo').focus(); const dt = new DataTransfer(); dt.setData('text/plain', arguments[0]); document.getElementById('corpo').dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true })); return true`, url)
+      await s.waitFor(`const c = document.querySelector('#corpo .link-card'); return c?.querySelector('.lc-title')?.textContent === 'Receita de pão & café' && c.querySelector('.lc-img')?.naturalWidth > 0`, 'cartão com título e imagem', 10000)
+      const desc = await s.exec(`return document.querySelector('#corpo .lc-desc')?.textContent`)
+      if (desc !== 'Fermentação natural') throw new Error(`descrição: ${desc}`)
+      await sleep(700)
+      await s.exec(`document.querySelector('[aria-label="Voltar e salvar"]').click(); return true`)
+      await s.waitFor(`const c = [...document.querySelectorAll('.card')].find((c) => c.getAttribute('aria-label') === 'Link do pão'); return c?.querySelector('.pv-link')?.textContent.includes('Receita de pão')`, 'link na prévia do card')
+    } finally {
+      site.close()
+    }
   })
 
   await test('tema escuro: a janela (barra de título e fundo) acompanha e fica guardado para a próxima abertura', async () => {
