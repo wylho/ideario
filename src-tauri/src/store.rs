@@ -984,11 +984,11 @@ impl Store {
             (None, Some(b)) => b - STEP,
             (None, None) => cur,
         };
-        if let (Some(a), Some(b)) = (a, b) {
+        if let (Some(a), Some(b), Some(after), Some(before)) = (a, b, after, before) {
             if !(pos > a && pos < b) {
                 // Sem espaço entre os vizinhos: renumera tudo e tenta de novo.
                 self.renumber("n.position ASC")?;
-                let (a, b) = (pos_of(after.unwrap())?.unwrap_or(0.0), pos_of(before.unwrap())?.unwrap_or(0.0));
+                let (a, b) = (pos_of(after)?.unwrap_or(0.0), pos_of(before)?.unwrap_or(0.0));
                 pos = (a + b) / 2.0;
             }
         }
@@ -1233,14 +1233,16 @@ impl Store {
     }
 
     /// Enviada: limpa a marca de mudança só se a nota não mudou de novo enquanto subia.
-    pub fn mark_uploaded(&self, id: &str, uploaded: &[u8], file_id: &str, rev: &str) -> Result<()> {
-        self.conn
+    /// Devolve false se a nota não existe mais (foi excluída enquanto subia).
+    pub fn mark_uploaded(&self, id: &str, uploaded: &[u8], file_id: &str, rev: &str) -> Result<bool> {
+        let n = self
+            .conn
             .execute(
                 "UPDATE notes SET drive_file_id = ?3, drive_rev = ?4, dirty = CASE WHEN ydoc = ?2 THEN 0 ELSE dirty END WHERE id = ?1",
                 params![id, uploaded, file_id, rev],
             )
             .map_err(err)?;
-        Ok(())
+        Ok(n > 0)
     }
 
     /// O arquivo da nota sumiu do Drive (outro aparelho a excluiu de vez): sai daqui também. Se havia mudança aqui
@@ -1323,6 +1325,11 @@ impl Store {
         rows.collect::<std::result::Result<_, _>>().map_err(err)
     }
 
+    pub fn set_attachment_missing(&self, hash: &str) -> Result<()> {
+        self.conn.execute("UPDATE attachments SET local_state = 'missing' WHERE hash = ?1", [hash]).map_err(err)?;
+        Ok(())
+    }
+
     pub fn set_attachment_local(&self, hash: &str) -> Result<()> {
         self.conn.execute("UPDATE attachments SET local_state = 'full' WHERE hash = ?1", [hash]).map_err(err)?;
         Ok(())
@@ -1403,13 +1410,16 @@ impl Store {
         rows.collect::<std::result::Result<_, _>>().map_err(err)
     }
 
+    /// Grava as categorias que vieram do Drive. Só o que mudou, e sem mexer na data: o que veio de fora não é mudança
+    /// local (senão o sync acharia que há algo a enviar).
     pub fn put_category_rows(&self, rows: &[CategoryRow]) -> Result<()> {
         let tx = self.conn.unchecked_transaction().map_err(err)?;
         for c in rows {
             tx.execute(
-                "INSERT INTO categories (id, name, color, sort, deleted, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6) \
-                 ON CONFLICT(id) DO UPDATE SET name = excluded.name, color = excluded.color, sort = excluded.sort, deleted = excluded.deleted",
-                params![c.id, c.name, c.color, c.sort, c.deleted, now()],
+                "INSERT INTO categories (id, name, color, sort, deleted, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, 0) \
+                 ON CONFLICT(id) DO UPDATE SET name = excluded.name, color = excluded.color, sort = excluded.sort, deleted = excluded.deleted \
+                 WHERE name IS NOT excluded.name OR color IS NOT excluded.color OR sort IS NOT excluded.sort OR deleted IS NOT excluded.deleted",
+                params![c.id, c.name, c.color, c.sort, c.deleted],
             )
             .map_err(err)?;
         }
@@ -1440,7 +1450,7 @@ impl Store {
         let (notes, bytes): (i64, i64) = self
             .conn
             .query_row(
-                "SELECT (SELECT COUNT(*) FROM notes WHERE trashed_at IS NULL), (SELECT COALESCE(SUM(bytes), 0) FROM attachments)",
+                "SELECT (SELECT COUNT(*) FROM notes WHERE trashed_at IS NULL), (SELECT COALESCE(SUM(bytes), 0) FROM attachments WHERE local_state = 'full')",
                 [],
                 |r| Ok((r.get(0)?, r.get(1)?)),
             )

@@ -190,6 +190,20 @@
                 <span><b>Google Drive</b><small>As notas ficam numa pasta oculta do app no seu Drive: só o Ideario lê e escreve nela.</small></span>
                 <button class="btn ghost" onclick={signOut}>Sair</button>
               </div>
+            {:else if status?.account}
+              <!-- o Google não aceita mais o login (revogado, senha trocada…): a conta e o que já sincronizou ficam -->
+              <div class="sync-card bad">
+                <CloudAlert size={22} />
+                <div>
+                  <b>{status.account}</b>
+                  <span>{signingIn ? 'Continue no navegador. Volte aqui depois de permitir.' : 'O login do Google expirou. Entre de novo para voltar a sincronizar.'}</span>
+                </div>
+                {#if signingIn}
+                  <button class="btn ghost sm" onclick={() => api.syncCancelSignIn()}>Cancelar</button>
+                {:else}
+                  <button class="btn primary sm" onclick={signIn}>Entrar de novo</button>
+                {/if}
+              </div>
             {:else if status}
               <div class="sync-card off">
                 <CloudOff size={22} />
