@@ -27,8 +27,9 @@
   import { readMeta, writeMeta, type NoteMeta } from '../lib/ydoc'
   import { makePreviews } from '../lib/previews.svelte'
   import { reminderSet } from '../lib/notify.svelte'
-  import { ago, fmtBytes, hashTags, normalizeTag } from '../lib/format'
+  import { ago, fmtBytes, hashTags } from '../lib/format'
   import ReminderPopover from './ReminderPopover.svelte'
+  import TagInput from './TagInput.svelte'
   import type { Attachment, NoteColor, NoteInput, RichDoc, RichNode } from '../lib/types'
 
   let { target }: { target: EditorTarget } = $props()
@@ -50,7 +51,6 @@
   let editor = $state.raw<TipTap | null>(null)
   let tick = $state(0)
   let bodyTags = $state<string[]>([])
-  let tagDraft = $state('')
   /** Anexos usados no corpo, para desenhar fotos e players sem esperar. */
   const media = new Map<string, Attachment>()
   const recorder = new Recorder()
@@ -523,12 +523,6 @@
     if (tr && editor) editor.view.dispatch(tr)
     editor?.view.focus()
   }
-
-  function addTag() {
-    const t = normalizeTag(tagDraft)
-    if (meta && t && !meta.tags.includes(t)) meta.tags.push(t)
-    tagDraft = ''
-  }
 </script>
 
 {#if meta}
@@ -672,20 +666,7 @@
             {#each extraTags as t (t)}
               <span class="pill tag" title="Tag vinda do texto">#{t}</span>
             {/each}
-            <input
-              id="nova-tag"
-              class="tag-input"
-              placeholder="+ tag"
-              autocomplete="off"
-              bind:value={tagDraft}
-              onkeydown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ' || e.key === ',') {
-                  e.preventDefault()
-                  addTag()
-                }
-              }}
-              onblur={addTag}
-            />
+            <TagInput exclude={[...meta.tags, ...extraTags]} onpick={(t) => meta && !meta.tags.includes(t) && meta.tags.push(t)} />
           </div>
         </div>
 

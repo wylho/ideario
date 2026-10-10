@@ -709,6 +709,46 @@ test('lateral: "Sem categoria" e "Sem tags" filtram; soltar um card em "Sem cate
   await expect(noCat.locator('.count')).toHaveText(String(nCat + 1))
 })
 
+test('tag na nota: sugere as que já existem (sem acento), cria nova e Esc só fecha a lista', async ({ page }) => {
+  await page.setViewportSize({ width: 1300, height: 900 })
+  await cards(page).filter({ hasText: 'Ideias de campanha' }).first().click()
+  const field = page.getByRole('combobox', { name: 'Nova tag' })
+  const list = page.getByRole('listbox', { name: 'Tags que já existem' })
+  await field.click()
+  // ao focar: as mais usadas, sem as que a nota já tem
+  await expect(list).toContainText('Tags usadas')
+  await expect(list.getByRole('option', { name: /^estudo/ })).toBeVisible()
+  await expect(list.getByRole('option', { name: /^campanha/ })).toHaveCount(0)
+  // digitando sem acento acha "referência"; Enter põe a primeira
+  await field.fill('referencia')
+  await expect(list.getByRole('option').first()).toHaveAttribute('aria-selected', 'true')
+  await expect(list.getByRole('option').first()).toContainText('referência')
+  await field.press('Enter')
+  await expect(page.locator('.ed-tags .pill', { hasText: '#referência' })).toHaveCount(1)
+  // pedaço do meio também; setas escolhem
+  await field.fill('pron')
+  await expect(list.getByRole('option')).toHaveCount(2)
+  await field.press('ArrowDown')
+  await expect(list.getByRole('option').nth(1)).toContainText('Criar #pron')
+  await field.press('ArrowUp')
+  await field.press('Tab')
+  await expect(page.locator('.ed-tags .pill', { hasText: '#pronúncia' })).toHaveCount(1)
+  // tag nova
+  await field.fill('Lançamento 2027')
+  await expect(list.getByRole('option')).toHaveText(['Criar #lançamento-2027'])
+  await field.press('Enter')
+  await expect(page.locator('.ed-tags .pill', { hasText: '#lançamento-2027' })).toHaveCount(1)
+  // clique numa sugestão
+  await field.fill('tipo')
+  await list.getByRole('option', { name: /tipografia/ }).click()
+  await expect(page.locator('.ed-tags .pill', { hasText: '#tipografia' })).toHaveCount(1)
+  // Esc fecha a lista, o editor continua aberto
+  await field.fill('x')
+  await field.press('Escape')
+  await expect(list).toHaveCount(0)
+  await expect(page.locator('#corpo')).toBeVisible()
+})
+
 test.describe('ordenar e arrastar', () => {
   const titles = (page: Page, section = 1) =>
     page.locator('.drag-section').nth(section).locator('.card').evaluateAll((els) => els.map((e) => e.getAttribute('aria-label')))
