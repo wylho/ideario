@@ -232,8 +232,27 @@ pub fn save_copy(data: &Path, downloads: &Path, hash: &str, name: &str) -> Resul
 
 /// Responde a `att://localhost/<hash>` com o arquivo, inteiro ou só o trecho pedido (Range).
 /// `?thumb` pede a miniatura (WebP); sem miniatura (não é foto, ou ainda não gerada), vai o arquivo.
-pub fn serve(store: &Store, data: &Path, req: &Request<Vec<u8>>) -> Response<Vec<u8>> {
-    let hash: String = req.uri().path().trim_start_matches('/').chars().filter(|c| c.is_ascii_hexdigit()).collect();
+/// Hash pedido em `att://localhost/<hash>`.
+pub fn hash_of(req: &Request<Vec<u8>>) -> String {
+    req.uri().path().trim_start_matches('/').chars().filter(|c| c.is_ascii_hexdigit()).collect()
+}
+
+/// O que `serve` precisa do banco: lido de uma vez, e a trava do banco é solta antes de ler o arquivo.
+pub struct Info {
+    kind: Option<String>,
+    mime: Option<String>,
+}
+
+pub fn info(store: &Store, hash: &str) -> Info {
+    Info { kind: store.attachment_kind(hash).ok().flatten(), mime: store.attachment_mime(hash).ok().flatten() }
+}
+
+/// Pedaço máximo para um pedido aberto ("bytes=N-"): o player pede o resto aos poucos, sem ler um vídeo de 500 MB
+/// inteiro a cada salto.
+const CHUNK: u64 = 4 * 1024 * 1024;
+
+pub fn serve(info: Info, data: &Path, req: &Request<Vec<u8>>) -> Response<Vec<u8>> {
+    let hash = hash_of(req);
     let not_found = || status_only(StatusCode::NOT_FOUND);
     if hash.is_empty() {
         return not_found();
@@ -249,31 +268,15 @@ pub fn serve(store: &Store, data: &Path, req: &Request<Vec<u8>>) -> Response<Vec
                     .unwrap_or_else(|_| status_only(StatusCode::INTERNAL_SERVER_ERROR));
             }
             // Foto ainda sem miniatura: vai a foto. Outros tipos: sem prévia (ainda).
-            _ if store.attachment_kind(&hash).ok().flatten().as_deref() == Some("image") => {}
+            _ if info.kind.as_deref() == Some("image") => {}
             _ => return not_found(),
         }
     }
-    let Ok(bytes) = std::fs::read(dir(data).join(&hash)) else { return not_found() };
+    let Ok(mut file) = std::fs::File::open(dir(data).join(&hash)) else { return not_found() };
+    let Ok(len) = file.metadata().map(|m| m.len()) else { return not_found() };
     // Tipo vindo do banco: se não servir de cabeçalho (caractere inválido), vai como binário genérico.
-    let mime = store
-        .attachment_mime(&hash)
-        .ok()
-        .flatten()
-        .filter(|m| header::HeaderValue::from_str(m).is_ok())
-        .unwrap_or_else(|| "application/octet-stream".into());
-    let len = bytes.len();
-    let range = req
-        .headers()
-        .get(header::RANGE)
-        .and_then(|v| v.to_str().ok())
-        .and_then(|v| v.strip_prefix("bytes="))
-        .and_then(|v| v.split(',').next())
-        .and_then(|v| v.split_once('-'))
-        .and_then(|(a, b)| {
-            let start: usize = if a.is_empty() { len.saturating_sub(b.parse().ok()?) } else { a.parse().ok()? };
-            let end: usize = if a.is_empty() || b.is_empty() { len.saturating_sub(1) } else { b.parse::<usize>().ok()?.min(len.saturating_sub(1)) };
-            (start <= end && start < len).then_some((start, end))
-        });
+    let mime = info.mime.filter(|m| header::HeaderValue::from_str(m).is_ok()).unwrap_or_else(|| "application/octet-stream".into());
+    let range = req.headers().get(header::RANGE).and_then(|v| v.to_str().ok()).and_then(|v| parse_range(v, len));
     let base = Response::builder()
         // A página (outra origem: tauri://localhost) lê o arquivo com fetch, para o pdf.js desenhar a prévia.
         .header(header::ACCESS_CONTROL_ALLOW_ORIGIN, "*")
@@ -281,13 +284,39 @@ pub fn serve(store: &Store, data: &Path, req: &Request<Vec<u8>>) -> Response<Vec
         .header(header::ACCEPT_RANGES, "bytes")
         .header(header::CACHE_CONTROL, "max-age=31536000, immutable");
     let res = match range {
-        Some((start, end)) => base
-            .status(StatusCode::PARTIAL_CONTENT)
-            .header(header::CONTENT_RANGE, format!("bytes {start}-{end}/{len}"))
-            .body(bytes[start..=end].to_vec()),
-        None => base.status(StatusCode::OK).body(bytes),
+        Some((start, end)) => {
+            use std::io::{Read, Seek, SeekFrom};
+            let mut buf = vec![0; (end - start + 1) as usize];
+            if file.seek(SeekFrom::Start(start)).and_then(|_| file.read_exact(&mut buf)).is_err() {
+                return status_only(StatusCode::INTERNAL_SERVER_ERROR);
+            }
+            base.status(StatusCode::PARTIAL_CONTENT).header(header::CONTENT_RANGE, format!("bytes {start}-{end}/{len}")).body(buf)
+        }
+        None => {
+            use std::io::Read;
+            let mut buf = Vec::with_capacity(len as usize);
+            if file.read_to_end(&mut buf).is_err() {
+                return status_only(StatusCode::INTERNAL_SERVER_ERROR);
+            }
+            base.status(StatusCode::OK).body(buf)
+        }
     };
     res.unwrap_or_else(|_| status_only(StatusCode::INTERNAL_SERVER_ERROR))
+}
+
+/// "bytes=a-b", "bytes=a-" (até `CHUNK`) ou "bytes=-n" (os últimos n) → (início, fim) inclusivos.
+fn parse_range(v: &str, len: u64) -> Option<(u64, u64)> {
+    let (a, b) = v.strip_prefix("bytes=")?.split(',').next()?.split_once('-')?;
+    let last = len.checked_sub(1)?;
+    let (start, end) = match (a.trim(), b.trim()) {
+        ("", n) => (len.saturating_sub(n.parse().ok()?), last),
+        (a, "") => {
+            let a: u64 = a.parse().ok()?;
+            (a, a.saturating_add(CHUNK - 1).min(last))
+        }
+        (a, b) => (a.parse().ok()?, b.parse::<u64>().ok()?.min(last)),
+    };
+    (start <= end && start < len).then_some((start, end))
 }
 
 /// Resposta vazia só com o código (não falha: sem cabeçalhos a montar).
@@ -300,6 +329,22 @@ pub fn status_only(code: StatusCode) -> Response<Vec<u8>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn serve_with(store: &Store, data: &Path, req: &Request<Vec<u8>>) -> Response<Vec<u8>> {
+        serve(info(store, &hash_of(req)), data, req)
+    }
+
+    #[test]
+    fn ranges() {
+        assert_eq!(parse_range("bytes=0-99", 1000), Some((0, 99)));
+        assert_eq!(parse_range("bytes=900-", 1000), Some((900, 999)));
+        assert_eq!(parse_range("bytes=0-", 100 * 1024 * 1024), Some((0, CHUNK - 1)), "aberto: só um pedaço");
+        assert_eq!(parse_range("bytes=-10", 1000), Some((990, 999)));
+        assert_eq!(parse_range("bytes=0-5000", 1000), Some((0, 999)));
+        assert_eq!(parse_range("bytes=1000-", 1000), None);
+        assert_eq!(parse_range("bytes=0-", 0), None);
+        assert_eq!(parse_range("lixo", 1000), None);
+    }
 
     #[test]
     fn kinds() {
@@ -324,7 +369,7 @@ mod tests {
         assert!(a.bytes < jpg.len() as i64);
         assert_eq!(a.palette.as_ref().map(Vec::len), Some(5));
         assert!(a.tone.is_some());
-        let get = |q: &str| serve(&store, &tmp, &Request::builder().uri(format!("att://localhost/{}{q}", a.hash)).body(Vec::new()).unwrap());
+        let get = |q: &str| serve_with(&store, &tmp, &Request::builder().uri(format!("att://localhost/{}{q}", a.hash)).body(Vec::new()).unwrap());
         let thumb = get("?thumb");
         assert_eq!(thumb.headers()[header::CONTENT_TYPE], "image/webp");
         assert_eq!(image::load_from_memory(thumb.body()).unwrap().width(), 400);
@@ -342,7 +387,7 @@ mod tests {
         let tmp = std::env::temp_dir().join(format!("ideario-test-{}", uuid::Uuid::now_v7()));
         let store = Store::memory();
         let a = import(&store, &tmp, b"%PDF-1.4 conteudo", "Contrato.pdf", "application/pdf").unwrap();
-        let thumb = || serve(&store, &tmp, &Request::builder().uri(format!("att://localhost/{}?thumb", a.hash)).body(Vec::new()).unwrap());
+        let thumb = || serve_with(&store, &tmp, &Request::builder().uri(format!("att://localhost/{}?thumb", a.hash)).body(Vec::new()).unwrap());
         assert_eq!(thumb().status(), StatusCode::NOT_FOUND, "sem prévia ainda: a interface mostra o ícone");
         // primeira página desenhada pelo pdf.js (aqui, um PNG qualquer de 800×1100)
         let page = image::RgbImage::from_pixel(800, 1100, image::Rgb([250, 250, 250]));
@@ -356,7 +401,7 @@ mod tests {
         let b = import(&store, &tmp, b"%PDF-1.4 outro", "b.pdf", "application/pdf").unwrap();
         save_preview(&tmp, &b.hash, &[]).unwrap();
         assert!(thumb_path(&tmp, &b.hash).exists());
-        let r = serve(&store, &tmp, &Request::builder().uri(format!("att://localhost/{}?thumb", b.hash)).body(Vec::new()).unwrap());
+        let r = serve_with(&store, &tmp, &Request::builder().uri(format!("att://localhost/{}?thumb", b.hash)).body(Vec::new()).unwrap());
         assert_eq!(r.status(), StatusCode::NOT_FOUND);
         let _ = std::fs::remove_dir_all(&tmp);
     }
@@ -370,14 +415,14 @@ mod tests {
         assert_eq!(a.hash, b.hash);
         assert_eq!(a.kind, "doc");
         let req = Request::builder().uri(format!("att://localhost/{}", a.hash)).header("Range", "bytes=2-4").body(Vec::new()).unwrap();
-        let res = serve(&store, &tmp, &req);
+        let res = serve_with(&store, &tmp, &req);
         assert_eq!(res.status(), StatusCode::PARTIAL_CONTENT);
         assert_eq!(res.body(), b"234");
         let dl = save_copy(&tmp, &tmp.join("dl"), &a.hash, "a.txt").unwrap();
         // tipo gravado que não serve de cabeçalho não derruba o servidor
         store.conn.execute("UPDATE attachments SET mime = 'text/plain\nX: y' WHERE hash = ?1", [&a.hash]).unwrap();
         let req = Request::builder().uri(format!("att://localhost/{}", a.hash)).body(Vec::new()).unwrap();
-        let res = serve(&store, &tmp, &req);
+        let res = serve_with(&store, &tmp, &req);
         assert_eq!(res.status(), StatusCode::OK);
         assert_eq!(res.headers()[header::CONTENT_TYPE], "application/octet-stream");
         let dl2 = save_copy(&tmp, &tmp.join("dl"), &a.hash, "a.txt").unwrap();

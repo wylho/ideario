@@ -28,6 +28,13 @@
 
   async function toggle(n: NoteSummary) {
     const was = n.reminderDone
+    if (n.reminderRepeat && !was) {
+      // Lembrete que se repete: "feito" vale para esta vez; a série continua.
+      const before = n.reminderAt
+      await api.completeReminder(n.id)
+      app.say('Feito por esta vez', { label: 'Desfazer', run: () => void api.updateNote(n.id, { reminderAt: before }) })
+      return
+    }
     await api.setReminderDone(n.id, !was)
     app.say(was ? 'Lembrete reaberto' : 'Lembrete concluído', { label: 'Desfazer', run: () => void api.setReminderDone(n.id, was) })
   }
@@ -39,7 +46,7 @@
   <ContextMenu items={() => reminderMenu(n)}>
     {#snippet children(trigger)}
   <div {...trigger} class="r-item" class:done={n.reminderDone}>
-    <button class="r-check" aria-label={n.reminderDone ? 'Reabrir lembrete' : 'Concluir lembrete'} onclick={() => toggle(n)}>
+    <button class="r-check" aria-label={n.reminderDone ? 'Reabrir lembrete' : n.reminderRepeat ? 'Feito por esta vez' : 'Concluir lembrete'} onclick={() => toggle(n)}>
       {#if n.reminderDone}<Check size={14} strokeWidth={3} />{/if}
     </button>
     <button class="r-main" onclick={() => app.openNote(n.id)}>

@@ -264,6 +264,8 @@ function passes(n: StoredNote, f: Filter) {
 
 /** Notas ativas que passam no filtro, as mais recentes primeiro. */
 const activeIn = (f: Filter) => [...notes.values()].filter((n) => isLive(n) && passes(n, f)).sort(byRecent)
+/** Fora da lixeira (arquivadas inclusive): os lembretes delas continuam valendo, como no núcleo. */
+const notTrashed = (f: Filter) => [...notes.values()].filter((n) => n.trashedAt == null && passes(n, f)).sort(byRecent)
 
 const fileMatches = (query: string) => {
   const q = fold(query.trim())
@@ -385,7 +387,7 @@ export const mockApi: Api = {
 
   listReminders({ filter, query, includeDone }) {
     return done(
-      activeIn(filter)
+      notTrashed(filter)
         .filter((n) => n.reminderAt != null && (includeDone || !n.reminderDone) && matches(n, query))
         .sort((a, b) => a.reminderAt! - b.reminderAt!)
         .map(summarize),
@@ -409,7 +411,7 @@ export const mockApi: Api = {
     const now = Date.now()
     const live = activeIn(filter)
     const found = live.filter((n) => matches(n, query))
-    const pending = found.filter((n) => n.reminderAt != null && !n.reminderDone)
+    const pending = notTrashed(filter).filter((n) => matches(n, query) && n.reminderAt != null && !n.reminderDone)
     return done({
       notes: found.length,
       reminders: pending.length,
@@ -530,6 +532,24 @@ export const mockApi: Api = {
       changed()
     }
     return done(undefined)
+  },
+
+  snoozeReminder(id, until) {
+    const n = notes.get(id)
+    // Na prévia nada avisa; o que se repete mantém a série.
+    if (n && !n.reminderRepeat) return mockApi.updateNote(id, { reminderAt: until, reminderDone: false })
+    return done(undefined)
+  },
+
+  completeReminder(id) {
+    const n = notes.get(id)
+    if (!n || n.reminderAt == null) return done(undefined)
+    if (!n.reminderRepeat) return mockApi.setReminderDone(id, true)
+    const d = new Date(n.reminderAt)
+    const step = { day: () => d.setDate(d.getDate() + 1), week: () => d.setDate(d.getDate() + 7), month: () => d.setMonth(d.getMonth() + 1), year: () => d.setFullYear(d.getFullYear() + 1) }
+    do step[n.reminderRepeat]()
+    while (d.getTime() <= Date.now())
+    return mockApi.updateNote(id, { reminderAt: d.getTime() })
   },
 
   updateNote(id, patch) {

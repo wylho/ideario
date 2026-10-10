@@ -135,12 +135,27 @@ export function reminderMenu(n: NoteSummary): MenuEntry[] {
     { label: 'Abrir nota', icon: ExternalLink, onSelect: () => app.openNote(n.id) },
     n.reminderDone
       ? { label: 'Reabrir', icon: RotateCcw, onSelect: () => change(n, { reminderDone: false }, 'Lembrete reaberto') }
-      : { label: 'Concluir', icon: Check, onSelect: () => change(n, { reminderDone: true }, 'Lembrete concluído') },
+      : n.reminderRepeat
+        ? {
+            // Lembrete que se repete: "feito" vale para esta vez; a série continua.
+            label: 'Feito por esta vez', icon: Check,
+            onSelect: () => {
+              const before = n.reminderAt
+              void api.completeReminder(n.id)
+              app.say('Feito por esta vez', { label: 'Desfazer', run: () => void api.updateNote(n.id, { reminderAt: before }) })
+            },
+          }
+        : { label: 'Concluir', icon: Check, onSelect: () => change(n, { reminderDone: true }, 'Lembrete concluído') },
     {
       label: 'Adiar', icon: AlarmClock,
       sub: snoozeTimes().map(([label, at]) => ({
         label, hint: fmtReminder(at).replace(/^.*?, /, ''),
-        onSelect: () => change(n, { reminderAt: at, reminderDone: false }, `Adiado para ${fmtReminder(at)}`),
+        // O que se repete avisa de novo nessa hora sem mudar o horário da série.
+        onSelect: () => {
+          const before = n.reminderAt
+          void api.snoozeReminder(n.id, at)
+          app.say(`Adiado para ${fmtReminder(at)}`, n.reminderRepeat ? undefined : { label: 'Desfazer', run: () => void api.updateNote(n.id, { reminderAt: before }) })
+        },
       })),
     },
     SEP,

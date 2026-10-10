@@ -77,7 +77,13 @@ pub fn next_occurrence<Tz: TimeZone>(at: Millis, repeat: &str, now: Millis, tz: 
 /// O que venceu até `now` e ainda não foi avisado neste aparelho. Marca como avisado e reagenda os que se repetem.
 pub fn take_due<Tz: TimeZone>(store: &Store, now: Millis, tz: &Tz) -> Result<Vec<Alert>> {
     let mut out = Vec::new();
-    for DueReminder { id, title, at, repeat } in store.due_reminders(now)? {
+    for DueReminder { id, title, at, repeat, snoozed } in store.due_reminders(now)? {
+        if snoozed {
+            // Volta de um adiamento: avisa uma vez; a série continua no horário dela.
+            store.set_snooze(&id, None)?;
+            out.push(Alert { id, title, at, late: now - at > LATE_AFTER, repeats: repeat.is_some() });
+            continue;
+        }
         store.mark_notified(&id, at)?;
         if let Some(next) = repeat.as_deref().and_then(|r| next_occurrence(at, r, now, tz)) {
             // A próxima vez entra no lugar (como no Keep); concluir não faz sentido num lembrete que se repete.
@@ -88,6 +94,36 @@ pub fn take_due<Tz: TimeZone>(store: &Store, now: Millis, tz: &Tz) -> Result<Vec
         out.push(Alert { id, title, at, late: now - at > LATE_AFTER, repeats: repeat.is_some() });
     }
     Ok(out)
+}
+
+/// Adiar: o que se repete avisa de novo em `until` sem mudar a série; o que é de uma vez passa para `until`.
+/// Nenhum dos dois conta como edição da nota.
+pub fn snooze(store: &Store, id: &str, until: Millis) -> Result<()> {
+    match store.reminder_of(id)? {
+        Some((_, Some(_))) => store.set_snooze(id, Some(until)),
+        Some((_, None)) => {
+            let mut patch = Map::new();
+            patch.insert("reminderAt".into(), Value::from(until));
+            patch.insert("reminderDone".into(), Value::Bool(false));
+            store.reschedule(id, &patch).map(|_| ())
+        }
+        None => Ok(()),
+    }
+}
+
+/// Concluir: o que é de uma vez fica concluído; o que se repete pula para a próxima vez (a série continua).
+pub fn complete<Tz: TimeZone>(store: &Store, id: &str, now: Millis, tz: &Tz) -> Result<()> {
+    match store.reminder_of(id)? {
+        Some((at, Some(repeat))) => {
+            store.set_snooze(id, None)?;
+            let Some(next) = next_occurrence(at, &repeat, now.max(at), tz) else { return Ok(()) };
+            let mut patch = Map::new();
+            patch.insert("reminderAt".into(), Value::from(next));
+            store.reschedule(id, &patch).map(|_| ())
+        }
+        Some((_, None)) => store.set_reminder_done(id, true).map(|_| ()),
+        None => Ok(()),
+    }
 }
 
 /// Texto das notificações: até 3 avisos, um por nota; passou disso, os 2 primeiros e um resumo do resto.
@@ -346,5 +382,96 @@ mod props {
                 prop_assert!(local.day() == anchor.day() || local.day() < anchor.day() && (local + chrono::Duration::days(1)).day() == 1);
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod snooze_tests {
+    //! Adiar e concluir lembretes que se repetem: a série nunca sai do horário dela.
+    use super::*;
+    use crate::store::{Filter, NoteInput};
+    use chrono::FixedOffset;
+    use serde_json::json;
+
+    const MIN: Millis = 60_000;
+
+    fn tz() -> FixedOffset {
+        FixedOffset::west_opt(3 * 3600).unwrap()
+    }
+
+    fn at(d: u32, h: u32, m: u32) -> Millis {
+        tz().with_ymd_and_hms(2026, 10, d, h, m, 0).single().unwrap().timestamp_millis()
+    }
+
+    fn note(id: &str, reminder: Millis, repeat: Option<&str>) -> NoteInput {
+        NoteInput {
+            id: id.into(),
+            title: "Água das plantas".into(),
+            body: json!({"type":"doc","content":[{"type":"paragraph"}]}),
+            category_id: None,
+            color: "none".into(),
+            pinned: false,
+            archived: false,
+            trashed_at: None,
+            reminder_at: Some(reminder),
+            reminder_done: false,
+            reminder_repeat: repeat.map(str::to_string),
+            tags: vec![],
+        }
+    }
+
+    fn reminder_at(s: &Store, id: &str) -> (Option<Millis>, bool) {
+        let n = s.get_note(id).unwrap().unwrap();
+        (n.reminder_at, n.reminder_done)
+    }
+
+    #[test]
+    fn snoozing_a_repeating_reminder_keeps_the_series_time() {
+        let s = Store::memory();
+        s.save_note(&note("n1", at(10, 9, 0), Some("day"))).unwrap();
+        assert_eq!(take_due(&s, at(10, 9, 0), &tz()).unwrap().len(), 1);
+        assert_eq!(reminder_at(&s, "n1").0, Some(at(11, 9, 0)), "a próxima vez já entrou");
+        let edited = s.get_note("n1").unwrap().unwrap().updated_at;
+        snooze(&s, "n1", at(10, 9, 0) + 10 * MIN).unwrap();
+        // a série continua às 9h; o adiamento avisa às 9h10, uma vez
+        assert_eq!(reminder_at(&s, "n1").0, Some(at(11, 9, 0)));
+        assert!(take_due(&s, at(10, 9, 5), &tz()).unwrap().is_empty());
+        let again = take_due(&s, at(10, 9, 10), &tz()).unwrap();
+        assert_eq!(again.len(), 1);
+        assert!(take_due(&s, at(10, 9, 20), &tz()).unwrap().is_empty(), "avisa uma vez só");
+        assert_eq!(reminder_at(&s, "n1").0, Some(at(11, 9, 0)));
+        assert_eq!(s.get_note("n1").unwrap().unwrap().updated_at, edited, "adiar não é editar a nota");
+    }
+
+    #[test]
+    fn snoozing_a_one_time_reminder_moves_it() {
+        let s = Store::memory();
+        s.save_note(&note("n1", at(10, 9, 0), None)).unwrap();
+        take_due(&s, at(10, 9, 0), &tz()).unwrap();
+        snooze(&s, "n1", at(10, 9, 10)).unwrap();
+        assert_eq!(reminder_at(&s, "n1"), (Some(at(10, 9, 10)), false));
+        assert_eq!(take_due(&s, at(10, 9, 10), &tz()).unwrap().len(), 1);
+    }
+
+    #[test]
+    fn completing_a_repeating_reminder_goes_to_the_next_time() {
+        let s = Store::memory();
+        s.save_note(&note("n1", at(10, 9, 0), Some("week"))).unwrap();
+        complete(&s, "n1", at(10, 8, 0), &tz()).unwrap();
+        assert_eq!(reminder_at(&s, "n1"), (Some(at(17, 9, 0)), false), "pula esta vez; a série continua");
+        s.save_note(&note("n2", at(10, 9, 0), None)).unwrap();
+        complete(&s, "n2", at(10, 8, 0), &tz()).unwrap();
+        assert_eq!(reminder_at(&s, "n2"), (Some(at(10, 9, 0)), true));
+    }
+
+    #[test]
+    fn reminders_of_archived_notes_are_listed_and_counted() {
+        let s = Store::memory();
+        let mut n = note("n1", at(10, 9, 0), None);
+        n.archived = true;
+        s.save_note(&n).unwrap();
+        assert_eq!(s.list_reminders(&Filter::default(), "", false).unwrap().len(), 1);
+        assert_eq!(s.view_counts(&Filter::default(), "").unwrap().reminders, 1);
+        assert_eq!(s.view_counts(&Filter::default(), "").unwrap().notes, 0, "a nota arquivada não conta em Notas");
     }
 }

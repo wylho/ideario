@@ -45,12 +45,8 @@ fn act(app: &AppHandle, n: &Notice, action: &str) {
             }
             .ok();
         }
-        "snooze" | "Adiar 10 min" => change(app, n, |s, id| {
-            let mut patch = serde_json::Map::new();
-            patch.insert("reminderAt".into(), serde_json::Value::from(now() + SNOOZE_MS));
-            s.update_note(id, &patch).map(|_| ())
-        }),
-        "done" | "Concluir" => change(app, n, |s, id| s.set_reminder_done(id, true).map(|_| ())),
+        "snooze" | "Adiar 10 min" => change(app, n, |s, id| crate::reminders::snooze(s, id, now() + SNOOZE_MS)),
+        "done" | "Concluir" => change(app, n, |s, id| crate::reminders::complete(s, id, now(), &chrono::Local)),
         _ => {}
     }
 }

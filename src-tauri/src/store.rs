@@ -198,6 +198,8 @@ pub struct DueReminder {
     pub title: String,
     pub at: Millis,
     pub repeat: Option<String>,
+    /// É a volta de um adiamento (a série não muda).
+    pub snoozed: bool,
 }
 
 #[derive(Debug, Serialize)]
@@ -328,6 +330,11 @@ const MIGRATIONS: &[&str] = &[
     CREATE TABLE IF NOT EXISTS pending_deletes (drive_file_id TEXT PRIMARY KEY);
     CREATE TABLE IF NOT EXISTS sync_blobs (key TEXT PRIMARY KEY, value BLOB NOT NULL);
     "#,
+    // 5 — adiar um lembrete que se repete: avisa de novo mais tarde sem mexer no horário da série (local, como
+    // `notified_at`).
+    r#"
+    ALTER TABLE notes ADD COLUMN snoozed_until INTEGER;
+    "#,
 ];
 
 pub struct Store {
@@ -419,6 +426,7 @@ impl Store {
         let mut w = vec![match box_ {
             "trash" => "n.trashed_at IS NOT NULL".to_string(),
             "archive" => "n.archived = 1 AND n.trashed_at IS NULL".to_string(),
+            "live" => "n.trashed_at IS NULL".to_string(),
             _ => "n.archived = 0 AND n.trashed_at IS NULL".to_string(),
         }];
         if let Some(c) = &filter.category_id {
@@ -543,7 +551,8 @@ impl Store {
 
     pub fn list_reminders(&self, filter: &Filter, query: &str, include_done: bool) -> Result<Vec<NoteSummary>> {
         let mut args = Vec::new();
-        let mut w = Self::where_clause("active", filter, query, &mut args);
+        // Arquivar não tira o lembrete: ele avisa e aparece aqui (só a lixeira tira).
+        let mut w = Self::where_clause("live", filter, query, &mut args);
         w.push_str(" AND n.reminder_at IS NOT NULL");
         if !include_done {
             w.push_str(" AND n.reminder_done = 0");
@@ -558,16 +567,17 @@ impl Store {
 
     pub fn view_counts(&self, filter: &Filter, query: &str) -> Result<ViewCounts> {
         let mut args = Vec::new();
-        let w = Self::where_clause("active", filter, query, &mut args);
+        // Lembretes contam as arquivadas também (aparecem em Lembretes); Notas e Moodboard, só as ativas.
+        let w = Self::where_clause("live", filter, query, &mut args);
         let now = now();
         let (notes, reminders, overdue, moodboard): (i64, i64, i64, i64) = self
             .conn
             .query_row(
                 &format!(
-                    "SELECT COUNT(*), \
+                    "SELECT COALESCE(SUM(n.archived = 0), 0), \
                      COALESCE(SUM(n.reminder_at IS NOT NULL AND n.reminder_done = 0), 0), \
                      COALESCE(SUM(n.reminder_at IS NOT NULL AND n.reminder_done = 0 AND n.reminder_at < {now}), 0), \
-                     COALESCE(SUM(n.image_count), 0) FROM notes n WHERE {w}"
+                     COALESCE(SUM(CASE WHEN n.archived = 0 THEN n.image_count ELSE 0 END), 0) FROM notes n WHERE {w}"
                 ),
                 params_from_iter(args.iter()),
                 |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)),
@@ -921,15 +931,37 @@ impl Store {
         let mut st = self
             .conn
             .prepare_cached(
-                "SELECT id, label, reminder_at, reminder_repeat FROM notes \
+                "SELECT id, label, reminder_at, reminder_repeat, 0 FROM notes \
                  WHERE reminder_at IS NOT NULL AND reminder_at <= ?1 AND reminder_done = 0 AND trashed_at IS NULL \
-                 AND (notified_at IS NULL OR notified_at < reminder_at) ORDER BY reminder_at",
+                 AND (notified_at IS NULL OR notified_at < reminder_at) \
+                 UNION ALL \
+                 SELECT id, label, snoozed_until, reminder_repeat, 1 FROM notes \
+                 WHERE snoozed_until IS NOT NULL AND snoozed_until <= ?1 AND trashed_at IS NULL \
+                 ORDER BY 3",
             )
             .map_err(err)?;
         let rows = st
-            .query_map([now], |r| Ok(DueReminder { id: r.get(0)?, title: r.get(1)?, at: r.get(2)?, repeat: r.get(3)? }))
+            .query_map([now], |r| {
+                Ok(DueReminder { id: r.get(0)?, title: r.get(1)?, at: r.get(2)?, repeat: r.get(3)?, snoozed: r.get(4)? })
+            })
             .map_err(err)?;
         rows.collect::<std::result::Result<_, _>>().map_err(err)
+    }
+
+    /// Lembrete da nota: (quando, repetição).
+    pub fn reminder_of(&self, id: &str) -> Result<Option<(Millis, Option<String>)>> {
+        self.conn
+            .query_row("SELECT reminder_at, reminder_repeat FROM notes WHERE id = ?1 AND reminder_at IS NOT NULL", [id], |r| {
+                Ok((r.get(0)?, r.get(1)?))
+            })
+            .optional()
+            .map_err(err)
+    }
+
+    /// Adiamento local de um lembrete que se repete (None = sem adiamento).
+    pub fn set_snooze(&self, id: &str, until: Option<Millis>) -> Result<()> {
+        self.conn.execute("UPDATE notes SET snoozed_until = ?2 WHERE id = ?1", params![id, until]).map_err(err)?;
+        Ok(())
     }
 
     /// Este aparelho já avisou o lembrete marcado para `at` (local: não sincroniza).
@@ -1770,7 +1802,8 @@ mod tests {
             s.conn
                 .execute_batch(
                     "DROP INDEX notes_drive; ALTER TABLE notes DROP COLUMN ydoc; ALTER TABLE notes DROP COLUMN reminder_repeat; \
-                     ALTER TABLE notes DROP COLUMN notified_at; ALTER TABLE notes DROP COLUMN drive_file_id; ALTER TABLE notes DROP COLUMN drive_rev; PRAGMA user_version = 1",
+                     ALTER TABLE notes DROP COLUMN notified_at; ALTER TABLE notes DROP COLUMN drive_file_id; ALTER TABLE notes DROP COLUMN drive_rev; \
+                     ALTER TABLE notes DROP COLUMN snoozed_until; PRAGMA user_version = 1",
                 )
                 .unwrap();
         }

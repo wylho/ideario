@@ -1,4 +1,6 @@
 <script lang="ts">
+  /** "image/jpeg" → "JPEG", "image/svg+xml" → "SVG". */
+  const formatOf = (mime: string) => (mime.split('/')[1] ?? '').split('+')[0].replace('jpeg', 'jpg').toUpperCase() || 'Arquivo'
   import { Dialog } from 'bits-ui'
   import { Download, X } from '@lucide/svelte'
   import { api } from '../lib/api'
@@ -50,7 +52,7 @@
         <div class="lb-sheet">
           {#if img.palette}
             <div class="lb-pal">
-              {#each img.palette as p (p)}
+              {#each img.palette as p, i (i)}
                 <button onclick={() => copy(p)} aria-label="Copiar {p}">
                   <i style:background={p}></i>
                   <code>{p}</code>
@@ -67,7 +69,8 @@
               <b>WebP {fmtBytes(img.bytes)}</b>
               <span class="good">−{Math.round((1 - img.bytes / img.origBytes) * 100)}%</span>
             {:else}
-              <b>WebP {fmtBytes(img.bytes)}</b>
+              <!-- não foi convertida (qualidade Original, GIF…): o formato é o que veio -->
+              <b>{formatOf(img.mime)} {fmtBytes(img.bytes)}</b>
             {/if}
           </p>
           <div class="lb-actions">
