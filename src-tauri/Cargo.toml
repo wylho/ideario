@@ -38,6 +38,9 @@ ureq = { version = "2", features = ["json"] }
 tauri-plugin-opener = "2"
 base64 = "0.22"
 rand = "0.8"
+# MCP (o Claude mexe nas notas): o corpo entra e sai em Markdown; a pasta de dados sem o Tauri (`ideario --mcp`).
+pulldown-cmark = { version = "0.13", default-features = false }
+dirs = "7"
 
 [profile.release]
 codegen-units = 1

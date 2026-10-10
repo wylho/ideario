@@ -29,6 +29,9 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
   No Linux o núcleo lê a fonte do GNOME/KDE (`src-tauri/src/system_fonts.rs`); nos demais, `system-ui`.
 - **D5:** categorias só com cor (sem ícone).
 - **D3:** notas na **pasta oculta do app** no Drive (`appDataFolder`, escopo `drive.appdata`). Sem pasta visível em Markdown.
+- **MCP (pedido do usuário: "funcione completamente"):** o executável com `--mcp` é o servidor (stdio). Funciona com o
+  app aberto ou fechado. Faz tudo o que o app faz; apagar vai para a Lixeira e apagar para sempre só vale para o que já
+  está nela. Ligar pelas Configurações (botão do Claude Desktop + comando do Claude Code).
 
 ## Estado atual
 - **Fases 0 a 5 concluídas (e a importação do Keep).** No app, a UI fala com o núcleo Rust (`src/lib/api/tauri.ts` → `src-tauri/src/commands.rs`):
@@ -141,4 +144,11 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
   `docs/GOOGLE_DRIVE.md`); sem ele as Configurações dizem que o sync não está ligado nesta versão.
   Falta validar com uma conta Google real (precisa do cliente OAuth do usuário). Ficam para depois: cache LRU dos
   anexos e "só no Wi-Fi" (Android).
+- **MCP (concluído; guia em `docs/MCP.md`, SPEC §3.11).** `ideario --mcp` (`src-tauri/src/mcp/`) fala JSON-RPC por
+  stdin/stdout sobre o mesmo `Core`/banco, com 32 ferramentas. O corpo entra e sai em Markdown (`markdown.rs`; ida e volta
+  sem perda, proptest), com fotos e anexos como `ideario://att/<hash>`. A gravação no Y.Doc mexe só no que mudou
+  (`ydoc::patch_children`), então o Claude marca um item com a nota aberta e as edições se juntam. Cada mudança vai para
+  `external_changes` (migração 6); o app aberto olha o `PRAGMA data_version` (`mcp/watch.rs`) e emite os eventos do sync.
+  Configurações → Claude: `mcp/setup.rs` grava `mcpServers.ideario` no `claude_desktop_config.json` (AppImage: usa
+  `$APPIMAGE`). Teste nativo "MCP:" roda o processo de verdade com o app aberto.
 - **Próximo passo: Fase 7 (Android).**

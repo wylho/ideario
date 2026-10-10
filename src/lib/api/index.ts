@@ -1,7 +1,7 @@
 // Camada de dados da UI. No app, os comandos Tauri (`invoke`) do núcleo Rust (SQLite local, Fase 1);
 // no navegador (`npm run dev`, prévia) e nos testes e2e, um mock em memória com dados de exemplo.
 import type {
-  Attachment, AttachmentKind, AttachmentRow, KeepReport, Box, Millis, Category, Filter, NoteDetail, NoteInput, NotePatch, NoteSort, NoteSummary, Settings, SyncState, SyncStatus, TagCount, Tone, ViewCounts,
+  Attachment, AttachmentKind, AttachmentRow, KeepReport, Box, McpInfo, Millis, Category, Filter, NoteDetail, NoteInput, NotePatch, NoteSort, NoteSummary, Settings, SyncState, SyncStatus, TagCount, Tone, ViewCounts,
 } from '../types'
 import { invoke, isTauri } from '@tauri-apps/api/core'
 import { mockApi } from './mock'
@@ -67,6 +67,13 @@ export interface Api {
   syncNow(): Promise<void>
   /** A janela voltou ao primeiro plano: sincroniza se já faz um tempo. */
   syncFocus(): void
+
+  /** Ligação com o Claude (MCP): o comando e se já está no Claude Desktop. */
+  mcpInfo(): Promise<McpInfo>
+  /** Registra o Ideario no Claude Desktop (vale ao reabrir o Claude). */
+  mcpInstall(): Promise<McpInfo>
+  /** Tira o Ideario do Claude Desktop. */
+  mcpUninstall(): Promise<McpInfo>
 
   /** URL local de uma imagem (miniatura ou tamanho cheio). Nunca depende de rede. */
   imageUrl(hash: string, size?: 'thumb' | 'full'): string

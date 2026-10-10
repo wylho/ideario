@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Dialog, Switch, ToggleGroup } from 'bits-ui'
-  import { CloudAlert, CloudCheck, CloudOff, Monitor, Moon, Sun, X } from '@lucide/svelte'
+  import { CloudAlert, CloudCheck, CloudOff, Copy, Monitor, Moon, Sun, X } from '@lucide/svelte'
   import { untrack } from 'svelte'
   import { api, coreVersion } from '../lib/api'
   import { app } from '../lib/app.svelte'
@@ -11,7 +11,7 @@
   import { isTauri } from '@tauri-apps/api/core'
   import { DESKTOPS, PALETTES, type DesktopId, type PaletteId } from '../lib/palettes'
   import Picker from './Picker.svelte'
-  import type { PhotoQuality, Settings, SyncStatus } from '../lib/types'
+  import type { McpInfo, PhotoQuality, Settings, SyncStatus } from '../lib/types'
 
   let settings = $state<Settings | null>(null)
   let status = $state.raw<SyncStatus | null>(null)
@@ -37,6 +37,31 @@
     void app.revision
     if (app.settingsOpen) void loadStatus()
   })
+
+  // ---------- Claude (MCP) ----------
+  let mcp = $state.raw<McpInfo | null>(null)
+  $effect(() => {
+    if (app.settingsOpen) untrack(() => api.mcpInfo().then((m) => (mcp = m)).catch(() => (mcp = null)))
+  })
+  async function mcpToggle() {
+    if (!mcp) return
+    const on = !mcp.desktopInstalled
+    try {
+      mcp = await (on ? api.mcpInstall() : api.mcpUninstall())
+      app.say(on ? 'Ligado no Claude Desktop. Se ele estiver aberto, feche e abra de novo.' : 'Desligado do Claude Desktop.')
+    } catch (e) {
+      app.say(`Não foi possível: ${e instanceof Error ? e.message : e}`)
+    }
+  }
+  async function copyCommand() {
+    if (!mcp) return
+    try {
+      await navigator.clipboard.writeText(mcp.claudeCode)
+      app.say('Comando copiado. Cole no terminal.')
+    } catch {
+      app.say(mcp.claudeCode)
+    }
+  }
 
   // ---------- Google Drive ----------
   let signingIn = $state(false)
@@ -232,6 +257,31 @@
               </div>
             {/if}
           </section>
+
+          {#if mcp}
+            <section class="set-group">
+              <h3>Claude</h3>
+              <div class="set-row">
+                <span>
+                  <b>Claude Desktop</b>
+                  <small>{mcp.desktopInstalled
+                    ? 'Ligado: no Claude, peça para buscar, criar e organizar suas notas, checklists e lembretes. Tudo continua no seu computador.'
+                    : mcp.desktopFound
+                      ? 'Deixa o Claude ler, criar e organizar suas notas, checklists, lembretes e anexos. Tudo continua no seu computador.'
+                      : 'O Claude Desktop não foi encontrado neste computador. Dá para ligar mesmo assim (vale quando ele for instalado).'}</small>
+                </span>
+                <button class="btn {mcp.desktopInstalled ? 'ghost' : 'primary'}" onclick={mcpToggle}>{mcp.desktopInstalled ? 'Desligar' : 'Ligar'}</button>
+              </div>
+              <div class="set-row mcp-code">
+                <span>
+                  <b>Claude Code</b>
+                  <small>Rode uma vez no terminal:</small>
+                  <code>{mcp.claudeCode}</code>
+                </span>
+                <button class="icon-btn" aria-label="Copiar comando" title="Copiar" onclick={copyCommand}><Copy size={18} /></button>
+              </div>
+            </section>
+          {/if}
 
           {#if isTauri()}
             <section class="set-group">

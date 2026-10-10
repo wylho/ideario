@@ -87,6 +87,10 @@ export const tauriApi: Api = {
   syncNow: () => invoke('sync_now'),
   syncFocus: () => void invoke('sync_focus').catch(() => {}),
 
+  mcpInfo: () => invoke('mcp_info'),
+  mcpInstall: () => invoke('mcp_install'),
+  mcpUninstall: () => invoke('mcp_uninstall'),
+
   // Fase 1: o arquivo é o próprio original; miniatura e versão otimizada chegam com o pipeline (Fase 3).
   // Miniatura (WebP ~400 px) para cards, Arquivos e Moodboard; a foto inteira no editor e no visualizador.
   imageUrl: (hash, size) => convertFileSrc(hash, 'att') + (size === 'thumb' ? '?thumb' : ''),

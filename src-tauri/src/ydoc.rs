@@ -130,11 +130,8 @@ pub(crate) fn update(state: &[u8], n: &NoteInput, body: bool) -> Result<Vec<u8>>
         let mut txn = doc.transact_mut();
         write_meta(&meta, &mut txn, n, Some(&prev));
         if body && prev.body != n.body {
-            let len = frag.len(&txn);
-            if len > 0 {
-                frag.remove_range(&mut txn, 0, len);
-            }
-            write_body(&frag, &mut txn, &n.body);
+            let empty = vec![];
+            patch_children(&frag, &mut txn, n.body.get("content").and_then(Value::as_array).unwrap_or(&empty));
         }
     }
     Ok(encode(&doc))
@@ -330,6 +327,196 @@ fn write_children<F: XmlFragment>(parent: &F, txn: &mut TransactionMut, nodes: &
     }
 }
 
+// ---------- corpo: troca mínima ----------
+
+/// Filho do corpo como o Y guarda: um elemento, ou um texto (os nós de texto seguidos do JSON viram um só).
+enum Unit<'a> {
+    Text(&'a [Value]),
+    El(&'a Value),
+}
+
+fn units(nodes: &[Value]) -> Vec<Unit<'_>> {
+    let mut out = Vec::new();
+    let mut i = 0;
+    while i < nodes.len() {
+        if nodes[i].get("type").and_then(Value::as_str) == Some("text") {
+            let start = i;
+            while i < nodes.len() && nodes[i].get("type").and_then(Value::as_str) == Some("text") {
+                i += 1;
+            }
+            out.push(Unit::Text(&nodes[start..i]));
+        } else {
+            out.push(Unit::El(&nodes[i]));
+            i += 1;
+        }
+    }
+    out
+}
+
+/// Forma canônica para comparar um filho do JSON com um do Y: sem atributos nulos, marcas em ordem, textos com as
+/// mesmas marcas juntos e sem textos vazios (como a leitura do Y devolve).
+fn canon_unit(u: &Unit) -> Value {
+    match u {
+        Unit::Text(nodes) => Value::Array(canon_texts(nodes)),
+        Unit::El(node) => canon_el(node),
+    }
+}
+
+fn canon_texts(nodes: &[Value]) -> Vec<Value> {
+    let mut out: Vec<Value> = Vec::new();
+    for n in nodes {
+        let text = n.get("text").and_then(Value::as_str).unwrap_or("");
+        if text.is_empty() {
+            continue;
+        }
+        let mut marks: Vec<Value> = n
+            .get("marks")
+            .and_then(Value::as_array)
+            .into_iter()
+            .flatten()
+            .map(|m| {
+                let mut m = m.clone();
+                if let Some(o) = m.as_object_mut() {
+                    if o.get("attrs").is_some_and(|a| a.is_null() || a.as_object().is_some_and(|a| a.is_empty())) {
+                        o.remove("attrs");
+                    }
+                }
+                m
+            })
+            .collect();
+        marks.sort_by(|a, b| a["type"].as_str().cmp(&b["type"].as_str()));
+        match out.last_mut() {
+            Some(last) if last.get("marks").cloned().unwrap_or(Value::Array(vec![])) == Value::Array(marks.clone()) => {
+                let joined = format!("{}{text}", last["text"].as_str().unwrap_or(""));
+                last["text"] = Value::from(joined);
+            }
+            _ => {
+                let mut t = json!({ "type": "text", "text": text });
+                if !marks.is_empty() {
+                    t["marks"] = Value::Array(marks);
+                }
+                out.push(t);
+            }
+        }
+    }
+    out
+}
+
+/// O corpo na forma canônica (para comparar dois corpos que o editor mostra igual).
+pub(crate) fn canon(body: &Value) -> Value {
+    canon_el(body)
+}
+
+fn canon_el(node: &Value) -> Value {
+    let mut out = Map::new();
+    out.insert("type".into(), node.get("type").cloned().unwrap_or_else(|| Value::from("paragraph")));
+    let attrs: Map<String, Value> =
+        node.get("attrs").and_then(Value::as_object).into_iter().flatten().filter(|(_, v)| !v.is_null()).map(|(k, v)| (k.clone(), v.clone())).collect();
+    if !attrs.is_empty() {
+        out.insert("attrs".into(), Value::Object(attrs));
+    }
+    let empty = vec![];
+    let content: Vec<Value> = units(node.get("content").and_then(Value::as_array).unwrap_or(&empty))
+        .iter()
+        .flat_map(|u| match canon_unit(u) {
+            Value::Array(texts) => texts,
+            el => vec![el],
+        })
+        .collect();
+    if !content.is_empty() {
+        out.insert("content".into(), Value::Array(content));
+    }
+    Value::Object(out)
+}
+
+/// O filho `i` do Y na forma canônica (texto: a lista dos trechos).
+fn canon_child<T: ReadTxn>(child: &XmlOut, txn: &T) -> Value {
+    match child {
+        XmlOut::Text(text) => Value::Array(text.diff(txn, |_| ()).iter().filter_map(text_node).collect()),
+        XmlOut::Element(el) => canon_el(&element_json(el, txn)),
+        XmlOut::Fragment(_) => Value::Null,
+    }
+}
+
+/// Grava `new` como filhos de `parent` mexendo só no que mudou: o começo e o fim iguais ficam; no meio, elemento do
+/// mesmo tipo recebe só os atributos e os filhos diferentes; o resto é trocado. Assim marcar um item ou acrescentar
+/// uma linha (o MCP, um sync) não recria a nota inteira, e quem está com ela aberta não perde o cursor.
+fn patch_children<F: XmlFragment>(parent: &F, txn: &mut TransactionMut, new: &[Value]) {
+    let new: Vec<Unit> = units(new).into_iter().filter(|u| !matches!(u, Unit::Text(t) if canon_texts(t).is_empty())).collect();
+    let want: Vec<Value> = new.iter().map(canon_unit).collect();
+    let have: Vec<Value> = parent.children(txn).map(|c| canon_child(&c, txn)).collect();
+    let mut pre = 0;
+    while pre < have.len() && pre < want.len() && have[pre] == want[pre] {
+        pre += 1;
+    }
+    let mut suf = 0;
+    while suf < have.len() - pre && suf < want.len() - pre && have[have.len() - 1 - suf] == want[want.len() - 1 - suf] {
+        suf += 1;
+    }
+    let (old_mid, new_mid) = (have.len() - pre - suf, want.len() - pre - suf);
+    if old_mid == new_mid {
+        for (i, unit) in new.iter().enumerate().skip(pre).take(new_mid) {
+            match (parent.get(txn, i as u32), unit) {
+                (Some(XmlOut::Element(el)), Unit::El(node)) if node.get("type").and_then(Value::as_str) == Some(el.tag().as_ref()) => {
+                    patch_attrs(&el, txn, node);
+                    let empty = vec![];
+                    patch_children(&el, txn, node.get("content").and_then(Value::as_array).unwrap_or(&empty));
+                }
+                _ => {
+                    parent.remove_range(txn, i as u32, 1);
+                    insert_unit(parent, txn, i as u32, unit);
+                }
+            }
+        }
+    } else {
+        if old_mid > 0 {
+            parent.remove_range(txn, pre as u32, old_mid as u32);
+        }
+        for (i, unit) in new.iter().enumerate().skip(pre).take(new_mid) {
+            insert_unit(parent, txn, i as u32, unit);
+        }
+    }
+}
+
+fn patch_attrs(el: &yrs::XmlElementRef, txn: &mut TransactionMut, node: &Value) {
+    let want: Map<String, Value> =
+        node.get("attrs").and_then(Value::as_object).into_iter().flatten().filter(|(_, v)| !v.is_null()).map(|(k, v)| (k.clone(), v.clone())).collect();
+    let have: Map<String, Value> = el.attributes(txn).map(|(k, v)| (k.to_string(), json_of(&v))).collect();
+    for k in have.keys().filter(|k| !want.contains_key(*k)) {
+        el.remove_attribute(txn, k);
+    }
+    for (k, v) in want.iter().filter(|(k, v)| have.get(*k) != Some(v)) {
+        el.insert_attribute(txn, k.as_str(), any_of(v));
+    }
+}
+
+fn insert_unit<F: XmlFragment>(parent: &F, txn: &mut TransactionMut, index: u32, unit: &Unit) {
+    match unit {
+        Unit::Text(nodes) => {
+            let text = parent.insert(txn, index, XmlTextPrelim::new(""));
+            for n in nodes.iter() {
+                let chunk = n.get("text").and_then(Value::as_str).unwrap_or("");
+                let end = text.len(txn);
+                text.insert_with_attributes(txn, end, chunk, marks_to_attrs(n));
+            }
+        }
+        Unit::El(node) => {
+            let tag = node.get("type").and_then(Value::as_str).unwrap_or("paragraph");
+            let el = parent.insert(txn, index, XmlElementPrelim::empty(tag));
+            if let Some(attrs) = node.get("attrs").and_then(Value::as_object) {
+                for (k, v) in attrs {
+                    if !v.is_null() {
+                        el.insert_attribute(txn, k.as_str(), any_of(v));
+                    }
+                }
+            }
+            if let Some(children) = node.get("content").and_then(Value::as_array) {
+                write_children(&el, txn, children);
+            }
+        }
+    }
+}
+
 fn marks_to_attrs(node: &Value) -> Attrs {
     let mut attrs: Attrs = HashMap::new();
     for m in node.get("marks").and_then(Value::as_array).into_iter().flatten() {
@@ -362,20 +549,7 @@ fn read_children<F: XmlFragment, T: ReadTxn>(parent: &F, txn: &T) -> Vec<Value> 
     let mut out = Vec::new();
     for child in parent.children(txn) {
         match child {
-            XmlOut::Element(el) => {
-                let mut node = Map::new();
-                node.insert("type".into(), Value::from(el.tag().as_ref()));
-                let attrs: Map<String, Value> =
-                    el.attributes(txn).map(|(k, v)| (k.to_string(), json_of(&v))).filter(|(_, v)| !v.is_null()).collect();
-                if !attrs.is_empty() {
-                    node.insert("attrs".into(), Value::Object(attrs));
-                }
-                let content = read_children(&el, txn);
-                if !content.is_empty() {
-                    node.insert("content".into(), Value::Array(content));
-                }
-                out.push(Value::Object(node));
-            }
+            XmlOut::Element(el) => out.push(element_json(&el, txn)),
             XmlOut::Text(text) => {
                 for d in text.diff(txn, |_| ()) {
                     if let Some(node) = text_node(&d) {
@@ -387,6 +561,20 @@ fn read_children<F: XmlFragment, T: ReadTxn>(parent: &F, txn: &T) -> Vec<Value> 
         }
     }
     out
+}
+
+fn element_json<T: ReadTxn>(el: &yrs::XmlElementRef, txn: &T) -> Value {
+    let mut node = Map::new();
+    node.insert("type".into(), Value::from(el.tag().as_ref()));
+    let attrs: Map<String, Value> = el.attributes(txn).map(|(k, v)| (k.to_string(), json_of(&v))).filter(|(_, v)| !v.is_null()).collect();
+    if !attrs.is_empty() {
+        node.insert("attrs".into(), Value::Object(attrs));
+    }
+    let content = read_children(el, txn);
+    if !content.is_empty() {
+        node.insert("content".into(), Value::Array(content));
+    }
+    Value::Object(node)
 }
 
 fn text_node(d: &Diff<()>) -> Option<Value> {
@@ -565,6 +753,83 @@ mod tests {
         let merged = apply(&a, &b).unwrap();
         assert_eq!(read_categories(&merged).unwrap(), vec![cat("c1", "Lar", "#4F8A3E"), gone]);
         assert_eq!(read_categories(&merged).unwrap(), read_categories(&apply(&b, &a).unwrap()).unwrap());
+    }
+
+    #[test]
+    fn checking_an_item_only_touches_that_item() {
+        // A nota aberta no editor (outra cópia) recebe só a mudança do item, não o corpo de novo.
+        let base = from_note(&note(rich()));
+        let mut n = to_note("n1", &base).unwrap();
+        n.body["content"][1]["content"][1]["attrs"]["checked"] = json!(true);
+        let after = update(&base, &n, true).unwrap();
+        assert_eq!(to_note("n1", &after).unwrap().body, n.body);
+        let diff = {
+            let doc = load(&after).unwrap();
+            let sv = load(&base).unwrap().transact().state_vector();
+            let d = doc.transact().encode_state_as_update_v1(&sv);
+            d
+        };
+        let text = String::from_utf8_lossy(&diff);
+        assert!(!text.contains("Arroz") && !text.contains("Café") && !text.contains("mundo"), "o texto não foi regravado");
+        // e a mudança é pequena (só o atributo)
+        assert!(diff.len() < 60, "{} bytes", diff.len());
+    }
+
+    #[test]
+    fn edit_while_someone_types_keeps_both() {
+        // O editor digita no 1º parágrafo enquanto, ao mesmo tempo, o MCP marca um item e põe uma linha no fim.
+        let base = from_note(&note(rich()));
+        let typed = type_text(&base, 0, 0, "Oi! ");
+        let mut n = to_note("n1", &base).unwrap();
+        n.body["content"][1]["content"][1]["attrs"]["checked"] = json!(true);
+        n.body["content"].as_array_mut().unwrap().push(json!({"type":"paragraph","content":[{"type":"text","text":"fim"}]}));
+        let mcp = update(&base, &n, true).unwrap();
+        let merged = to_note("n1", &apply(&typed, &mcp).unwrap()).unwrap().body;
+        let s = merged.to_string();
+        assert_eq!(s.matches("Arroz").count(), 1, "nada duplicado: {s}");
+        assert!(s.contains("Oi! Olá"), "{s}");
+        assert_eq!(merged["content"][1]["content"][1]["attrs"]["checked"], json!(true));
+        assert_eq!(merged["content"].as_array().unwrap().last().unwrap()["content"][0]["text"], json!("fim"));
+    }
+
+    #[test]
+    fn adding_an_item_in_the_middle_inserts_only_it() {
+        let base = from_note(&note(rich()));
+        let mut n = to_note("n1", &base).unwrap();
+        let item = json!({"type":"taskItem","attrs":{"checked":false},"content":[{"type":"paragraph","content":[{"type":"text","text":"Feijão"}]}]});
+        n.body["content"][1]["content"].as_array_mut().unwrap().insert(1, item);
+        let after = update(&base, &n, true).unwrap();
+        assert_eq!(to_note("n1", &after).unwrap().body, n.body);
+        let sv = load(&base).unwrap().transact().state_vector();
+        let diff = load(&after).unwrap().transact().encode_state_as_update_v1(&sv);
+        let text = String::from_utf8_lossy(&diff);
+        assert!(text.contains("Feijão") && !text.contains("Arroz") && !text.contains("Café"));
+    }
+
+    #[test]
+    fn attribute_that_went_away_is_removed() {
+        let code = |attrs: Value| json!({"type":"doc","content":[{"type":"codeBlock","attrs":attrs,"content":[{"type":"text","text":"x = 1"}]}]});
+        let base = from_note(&note(code(json!({"language":"rust"}))));
+        let mut n = to_note("n1", &base).unwrap();
+        n.body = code(json!({"language":null}));
+        let after = update(&base, &n, true).unwrap();
+        assert_eq!(to_note("n1", &after).unwrap().body, json!({"type":"doc","content":[{"type":"codeBlock","content":[{"type":"text","text":"x = 1"}]}]}));
+    }
+
+    proptest::proptest! {
+        #![proptest_config(proptest::prelude::ProptestConfig::with_cases(200))]
+        #[test]
+        fn update_writes_exactly_the_new_body(a in crate::testdoc::doc(false), b in crate::testdoc::doc(false)) {
+            let base = from_note(&note(a));
+            let mut n = to_note("n1", &base).unwrap();
+            n.body = b.clone();
+            let after = update(&base, &n, true).unwrap();
+            proptest::prop_assert_eq!(canon(&to_note("n1", &after).unwrap().body), canon(&b));
+            // gravar o mesmo de novo não muda nada
+            let again = update(&after, &n, true).unwrap();
+            let sv = load(&after).unwrap().transact().state_vector();
+            proptest::prop_assert_eq!(load(&again).unwrap().transact().state_vector(), sv);
+        }
     }
 
     #[test]

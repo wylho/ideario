@@ -1158,6 +1158,23 @@ test('configurações só mostram o que funciona', async ({ page }) => {
   await expect(page.locator('.footnote')).toHaveText('Prévia no navegador · dados de exemplo')
 })
 
+test('configurações: ligar o Ideario no Claude Desktop e o comando do Claude Code', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write'])
+  await openSettings(page)
+  const desktop = page.locator('.set-row', { hasText: 'Claude Desktop' })
+  await expect(desktop).toContainText('Deixa o Claude ler, criar e organizar')
+  await desktop.getByRole('button', { name: 'Ligar' }).click()
+  await expect(page.locator('.toast')).toContainText('Ligado no Claude Desktop')
+  await expect(desktop.getByRole('button', { name: 'Desligar' })).toBeVisible()
+  await expect(desktop).toContainText('Ligado: no Claude')
+  const code = page.locator('.mcp-code code')
+  await expect(code).toHaveText(/^claude mcp add --scope user ideario -- ".+" --mcp$/)
+  await page.getByRole('button', { name: 'Copiar comando' }).click()
+  await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toMatch(/^claude mcp add/)
+  await desktop.getByRole('button', { name: 'Desligar' }).click()
+  await expect(desktop.getByRole('button', { name: 'Ligar' })).toBeVisible()
+})
+
 test('"+" em leque: atalhos que já abrem a nota fazendo a coisa', async ({ page }) => {
   await page.getByRole('button', { name: 'Criar' }).click()
   const items = page.getByRole('menuitem')

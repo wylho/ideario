@@ -205,6 +205,20 @@ export interface SyncStatus {
   cacheUsedBytes: number
 }
 
+/** Ligação com o Claude (MCP): o próprio app vira o servidor (`ideario --mcp`). */
+export interface McpInfo {
+  /** Programa que o Claude roda e os argumentos. */
+  command: string
+  args: string[]
+  /** Comando para registrar no Claude Code. */
+  claudeCode: string
+  desktopConfig: string | null
+  /** O Claude Desktop parece instalado. */
+  desktopFound: boolean
+  /** Já registrado no Claude Desktop, apontando para este app. */
+  desktopInstalled: boolean
+}
+
 /** Resumo de uma importação do Google Keep. */
 export interface KeepReport {
   notes: number
