@@ -49,10 +49,17 @@ type SharedSession = Arc<Mutex<Option<Session>>>;
 /// Estado do sync no app (gerenciado pelo Tauri).
 #[derive(Default)]
 pub struct Sync {
+    /// O login (a trava fica pega durante a renovação do token, que vai à rede: nada da interface espera por ela).
     session: SharedSession,
+    /// Há login? (lido pela interface sem tocar na sessão)
+    connected: AtomicBool,
     wake: Mutex<Option<mpsc::Sender<Wake>>>,
     phase: Mutex<Phase>,
     cancel_login: Arc<AtomicBool>,
+    /// Um ciclo por vez; sair da conta espera o ciclo em andamento terminar.
+    cycle: Mutex<()>,
+    /// Liga ao sair da conta: o ciclo em andamento para de gravar na hora.
+    stop: AtomicBool,
 }
 
 fn lock<T>(m: &Mutex<T>) -> MutexGuard<'_, T> {
@@ -73,7 +80,12 @@ impl Tokens for Shared {
 
 impl Sync {
     fn signed_in(&self) -> bool {
-        lock(&self.session).is_some()
+        self.connected.load(Ordering::Relaxed)
+    }
+
+    fn set_session(&self, session: Option<Session>) {
+        self.connected.store(session.is_some(), Ordering::Relaxed);
+        *lock(&self.session) = session;
     }
 
     fn drive(&self) -> DriveApi<Shared> {
@@ -102,7 +114,7 @@ pub fn start(app: &AppHandle) {
     let sync = app.state::<Sync>();
     let account = core.with(|s| s.sync_value("account")).ok().flatten();
     if let (Some(client), Some(_), Some(refresh)) = (auth::client(), account, auth::load_refresh(&core.data)) {
-        *lock(&sync.session) = Some(Session::new(client, refresh));
+        sync.set_session(Some(Session::new(client, refresh)));
     }
     let (tx, rx) = mpsc::channel();
     *lock(&sync.wake) = Some(tx);
@@ -159,10 +171,14 @@ fn run(app: AppHandle, rx: mpsc::Receiver<Wake>) {
 
 fn run_once(app: &AppHandle, visible: bool) -> SResult<Report> {
     let (sync, core) = (app.state::<Sync>(), app.state::<Core>());
+    let _cycle = lock(&sync.cycle);
+    if !sync.signed_in() {
+        return Ok(Report::default());
+    }
     if visible {
         sync.set_phase(app, "syncing", None);
     }
-    let res = sync_once(&Device { store: &core.store, data: &core.data }, &mut sync.drive());
+    let res = sync_once(&Device { store: &core.store, data: &core.data, stop: &sync.stop }, &mut sync.drive());
     match &res {
         Ok(report) => {
             sync.set_phase(app, "ok", None);
@@ -172,7 +188,14 @@ fn run_once(app: &AppHandle, visible: bool) -> SResult<Report> {
             }
         }
         Err(SyncError::Offline(_)) => sync.set_phase(app, "offline", None),
-        Err(SyncError::Unauthorized) => sync.set_phase(app, "error", Some("O login do Google expirou. Entre de novo para voltar a sincronizar.".into())),
+        Err(SyncError::Stopped) => {}
+        Err(SyncError::Unauthorized) => {
+            // O Google não aceita mais o login (revogado, senha trocada, meses sem uso): para de tentar e pede para
+            // entrar de novo. A conta e o que já foi sincronizado ficam; entrar de novo continua de onde parou.
+            sync.set_session(None);
+            sync.set_phase(app, "error", Some("O login do Google expirou. Entre de novo para voltar a sincronizar.".into()));
+            let _ = app.emit("core-changed", ());
+        }
         Err(e) => sync.set_phase(app, "error", Some(e.to_string())),
     }
     res
@@ -189,7 +212,7 @@ pub fn ensure_local(app: &AppHandle, hash: &str) {
         return;
     }
     let Ok(Some(file)) = core.with(|s| s.attachment_file(hash)) else { return };
-    let _ = fetch_attachment(&Device { store: &core.store, data: &core.data }, &mut sync.drive(), hash, &file);
+    let _ = fetch_attachment(&Device { store: &core.store, data: &core.data, stop: &sync.stop }, &mut sync.drive(), hash, &file);
 }
 
 // ---------- comandos ----------
@@ -234,10 +257,16 @@ pub async fn sync_sign_in(app: AppHandle) -> Result<SyncStatus, String> {
     .map_err(|e| e.to_string())?
     .map_err(|e| e.to_string())?;
     let core = app.state::<Core>();
+    // Outra conta que não a de antes: nada daqui aponta para os arquivos da conta antiga.
+    let previous = core.with(|s| s.sync_value("account"))?;
+    if previous.as_deref().is_some_and(|p| !grant.email.is_empty() && p != grant.email) {
+        let _cycle = lock(&sync.cycle);
+        core.with(|s| s.reset_sync())?;
+    }
     auth::save_refresh(&core.data, &grant.refresh)?;
     let account = if grant.email.is_empty() { "Conta Google".to_string() } else { grant.email.clone() };
     core.with(|s| s.set_sync_value("account", Some(&account)))?;
-    *lock(&sync.session) = Some(Session::new(client, grant.refresh).with_access(grant.access, grant.expires_in));
+    sync.set_session(Some(Session::new(client, grant.refresh).with_access(grant.access, grant.expires_in)));
     sync.set_phase(&app, "ok", None);
     sync.poke(Wake::Now);
     sync_status(app.state::<Core>(), app.state::<Sync>())
@@ -249,15 +278,27 @@ pub fn sync_cancel_sign_in(sync: tauri::State<Sync>) {
 }
 
 /// Sair: esquece o login (e o desfaz no Google). As notas ficam neste aparelho; entrar de novo (com qualquer conta)
-/// junta tudo outra vez.
+/// junta tudo outra vez. Espera o ciclo em andamento parar, para ele não gravar nada da conta antiga depois da limpeza.
 #[tauri::command]
-pub fn sync_sign_out(app: AppHandle) -> Result<(), String> {
-    let (core, sync) = (app.state::<Core>(), app.state::<Sync>());
-    if let Some(session) = lock(&sync.session).take() {
-        std::thread::spawn(move || session.revoke());
-    }
-    auth::forget_refresh(&core.data);
-    core.with(|s| s.reset_sync())?;
+pub async fn sync_sign_out(app: AppHandle) -> Result<(), String> {
+    let handle = app.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let (core, sync) = (handle.state::<Core>(), handle.state::<Sync>());
+        sync.stop.store(true, Ordering::Relaxed);
+        let _cycle = lock(&sync.cycle);
+        let session = lock(&sync.session).take();
+        sync.connected.store(false, Ordering::Relaxed);
+        if let Some(session) = session {
+            std::thread::spawn(move || session.revoke());
+        }
+        auth::forget_refresh(&core.data);
+        let res = core.with(|s| s.reset_sync());
+        sync.stop.store(false, Ordering::Relaxed);
+        res
+    })
+    .await
+    .map_err(|e| e.to_string())??;
+    let sync = app.state::<Sync>();
     sync.set_phase(&app, "ok", None);
     let _ = app.emit("core-changed", ());
     Ok(())

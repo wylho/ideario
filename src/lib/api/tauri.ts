@@ -4,7 +4,18 @@ import type { Api } from '.'
 import type { SyncState } from '../types'
 
 const listeners = new Set<() => void>()
-const changed = () => listeners.forEach((fn) => fn())
+let soon: ReturnType<typeof setTimeout> | undefined
+const changed = () => {
+  clearTimeout(soon)
+  soon = undefined
+  listeners.forEach((fn) => fn())
+}
+/** Escrita contínua no editor: a lista por trás só recarrega quando a escrita para (recarregar milhares de cards a
+ *  cada pausa da digitação engasga). Fechar a nota (`settle`) atualiza na hora. */
+const changedSoon = () => {
+  clearTimeout(soon)
+  soon = setTimeout(changed, 1500)
+}
 
 // O núcleo também muda dados sozinho (lembrete que se repete, botões da notificação, importação): avisa a UI.
 void import('@tauri-apps/api/event').then(({ listen }) => listen('core-changed', changed)).catch(() => {})
@@ -47,7 +58,8 @@ export const tauriApi: Api = {
 
   getNote: (id) => invoke('get_note', { id }),
   getNoteState: async (id) => new Uint8Array(await invoke<ArrayBuffer>('get_note_state', { id })),
-  applyNoteUpdate: (id, update) => write('apply_note_update', update, { headers: { 'x-id': id } }),
+  applyNoteUpdate: (id, update) => invoke<void>('apply_note_update', update, { headers: { 'x-id': id } }).then(changedSoon),
+  settle: () => soon !== undefined && changed(),
   setReminderDone: (id, done) => write('set_reminder_done', { id, done }),
   trashCount: () => invoke('trash_count'),
   emptyTrash: () => write('empty_trash'),

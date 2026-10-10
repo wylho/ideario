@@ -14,6 +14,7 @@ use crate::store::{NoteInput, Store};
 struct Dev {
     store: Mutex<Store>,
     data: PathBuf,
+    stop: std::sync::atomic::AtomicBool,
 }
 
 impl Dev {
@@ -21,23 +22,27 @@ impl Dev {
         let data = std::env::temp_dir().join(format!("ideario-sync-{}", uuid::Uuid::now_v7()));
         std::fs::create_dir_all(&data).unwrap();
         let store = Store::open(&data.join("ideario.db")).unwrap();
-        Dev { store: Mutex::new(store), data }
+        Dev { store: Mutex::new(store), data, stop: Default::default() }
     }
 
     fn s(&self) -> MutexGuard<'_, Store> {
         self.store.lock().unwrap()
     }
 
+    fn device(&self) -> Device<'_> {
+        Device { store: &self.store, data: &self.data, stop: &self.stop }
+    }
+
     fn sync(&self, drive: &MemoryDrive) -> SResult<Report> {
-        sync_once(&Device { store: &self.store, data: &self.data }, &mut drive.clone())
+        sync_once(&self.device(), &mut drive.clone())
     }
 
     fn pull(&self, drive: &MemoryDrive) {
-        pull(&Device { store: &self.store, data: &self.data }, &mut drive.clone(), &mut Report::default()).unwrap();
+        pull(&self.device(), &mut drive.clone(), &mut Report::default()).unwrap();
     }
 
     fn push(&self, drive: &MemoryDrive) {
-        push(&Device { store: &self.store, data: &self.data }, &mut drive.clone(), &mut Report::default()).unwrap();
+        push(&self.device(), &mut drive.clone(), &mut Report::default()).unwrap();
     }
 
     fn note(&self, id: &str) -> Option<NoteInput> {
@@ -515,7 +520,7 @@ fn two_devices_through_the_drive_http_api() {
     let mem = MemoryDrive::default();
     let base = http_drive(mem.clone());
     let (a, b) = (Dev::new(), Dev::new());
-    let sync = |d: &Dev| sync_once(&Device { store: &d.store, data: &d.data }, &mut DriveApi::local(&base, Fake::default(), MULTIPART_LIMIT));
+    let sync = |d: &Dev| sync_once(&d.device(), &mut DriveApi::local(&base, Fake::default(), MULTIPART_LIMIT));
     a.create("n1", "Mercado", "arroz");
     a.s().create_category("Casa", "#C26A3D").unwrap();
     sync(&a).unwrap();
@@ -531,4 +536,148 @@ fn two_devices_through_the_drive_http_api() {
     assert_eq!(b.s().list_categories().unwrap()[0].name, "Casa");
     assert_eq!(b.s().note_times("n1").unwrap().0, a.s().note_times("n1").unwrap().0, "data de criação pelo appProperties");
     assert!(mem.files().iter().all(|f| !f.rev.is_empty()));
+}
+
+// ---------- achados da revisão do sync ----------
+
+#[test]
+fn an_unreadable_file_on_the_drive_does_not_stop_the_sync() {
+    let drive = MemoryDrive::default();
+    let (a, b) = (Dev::new(), Dev::new());
+    a.create("n1", "Estragada", "x");
+    a.create("n2", "Boa", "y");
+    a.sync(&drive).unwrap();
+    let bad = drive.files().into_iter().find(|f| f.props.get("noteId").map(String::as_str) == Some("n1")).unwrap();
+    drive.overwrite(&bad.id, b"\xff\xfe lixo de outro formato");
+    let r = b.sync(&drive).unwrap();
+    assert_eq!(r.skipped, 1);
+    assert_eq!(b.text("n2"), "Boa\ny");
+    // e o resto continua andando nos dois sentidos
+    b.create("n3", "Nova", "z");
+    b.sync(&drive).unwrap();
+    a.sync(&drive).unwrap();
+    assert_eq!(a.text("n3"), "Nova\nz");
+}
+
+#[test]
+fn a_losing_duplicate_with_newer_content_is_merged_before_being_deleted() {
+    let drive = MemoryDrive::default();
+    let (a, b) = (Dev::new(), Dev::new());
+    a.create("n1", "", "x");
+    a.sync(&drive).unwrap();
+    b.create("n1", "", "x");
+    b.pull(&drive);
+    b.s().conn.execute("UPDATE notes SET drive_file_id = NULL, dirty = 1", []).unwrap();
+    b.push(&drive);
+    // A vê os dois arquivos e escolhe um; o envio dele cai antes de apagar o outro
+    drive.fail_after(2);
+    assert!(a.sync(&drive).is_err());
+    // B continua escrevendo no arquivo dele
+    b.type_text("n1", 0, 99, " de B");
+    b.push(&drive);
+    a.sync(&drive).unwrap();
+    // B sumiu (celular perdido): um aparelho novo pega tudo do Drive
+    let c = Dev::new();
+    c.sync(&drive).unwrap();
+    assert_eq!(c.text("n1"), "x de B");
+    assert_eq!(drive.files().iter().filter(|f| f.kind() == Some(NOTE)).count(), 1);
+}
+
+#[test]
+fn categories_that_came_from_the_drive_are_not_a_local_change() {
+    let drive = MemoryDrive::default();
+    let (a, b) = (Dev::new(), Dev::new());
+    a.s().create_category("Casa", "#C26A3D").unwrap();
+    a.sync(&drive).unwrap();
+    let before = b.s().local_changes().unwrap().categories_changed_at;
+    b.sync(&drive).unwrap();
+    assert_eq!(b.s().list_categories().unwrap().len(), 1);
+    assert_eq!(b.s().local_changes().unwrap().categories_changed_at, before);
+}
+
+#[test]
+fn an_attachment_gone_from_disk_is_not_pending_work_forever() {
+    let drive = MemoryDrive::default();
+    let a = Dev::new();
+    let att = crate::attachments::import(&a.s(), &a.data, b"%PDF-1.4 x", "doc.pdf", "application/pdf").unwrap();
+    let mut n = input("n1", "", "");
+    n.body = json!({"type":"doc","content":[{"type":"noteFile","attrs":{"hash":att.hash}}]});
+    a.s().save_note(&n).unwrap();
+    std::fs::remove_file(crate::attachments::dir(&a.data).join(&att.hash)).unwrap();
+    a.sync(&drive).unwrap();
+    assert!(!a.s().local_changes().unwrap().has_work());
+}
+
+#[test]
+fn the_cache_counts_only_files_that_are_on_this_device() {
+    let drive = MemoryDrive::default();
+    let (a, b) = (Dev::new(), Dev::new());
+    let big = vec![7u8; (EAGER_LIMIT + 1) as usize];
+    let att = crate::attachments::import(&a.s(), &a.data, &big, "video.bin", "application/octet-stream").unwrap();
+    let mut n = input("n1", "", "");
+    n.body = json!({"type":"doc","content":[{"type":"noteFile","attrs":{"hash":att.hash}}]});
+    a.s().save_note(&n).unwrap();
+    a.sync(&drive).unwrap();
+    b.sync(&drive).unwrap();
+    assert!(!crate::attachments::dir(&b.data).join(&att.hash).exists(), "grande: só desce ao abrir");
+    assert_eq!(b.s().sync_status().unwrap().cache_used_bytes, 0);
+}
+
+/// Drive que chama `hook` logo depois de criar um arquivo (para simular algo acontecendo durante o envio).
+struct Hooked<F: FnMut()> {
+    drive: MemoryDrive,
+    hook: F,
+}
+
+impl<F: FnMut()> Remote for Hooked<F> {
+    fn start_token(&mut self) -> SResult<String> {
+        self.drive.start_token()
+    }
+    fn list_all(&mut self) -> SResult<Vec<RemoteFile>> {
+        self.drive.list_all()
+    }
+    fn changes(&mut self, token: &str) -> SResult<(Vec<Change>, String)> {
+        self.drive.changes(token)
+    }
+    fn download(&mut self, id: &str) -> SResult<Vec<u8>> {
+        self.drive.download(id)
+    }
+    fn create(&mut self, file: &NewFile) -> SResult<RemoteFile> {
+        let f = self.drive.create(file)?;
+        (self.hook)();
+        Ok(f)
+    }
+    fn update(&mut self, id: &str, props: &Props, bytes: &[u8]) -> SResult<RemoteFile> {
+        self.drive.update(id, props, bytes)
+    }
+    fn delete(&mut self, id: &str) -> SResult<()> {
+        self.drive.delete(id)
+    }
+}
+
+#[test]
+fn a_note_deleted_during_its_first_upload_does_not_come_back() {
+    let drive = MemoryDrive::default();
+    let (a, b) = (Dev::new(), Dev::new());
+    a.create("n1", "Apagar", "x");
+    let mut hooked = Hooked { drive: drive.clone(), hook: || { a.s().delete_note("n1").unwrap(); } };
+    sync_once(&a.device(), &mut hooked).unwrap();
+    a.sync(&drive).unwrap();
+    assert!(drive.files().iter().all(|f| f.kind() != Some(NOTE)), "o arquivo criado sai do Drive");
+    b.sync(&drive).unwrap();
+    assert!(b.note("n1").is_none());
+}
+
+#[test]
+fn stopping_in_the_middle_writes_nothing_more() {
+    let drive = MemoryDrive::default();
+    let a = Dev::new();
+    a.create("n1", "Um", "x");
+    a.create("n2", "Dois", "y");
+    // sair da conta enquanto o primeiro envio acontece: nada do envio é gravado depois disso
+    let mut hooked = Hooked { drive: drive.clone(), hook: || a.stop.store(true, std::sync::atomic::Ordering::Relaxed) };
+    assert_eq!(sync_once(&a.device(), &mut hooked), Err(SyncError::Stopped));
+    let s = a.s();
+    assert_eq!(s.dirty_notes().unwrap().len(), 2, "nenhuma nota marcada como enviada");
+    assert!(s.sync_value("drive_token").unwrap().is_some(), "o que veio antes de parar fica");
 }

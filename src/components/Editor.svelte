@@ -170,6 +170,7 @@
     } else {
       await save()
     }
+    api.settle()
     app.editor = null
     if (msg) app.say(msg, before ? { label: 'Desfazer', run: () => void api.updateNote(id, before) } : undefined)
   }

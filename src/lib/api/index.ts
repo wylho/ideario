@@ -85,6 +85,8 @@ export interface Api {
   /** Salva uma cópia do anexo (no app: na pasta Downloads, e devolve o caminho; no navegador: download, e devolve null). */
   downloadAttachment(a: Pick<AttachmentRow, 'hash' | 'name' | 'mime'>): Promise<string | null>
 
+  /** Avisos de mudança que estavam esperando (a escrita no editor parou ou a nota fechou) saem agora. */
+  settle(): void
   /** Avisa quando os dados mudam (edição local ou sync). Devolve a função de cancelamento. */
   subscribe(fn: () => void): () => void
   /** Avisa mudanças no estado da sincronização (sincronizando, sem conexão, erro, ok). */

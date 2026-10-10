@@ -691,6 +691,8 @@ export const mockApi: Api = {
     if (!src) setTimeout(() => URL.revokeObjectURL(url), 1000)
     return null
   },
+  // No navegador cada mudança já avisa na hora.
+  settle() {},
   subscribe(fn) {
     listeners.add(fn)
     return () => listeners.delete(fn)

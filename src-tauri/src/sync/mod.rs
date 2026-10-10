@@ -20,6 +20,7 @@ mod tests;
 use std::collections::BTreeMap;
 use std::fmt;
 use std::path::Path;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
 
 use sha2::{Digest, Sha256};
@@ -85,6 +86,8 @@ pub enum SyncError {
     Unauthorized,
     /// Sem conexão (ou o Drive não respondeu): tenta de novo depois.
     Offline(String),
+    /// Parado no meio (saiu da conta): nada mais é gravado.
+    Stopped,
     Other(String),
 }
 
@@ -94,6 +97,7 @@ impl fmt::Display for SyncError {
             SyncError::NotFound => write!(f, "arquivo não encontrado no Drive"),
             SyncError::Unauthorized => write!(f, "é preciso entrar com a conta Google de novo"),
             SyncError::Offline(e) => write!(f, "sem conexão com o Drive ({e})"),
+            SyncError::Stopped => write!(f, "sincronização interrompida"),
             SyncError::Other(e) => write!(f, "{e}"),
         }
     }
@@ -121,13 +125,19 @@ pub(crate) trait Remote {
 }
 
 /// Este aparelho: o banco (a trava só é pega para ler e gravar, nunca durante a rede) e a pasta de dados.
+/// `stop` liga quando a conta sai no meio de um ciclo: daí em diante nada é lido nem gravado (senão os ids do Drive da
+/// conta antiga voltariam para o banco que acabou de ser limpo).
 pub(crate) struct Device<'a> {
     pub store: &'a Mutex<Store>,
     pub data: &'a Path,
+    pub stop: &'a AtomicBool,
 }
 
 impl Device<'_> {
     fn with<T>(&self, f: impl FnOnce(&Store) -> crate::store::Result<T>) -> SResult<T> {
+        if self.stop.load(Ordering::Relaxed) {
+            return Err(SyncError::Stopped);
+        }
         let store = self.store.lock().map_err(|_| SyncError::Other("banco indisponível".into()))?;
         Ok(f(&store)?)
     }
@@ -148,6 +158,9 @@ pub struct Report {
     pub files: usize,
     /// Categorias mudaram por causa do Drive.
     pub categories: bool,
+    /// Arquivos do Drive que não deu para ler (corrompidos ou de uma versão futura do app): ficam de fora, sem travar
+    /// o resto.
+    pub skipped: usize,
 }
 
 impl Report {
@@ -212,7 +225,7 @@ pub(crate) fn pull(dev: &Device, remote: &mut dyn Remote, report: &mut Report) -
 fn pull_note(dev: &Device, remote: &mut dyn Remote, f: &RemoteFile, report: &mut Report) -> SResult<()> {
     let Some(id) = f.props.get("noteId") else { return Ok(()) };
     let (known, deleting) = dev.with(|s| Ok((s.note_file(id)?, s.is_pending_delete(&f.id)?)))?;
-    if deleting {
+    if deleting && known.is_none() {
         // Excluída de vez aqui, o arquivo sai no próximo envio: não pode voltar.
         return Ok(());
     }
@@ -225,8 +238,13 @@ fn pull_note(dev: &Device, remote: &mut dyn Remote, f: &RemoteFile, report: &mut
         Err(SyncError::NotFound) => return Ok(()),
         other => other?,
     };
+    if ydoc::to_note(id, &bytes).is_err() {
+        report.skipped += 1;
+        return Ok(());
+    }
     // Dois arquivos para a mesma nota (dois aparelhos criaram ao mesmo tempo): fica o de menor id, o outro é juntado
-    // e apagado. Os dois aparelhos escolhem o mesmo.
+    // e apagado. Os dois aparelhos escolhem o mesmo. O que perdeu continua sendo juntado enquanto não sai do Drive
+    // (o outro aparelho pode ter escrito nele de novo).
     let (file, rev, keep_mine) = match mine {
         Some(m) if m != f.id && m < f.id => (m, my_rev.unwrap_or_default(), true),
         Some(m) if m != f.id => {
@@ -271,6 +289,10 @@ fn pull_categories(dev: &Device, remote: &mut dyn Remote, f: &RemoteFile, report
         Err(SyncError::NotFound) => return Ok(()),
         other => other?,
     };
+    if ydoc::read_categories(&bytes).is_err() {
+        report.skipped += 1;
+        return Ok(());
+    }
     dev.with(|s| {
         let local = ydoc::write_categories(&s.sync_blob("categories")?.unwrap_or_default(), &s.category_rows()?)?;
         let merged = ydoc::apply(&local, &bytes)?;
@@ -326,7 +348,10 @@ pub(crate) fn push(dev: &Device, remote: &mut dyn Remote, report: &mut Report) -
             },
             None => remote.create(&new())?,
         };
-        dev.with(|s| s.mark_uploaded(&id, &state, &sent.id, &sent.rev))?;
+        // Excluída enquanto subia: o arquivo que acabou de nascer sai também (senão a nota volta nos outros).
+        if !dev.with(|s| s.mark_uploaded(&id, &state, &sent.id, &sent.rev))? {
+            dev.with(|s| s.add_pending_delete(&sent.id))?;
+        }
         report.sent += 1;
     }
     push_categories(dev, remote)?;
@@ -341,8 +366,11 @@ pub(crate) fn push(dev: &Device, remote: &mut dyn Remote, report: &mut Report) -
 
 fn push_attachments(dev: &Device, remote: &mut dyn Remote) -> SResult<()> {
     for a in dev.with(|s| s.attachments_to_upload())? {
-        // Só o que está aqui (um anexo que ainda não desceu não tem o que subir).
-        let Ok(bytes) = std::fs::read(attachments::dir(dev.data).join(&a.hash)) else { continue };
+        // Só o que está aqui. Sumiu do disco: fica marcado como ausente (não é trabalho pendente para sempre).
+        let Ok(bytes) = std::fs::read(attachments::dir(dev.data).join(&a.hash)) else {
+            dev.with(|s| s.set_attachment_missing(&a.hash))?;
+            continue;
+        };
         let description = serde_json::to_string(&a).map_err(|e| SyncError::Other(e.to_string()))?;
         let f = remote.create(&NewFile {
             name: format!("att-{}", a.hash),

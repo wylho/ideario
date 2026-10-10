@@ -39,6 +39,7 @@ const waitList = async (id) => {
 
 try {
   let id = await session()
+  await wd('POST', `/session/${id}/timeouts`, { script: 300000 })
   console.log(`lista a frio (banco vazio), desde o início da página: ${(await waitList(id)).toFixed(0)} ms`)
   // 5 mil notas reais, pelo próprio núcleo
   const made = await run(
