@@ -3,7 +3,7 @@
 //   npx tauri build --debug --no-bundle && xvfb-run -a node tests/native/run.mjs
 // Precisa de: WebKitWebDriver (pacote webkit2gtk-driver) e tauri-driver (cargo install tauri-driver).
 import { spawn } from 'node:child_process'
-import { existsSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { DatabaseSync } from 'node:sqlite'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
@@ -511,6 +511,20 @@ try {
     await s.waitFor(`return document.querySelector('#backup-auto')?.getAttribute('data-state') === 'checked'`, 'backup automático ligado nas Configurações')
     await s.exec(`document.querySelector('.sheet [aria-label="Fechar"]').click(); return true`)
     await call('backup_set_auto', { enabled: false, dir: null })
+  })
+
+  await test('exportar nota: HTML com a foto num .zip; Markdown de nota sem anexo num arquivo só', async () => {
+    const call = (cmd, args) => s.execAsync(`window.__TAURI_INTERNALS__.invoke(arguments[0], arguments[1]).then((v) => arguments[2](v), (e) => arguments[2]('erro ' + e))`, cmd, args)
+    const all = await call('list_notes', { filter: { categoryId: null, tags: [] }, box: 'active', query: '', sort: 'updated' })
+    const withPhoto = all.find((n) => n.imageCount > 0)
+    const plain = all.find((n) => n.imageCount + n.fileCount === 0 && n.title)
+    const zip = join(DATA, 'export', 'foto.zip')
+    const r = await call('export_note_cmd', { id: withPhoto.id, format: 'html', path: zip })
+    if (typeof r !== 'object' || r.attachments < 1 || !existsSync(zip)) throw new Error(JSON.stringify(r))
+    const md = join(DATA, 'export', 'nota.md')
+    await call('export_note_cmd', { id: plain.id, format: 'md', path: md })
+    const text = readFileSync(md, 'utf8')
+    if (!text.startsWith('# ')) throw new Error(text.slice(0, 200))
   })
 
   await test('tema escuro: a janela (barra de título e fundo) acompanha e fica guardado para a próxima abertura', async () => {

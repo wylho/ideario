@@ -8,6 +8,7 @@ mod attachments;
 mod backup;
 mod background;
 mod commands;
+mod export;
 mod keep;
 mod markdown;
 mod mcp;
@@ -156,6 +157,8 @@ pub fn run() {
             commands::get_attachments,
             commands::import_file,
             commands::download_attachment,
+            export::export_note_cmd,
+            export::print_window,
             backup::backup_status,
             backup::backup_set_auto,
             backup::backup_export,

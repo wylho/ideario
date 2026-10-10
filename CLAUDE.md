@@ -167,5 +167,9 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
   nota (merge Yjs) + categorias que faltam; tira a boas-vindas intocada de um app novo. Automático: linha de fundo de hora
   em hora (`backup_auto`/`backup_dir`/`backup_last` no `sync_state`, local), poda os 4 mais novos pelo nome.
   MCP: `create_backup`.
+- Modo documento (`data-doc` no `.editor`, lembrado por nota em `docmode.ts`) e exportar (`src-tauri/src/export.rs`:
+  HTML/Markdown, `.zip` com `anexos/` quando há anexo; `src/lib/exporting.ts`). PDF = `print_window` (Tauri
+  `WebviewWindow::print`; no navegador `window.print`) com `body.print-note` e o CSS `@media print` do fim do app.css.
+  MCP: `export_note`.
 - Filtro "Sem categoria"/"Sem tags": sentinelas `NO_CATEGORY`/`NO_TAGS` (`~none`) no `Filter` (TS e Rust).
 - **Próximo passo: Fase 7 (Android).**

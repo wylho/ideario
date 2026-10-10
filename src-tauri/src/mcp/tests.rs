@@ -268,6 +268,16 @@ fn pin_protected_categories_are_off_limits() {
 }
 
 #[test]
+fn export_from_the_mcp() {
+    let (core, t) = setup();
+    let id = id_in(&tool(&core, "create_note", json!({ "title": "Receita", "content": "- [ ] farinha" }), true));
+    let out = json_of(&tool(&core, "export_note", json!({ "id": id, "format": "html", "folder": t.0.join("ex").display().to_string() }), true));
+    let path = out["path"].as_str().unwrap();
+    assert!(path.ends_with("Receita.html"), "sem anexo: um arquivo só");
+    assert!(std::fs::read_to_string(path).unwrap().contains("<h1>Receita</h1>"));
+}
+
+#[test]
 fn backup_from_the_mcp() {
     let (core, t) = setup();
     let out = json_of(&tool(&core, "create_backup", json!({ "folder": t.0.join("bk").display().to_string() }), true));

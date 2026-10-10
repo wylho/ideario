@@ -58,6 +58,13 @@ O Automerge foi considerado e **descartado** em favor do Yjs por causa do editor
 - Barra inferior: ferramentas de formatação, inserir imagem e cor da nota.
 - Salvamento contínuo, sem botão "salvar". Nota vazia ao sair não é criada.
 
+### 3.2.1 Modo documento e exportar
+- No editor, um botão (livro) abre a nota como **documento**: página inteira, coluna de leitura no meio, letra maior.
+  Lembrado por nota (neste aparelho). O mesmo botão volta ao card.
+- **Exportar** (menu ⋮ do editor e do card): Markdown e HTML; com fotos/anexos, um `.zip` com a pasta `anexos/` (no
+  HTML, áudio e vídeo tocam com player; no Markdown viram link). **PDF**: impressão do sistema ("Salvar como PDF"),
+  com só a nota no papel; áudio e vídeo saem como cartão com o nome e a duração.
+
 ### 3.3 Categorias e tags
 - **Categorias** substituem os "marcadores" do Keep. Cada nota tem **no máximo uma**. Cada categoria tem nome, cor e (futuramente) ícone. Ficam listadas no menu lateral com contagem.
 - **Tags** são livres e várias por nota. Cruzam categorias. Aparecem como nuvem no menu lateral.

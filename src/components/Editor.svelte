@@ -7,8 +7,10 @@
     Archive, ArchiveRestore, ArrowLeft, Bold, Camera, Check, ChevronDown, ChevronLeft, ChevronRight, Columns2, Heading, Image, Italic, List,
     ListChecks, Mic, MoreVertical, SquareCode, Palette, Paperclip, Pin, PinOff, Plus, Redo2, Rows2, Square, Tag, Trash2, Undo2, X,
     ArrowDown, ArrowUp, Copy, CopyPlus, Download, Eye, GripVertical, ListTodo, Pilcrow, Scissors, SquareCheck, SquareDashed, ExternalLink,
-    ListIndentDecrease, ListIndentIncrease,
+    ListIndentDecrease, ListIndentIncrease, BookOpen, Minimize2, FileDown,
   } from '@lucide/svelte'
+  import { exportEntries, printNote } from '../lib/exporting'
+  import { isDocNote, setDocNote } from '../lib/docmode'
   import {
     blockAt, canIndent, canMove, checkAll, checkCount, clipNode, convertBlock, deleteChecked, deleteNode, duplicateNode, moveNode, shapeOf,
     startNodeDrag, type BlockHit, type Shape,
@@ -43,7 +45,22 @@
   type Meta = NoteMeta
 
   // svelte-ignore state_referenced_locally
-  const { id, isNew, defaults, start } = target
+  const { id, isNew, defaults, start, print } = target
+  // Modo documento: a nota em página inteira, coluna de leitura e letra maior. Lembrado por nota.
+  let docMode = $state(isDocNote(id))
+  function toggleDoc() {
+    docMode = !docMode
+    setDocNote(id, docMode)
+  }
+  /** A nota tem foto ou anexo (exportar vira .zip). */
+  function hasMedia() {
+    let found = false
+    editor?.state.doc.descendants((n) => {
+      if (n.type.name === 'noteImage' || n.type.name === 'noteFile') found = true
+      return !found
+    })
+    return found
+  }
   let meta = $state<Meta | null>(null)
   let files = $state.raw<Attachment[]>([])
   let editedAt = $state<number | null>(null)
@@ -275,6 +292,8 @@
       if (start && 'files' in start) void addFiles(start.files)
       else if (start && 'record' in start) void recorder.start()
       else if (start && 'camera' in start) cameraOpen = true
+      // PDF pelo menu do card: abre e já imprime (as fotos têm um instante para carregar).
+      if (print) setTimeout(() => void printNote(), 400)
       // Soltos no texto entram no ponto; fora dele (título, margens, fundo), no fim da nota.
       const drop = (files: DroppedFile[], at?: { x: number; y: number }) => {
         const inside = at && ed.view.dom.contains(document.elementFromPoint(at.x, at.y))
@@ -529,10 +548,19 @@
   <Dialog.Root open onOpenChange={(o) => !o && close()}>
     <Dialog.Portal>
       <Dialog.Overlay class="overlay ed-overlay" />
-      <Dialog.Content class="editor c-{meta.color}" aria-describedby={undefined} onOpenAutoFocus={(e) => e.preventDefault()}>
+      <Dialog.Content class="editor c-{meta.color}" data-doc={docMode ? '' : undefined} aria-describedby={undefined} onOpenAutoFocus={(e) => e.preventDefault()}>
         <div class="ed-top">
           <button class="icon-btn" aria-label="Voltar e salvar" onclick={() => close()}><ArrowLeft size={20} /></button>
           <span class="ed-saved">{isNew ? 'Nova nota' : editedAt ? `Editada ${ago(editedAt)}` : ''}</span>
+          <button
+            class="icon-btn"
+            aria-pressed={docMode}
+            aria-label={docMode ? 'Voltar ao card' : 'Abrir como documento'}
+            title={docMode ? 'Voltar ao card' : 'Abrir como documento (página inteira)'}
+            onclick={toggleDoc}
+          >
+            {#if docMode}<Minimize2 size={19} />{:else}<BookOpen size={19} />{/if}
+          </button>
           <button class="icon-btn" aria-label={meta.pinned ? 'Desafixar' : 'Fixar'} aria-pressed={meta.pinned} onclick={() => meta && (meta.pinned = !meta.pinned)}>
             {#if meta.pinned}<PinOff size={19} />{:else}<Pin size={19} />{/if}
           </button>
@@ -551,6 +579,15 @@
                   <DropdownMenu.Separator class="menu-sep" />
                   <DropdownMenu.Item class="menu-item danger" onSelect={deleteForever}><Trash2 size={16} />Excluir para sempre</DropdownMenu.Item>
                 {:else}
+                  <DropdownMenu.Sub>
+                    <DropdownMenu.SubTrigger class="menu-item"><FileDown size={16} /><span class="grow">Exportar</span><ChevronRight size={16} /></DropdownMenu.SubTrigger>
+                    <DropdownMenu.SubContent class="menu" sideOffset={4}>
+                      {#each exportEntries(id, meta.title, hasMedia(), () => void printNote()) as e (e.label)}
+                        <DropdownMenu.Item class="menu-item" onSelect={e.onSelect}><e.icon size={16} />{e.label}</DropdownMenu.Item>
+                      {/each}
+                    </DropdownMenu.SubContent>
+                  </DropdownMenu.Sub>
+                  <DropdownMenu.Separator class="menu-sep" />
                   <DropdownMenu.Item class="menu-item" onSelect={() => meta && close({ archived: !meta.archived }, meta.archived ? 'Nota desarquivada' : 'Nota arquivada')}>
                     {#if meta.archived}<ArchiveRestore size={16} />Desarquivar{:else}<Archive size={16} />Arquivar{/if}
                   </DropdownMenu.Item>

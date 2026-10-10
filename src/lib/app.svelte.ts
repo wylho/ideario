@@ -59,6 +59,8 @@ export interface EditorTarget {
   defaults?: { categoryId: string | null; tags: string[] }
   /** Atalho do "+": a nota nova já abre gravando, com a câmera ou com os arquivos escolhidos. */
   start?: { record: true } | { camera: true } | { files: DroppedFile[] }
+  /** Abrir já imprimindo (PDF pelo menu do card). */
+  print?: boolean
 }
 
 /** Largura a partir da qual o layout é de desktop. Igual ao breakpoint em app.css. */
@@ -345,8 +347,12 @@ class AppState {
     }
   }
 
-  openNote(id: string) {
+  openNote(id: string, opts: { print?: boolean } = {}) {
     this.lightbox = null
+    if (opts.print) {
+      this.editor = { id, isNew: false, print: true }
+      return
+    }
     // Sem categoria bloqueada (o normal), abre na hora, sem perguntar ao núcleo.
     if (!this.categories.some((c) => c.locked && !c.unlocked)) {
       this.editor = { id, isNew: false }

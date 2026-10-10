@@ -850,6 +850,43 @@ test('categoria com PIN: some de Tudo, abre só com o PIN; bloquear, mudar e tir
   await expect(card()).toHaveCount(1)
 })
 
+test('modo documento: a nota vira página inteira, e ela lembra; imprimir deixa só a nota no papel', async ({ page }) => {
+  await page.setViewportSize({ width: 1300, height: 900 })
+  await cards(page).filter({ hasText: 'Ideias de campanha Q4' }).first().click()
+  const ed = page.locator('.editor')
+  expect((await ed.boundingBox())!.width).toBeLessThan(800)
+  await page.getByRole('button', { name: 'Abrir como documento' }).click()
+  await expect(ed).toHaveAttribute('data-doc', '')
+  expect((await ed.boundingBox())!.width).toBe(1300)
+  // a coluna do texto fica no meio, com largura de leitura
+  const body = (await page.locator('#corpo').boundingBox())!
+  expect(body.width).toBeLessThanOrEqual(780)
+  expect(Math.abs(body.x + body.width / 2 - 650)).toBeLessThan(40)
+  // fechar e abrir de novo: continua documento
+  await back(page)
+  await cards(page).filter({ hasText: 'Ideias de campanha Q4' }).first().click()
+  await expect(ed).toHaveAttribute('data-doc', '')
+  // Exportar no menu (no navegador, só o PDF; Markdown e HTML são do app)
+  await page.getByRole('button', { name: 'Mais opções' }).click()
+  await page.getByRole('menuitem', { name: 'Exportar' }).click()
+  await expect(page.getByRole('menuitem', { name: 'PDF (imprimir)' })).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('menu')).toHaveCount(0)
+  await expect(ed).toBeVisible()
+  // impressão: só a nota, sem a barra, as ferramentas e o resto do app
+  await page.evaluate(() => document.body.classList.add('print-note'))
+  await page.emulateMedia({ media: 'print' })
+  await expect(page.locator('.shell')).toBeHidden()
+  await expect(page.locator('.ed-top')).toBeHidden()
+  await expect(page.locator('.ed-tools').first()).toBeHidden()
+  await expect(page.locator('#titulo')).toBeVisible()
+  await expect(page.locator('.editor')).toHaveCSS('position', 'static')
+  await page.emulateMedia({ media: 'screen' })
+  await page.evaluate(() => document.body.classList.remove('print-note'))
+  await page.getByRole('button', { name: 'Voltar ao card' }).click()
+  await expect(ed).not.toHaveAttribute('data-doc', '')
+})
+
 test.describe('ordenar e arrastar', () => {
   const titles = (page: Page, section = 1) =>
     page.locator('.drag-section').nth(section).locator('.card').evaluateAll((els) => els.map((e) => e.getAttribute('aria-label')))

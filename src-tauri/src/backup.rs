@@ -116,7 +116,7 @@ pub fn export(core: &Core, dest: &Path, progress: impl Fn(usize, usize)) -> Resu
             if let Ok(n) = ydoc::to_note(id, state) {
                 if n.trashed_at.is_none() {
                     let md = markdown::to_markdown(&n.body, &names);
-                    let title = if n.title.is_empty() { String::new() } else { format!("# {}\n\n", n.title) };
+                    let title = if n.title.is_empty() { String::new() } else { format!("# {}\n\n", markdown::escape_line(&n.title)) };
                     texts.push((safe_name(&n.title, id), format!("{title}{md}\n")));
                 }
             }
