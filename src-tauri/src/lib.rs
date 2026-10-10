@@ -1,6 +1,9 @@
 //! Núcleo do Ideario (SPEC §4). Fase 1: banco local (SQLite + FTS5), notas, categorias, tags e anexos.
 //! Próximos módulos: Y.Doc por nota (yrs, Fase 2), pipeline de mídia (Fase 3), lembretes (4), sync (5), importação (6).
 
+// Sem `unwrap`/`expect` fora dos testes: um erro vira mensagem ou é tratado, nunca derruba o app.
+#![cfg_attr(not(test), deny(clippy::unwrap_used, clippy::expect_used))]
+
 mod attachments;
 mod background;
 mod commands;
@@ -22,7 +25,7 @@ use commands::Core;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
+    let app = tauri::Builder::default()
         // Janela nativa de abrir arquivo (Importar do Google Keep).
         .plugin(tauri_plugin_dialog::init())
         // Abre o navegador no login do Google (sync com o Drive).
@@ -65,7 +68,7 @@ pub fn run() {
                 .iter()
                 .find(|w| w.label == "main")
                 .cloned()
-                .expect("janela main ausente no tauri.conf.json");
+                .ok_or("janela main ausente no tauri.conf.json")?;
             WebviewWindowBuilder::from_config(app.handle(), &config)?
                 .initialization_script(format!("{}\n{}", system_fonts::init_script(), system_theme::init_script()))
                 .build()?;
@@ -118,9 +121,15 @@ pub fn run() {
             commands::import_file,
             commands::download_attachment,
         ])
-        .build(tauri::generate_context!())
-        .expect("erro ao iniciar o Ideario")
-        .run(|_app, _event| {
+        .build(tauri::generate_context!());
+    let app = match app {
+        Ok(app) => app,
+        Err(e) => {
+            eprintln!("erro ao iniciar o Ideario: {e}");
+            std::process::exit(1);
+        }
+    };
+    app.run(|_app, _event| {
             // macOS: clicar no ícone do Dock com a janela escondida traz a janela de volta.
             #[cfg(target_os = "macos")]
             if let tauri::RunEvent::Reopen { .. } = _event {

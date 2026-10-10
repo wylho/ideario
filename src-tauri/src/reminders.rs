@@ -297,3 +297,54 @@ mod tests {
         assert_eq!(notices(&alerts[..1])[0].note.as_deref(), Some("n0"));
     }
 }
+
+#[cfg(test)]
+mod props {
+    //! A próxima vez de um lembrete que se repete, conferida contra a conta feita à mão (passo a passo desde a data
+    //! original), para quaisquer datas: nunca pula uma ocorrência nem repete a mesma.
+    use super::*;
+    use chrono::{Datelike, FixedOffset, NaiveDateTime, Timelike};
+    use proptest::prelude::*;
+
+    fn tz() -> FixedOffset {
+        FixedOffset::west_opt(3 * 3600).unwrap_or_else(|| FixedOffset::east_opt(0).unwrap())
+    }
+
+    /// Ocorrência k (1, 2, …) contada à mão, no horário local.
+    fn nth(anchor: NaiveDateTime, repeat: &str, k: u32) -> NaiveDateTime {
+        match repeat {
+            "day" => anchor + chrono::Duration::days(k as i64),
+            "week" => anchor + chrono::Duration::days(7 * k as i64),
+            "month" => anchor.checked_add_months(Months::new(k)).unwrap(),
+            _ => anchor.checked_add_months(Months::new(12 * k)).unwrap(),
+        }
+    }
+
+    proptest! {
+        #[test]
+        fn next_is_the_first_occurrence_after_now(
+            at in 946_684_800_000i64..2_000_000_000_000,
+            gap in 0i64..(6 * 366 * 86_400_000),
+            repeat in prop::sample::select(vec!["day", "week", "month", "year"]),
+        ) {
+            let now = at + gap;
+            let next = next_occurrence(at, repeat, now, &tz()).unwrap();
+            prop_assert!(next > now);
+            let anchor = tz().timestamp_millis_opt(at).unwrap().naive_local();
+            // à mão: a primeira ocorrência depois de `now`
+            let mut k = 1;
+            let expected = loop {
+                let ms = tz().from_local_datetime(&nth(anchor, repeat, k)).unwrap().timestamp_millis();
+                if ms > now { break ms; }
+                k += 1;
+            };
+            prop_assert_eq!(next, expected);
+            // mesmo horário do dia; mês e ano no mesmo dia (ou o último do mês, quando ele não existe)
+            let local = tz().timestamp_millis_opt(next).unwrap().naive_local();
+            prop_assert_eq!((local.hour(), local.minute()), (anchor.hour(), anchor.minute()));
+            if repeat == "month" || repeat == "year" {
+                prop_assert!(local.day() == anchor.day() || local.day() < anchor.day() && (local + chrono::Duration::days(1)).day() == 1);
+            }
+        }
+    }
+}

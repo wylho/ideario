@@ -96,3 +96,51 @@ mod tests {
         assert_eq!(normalize_tag(" ##Lista de Compras "), "lista-de-compras");
     }
 }
+
+#[cfg(test)]
+mod props {
+    //! Comparar sem acento e as `#tags` valem para qualquer texto, não só os exemplos.
+    use super::*;
+    use proptest::prelude::*;
+
+    proptest! {
+        #[test]
+        fn folding_twice_is_folding_once(s in ".{0,60}") {
+            prop_assert_eq!(fold(&fold(&s)), fold(&s));
+        }
+
+        #[test]
+        fn accents_and_case_do_not_matter(s in "[a-zA-Z ]{0,30}") {
+            let accented: String = s.chars().map(|c| match c { 'a' => 'á', 'e' => 'ê', 'o' => 'õ', 'c' => 'ç', other => other }).collect();
+            prop_assert_eq!(fold(&accented.to_uppercase()), fold(&s));
+        }
+
+        #[test]
+        fn tags_found_are_clean_and_found_again(s in ".{0,80}") {
+            let tags = hash_tags(&s);
+            for t in &tags {
+                prop_assert!(!t.is_empty());
+                prop_assert!(t.chars().all(is_tag_char));
+                prop_assert_eq!(&t.to_lowercase(), t);
+                // escrita de novo como #tag, é achada de novo
+                prop_assert_eq!(hash_tags(&format!("#{t}")), vec![t.clone()]);
+            }
+            let mut unique = tags.clone();
+            unique.dedup();
+            prop_assert_eq!(unique.len(), tags.len());
+        }
+
+        #[test]
+        fn normalizing_a_tag_twice_changes_nothing(s in ".{0,40}") {
+            let once = normalize_tag(&s);
+            prop_assert_eq!(normalize_tag(&once), once);
+        }
+
+        #[test]
+        fn clean_leaves_no_double_spaces(s in "[ \ta-z\n]{0,60}") {
+            let c = clean(&s);
+            prop_assert!(!c.contains("  ") && !c.contains(" \n") && !c.contains('\t'), "{:?}", c);
+            prop_assert_eq!(clean(&c), c);
+        }
+    }
+}

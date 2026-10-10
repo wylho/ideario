@@ -465,7 +465,9 @@ impl Store {
             id: r.get(0)?,
             title: r.get(1)?,
             label: r.get(2)?,
-            preview: RawValue::from_string(preview).unwrap_or_else(|_| RawValue::from_string("[]".into()).unwrap()),
+            preview: RawValue::from_string(preview)
+                .or_else(|_| RawValue::from_string("[]".into()))
+                .map_err(|e| rusqlite::Error::FromSqlConversionFailure(4, rusqlite::types::Type::Text, Box::new(e)))?,
             // provisório: só os hashes; as dimensões entram em fill_tags_and_covers
             cover: serde_json::from_str::<Vec<String>>(&cover)
                 .unwrap_or_default()

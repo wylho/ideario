@@ -628,3 +628,68 @@ pub(crate) mod tests {
         assert_eq!(body(&KeepNote::default(), &[], &[]), json!({"type":"doc","content":[{"type":"paragraph"}]}));
     }
 }
+
+#[cfg(test)]
+mod props {
+    //! O leitor de HTML do Keep com entradas quaisquer: nunca quebra, e o texto e a formatação chegam inteiros.
+    use super::*;
+    use proptest::prelude::*;
+
+    /// Texto que os blocos levam (quebras viram "\n").
+    fn plain(blocks: &[Value]) -> String {
+        blocks
+            .iter()
+            .flat_map(|b| b.get("content").and_then(Value::as_array).cloned().unwrap_or_default())
+            .map(|r| if r["type"] == "hardBreak" { "\n".to_string() } else { r["text"].as_str().unwrap_or("").to_string() })
+            .collect()
+    }
+
+    fn escape(s: &str) -> String {
+        s.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;").replace('"', "&quot;")
+    }
+
+    proptest! {
+        #[test]
+        fn any_input_is_read_without_crashing(s in ".{0,300}", tagsoup in "[<>/&;#a-z0-9 \"'=:]{0,300}") {
+            for input in [&s, &tagsoup] {
+                let _ = html_blocks(input);
+                let _ = inline_html(input);
+                let _ = decode_entities(input);
+            }
+        }
+
+        #[test]
+        fn escaped_text_comes_back_as_it_was(t in "[^\n]{0,60}") {
+            prop_assert_eq!(decode_entities(&escape(&t)), t);
+        }
+
+        #[test]
+        fn text_and_bold_survive_any_formatting(parts in prop::collection::vec(("[a-zA-Zçãéõ0-9 <>&]{1,12}", 0..4u8), 1..8)) {
+            let html: String = parts
+                .iter()
+                .map(|(t, k)| {
+                    let t = escape(t);
+                    match k {
+                        0 => t,
+                        1 => format!("<b>{t}</b>"),
+                        2 => format!("<i>{t}</i>"),
+                        _ => format!("<span style=\"font-weight:700;\">{t}</span>"),
+                    }
+                })
+                .collect();
+            let blocks = html_blocks(&format!("<p>{html}</p>"));
+            let expected: String = parts.iter().map(|(t, _)| t.as_str()).collect();
+            prop_assert_eq!(plain(&blocks), expected);
+            // negrito exatamente onde havia <b> ou font-weight
+            let bold: String = blocks[0]["content"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .filter(|r| r["marks"].as_array().is_some_and(|m| m.iter().any(|m| m["type"] == "bold")))
+                .map(|r| r["text"].as_str().unwrap_or("").to_string())
+                .collect();
+            let want: String = parts.iter().filter(|(_, k)| *k == 1 || *k == 3).map(|(t, _)| t.as_str()).collect();
+            prop_assert_eq!(bold, want);
+        }
+    }
+}
