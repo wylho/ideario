@@ -190,7 +190,16 @@ export interface Settings {
 export type SyncState = 'ok' | 'syncing' | 'offline' | 'error'
 
 export interface SyncStatus {
+  /** O sync existe nesta versão (o app foi compilado com a chave do Google). */
+  configured: boolean
   connected: boolean
+  /** E-mail da conta Google conectada. */
+  account: string | null
+  state: SyncState
+  /** O que deu errado no último sync (só com `state: 'error'`). */
+  error: string | null
+  /** Notas com mudança ainda não enviada. */
+  pending: number
   lastSyncAt: Millis | null
   noteCount: number
   cacheUsedBytes: number

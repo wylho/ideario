@@ -10,6 +10,7 @@ mod notify;
 mod projection;
 mod reminders;
 mod store;
+mod sync;
 mod system_fonts;
 mod system_theme;
 mod text;
@@ -24,12 +25,17 @@ pub fn run() {
     tauri::Builder::default()
         // Janela nativa de abrir arquivo (Importar do Google Keep).
         .plugin(tauri_plugin_dialog::init())
+        // Abre o navegador no login do Google (sync com o Drive).
+        .plugin(tauri_plugin_opener::init())
+        .manage(sync::Sync::default())
         .manage(background::Background::default())
         .on_window_event(background::on_window_event)
         // Fotos, vídeos, áudios e documentos das notas: `att://localhost/<hash>` (convertFileSrc(hash, 'att')).
         .register_asynchronous_uri_scheme_protocol("att", |ctx, req, responder| {
             let app = ctx.app_handle().clone();
             std::thread::spawn(move || {
+                // Anexo grande que outro aparelho subiu: desce agora, na hora de abrir.
+                sync::ensure_local(&app, req.uri().path().trim_start_matches('/'));
                 let core = app.state::<Core>();
                 let res = match core.store.lock() {
                     Ok(store) => attachments::serve(&store, &core.data, &req),
@@ -47,6 +53,8 @@ pub fn run() {
             std::thread::spawn(move || handle.state::<Core>().backfill_media());
             // Lembretes: notificação na hora (e os atrasados, logo ao abrir).
             notify::start(app.handle().clone());
+            // Sync com o Google Drive em segundo plano (se houver login).
+            sync::start(app.handle());
 
             // A janela é criada aqui (e não pelo tauri.conf.json) para receber as fontes e as cores do
             // sistema antes de a página carregar, sem troca visível de fonte ou de cor.
@@ -100,7 +108,12 @@ pub fn run() {
             commands::empty_trash,
             commands::get_settings,
             commands::save_settings,
-            commands::sync_status,
+            sync::service::sync_status,
+            sync::service::sync_now,
+            sync::service::sync_focus,
+            sync::service::sync_sign_in,
+            sync::service::sync_cancel_sign_in,
+            sync::service::sync_sign_out,
             commands::get_attachments,
             commands::import_file,
             commands::download_attachment,

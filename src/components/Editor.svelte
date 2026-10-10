@@ -89,6 +89,18 @@
     })
   }
 
+  // Outro aparelho mudou esta nota (sync): junta na hora, sem fechar nem perder o que se está escrevendo aqui.
+  $effect(() =>
+    api.subscribeRemote((ids) => {
+      if (closed || !persisted || !ids.includes(id)) return
+      void api.getNoteState(id).then((state) => {
+        if (closed) return
+        Y.applyUpdate(doc, state, LOADED)
+        meta = readMeta(doc)
+      })
+    }),
+  )
+
   const cat = $derived(app.category(meta?.categoryId))
   /** Lembrete marcado (ou tirado): reabre, e sem lembrete não há repetição. */
   function setReminder(v: number | null) {

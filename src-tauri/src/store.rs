@@ -97,7 +97,7 @@ pub struct NoteSummary {
     pub position: f64,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Attachment {
     pub hash: String,
@@ -163,6 +163,33 @@ pub struct NoteInput {
     pub tags: Vec<String>,
 }
 
+/// Categoria como o sync a vê (com a ordem e a marca de apagada).
+#[derive(Debug, Clone, PartialEq)]
+pub struct CategoryRow {
+    pub id: String,
+    pub name: String,
+    pub color: String,
+    pub sort: i64,
+    pub deleted: bool,
+}
+
+/// O que mudou aqui e ainda não foi para o Drive (a linha do sync compara duas olhadas seguidas: igual = a escrita
+/// parou e dá para enviar).
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct LocalChanges {
+    pub dirty: i64,
+    pub dirty_edited_at: Millis,
+    pub deletes: i64,
+    pub uploads: i64,
+    pub categories_changed_at: Millis,
+}
+
+impl LocalChanges {
+    pub fn has_work(&self) -> bool {
+        self.dirty > 0 || self.deletes > 0 || self.uploads > 0
+    }
+}
+
 /// Lembrete vencido, para o agendador avisar.
 #[derive(Debug)]
 pub struct DueReminder {
@@ -185,7 +212,16 @@ pub struct ViewCounts {
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SyncStatus {
+    /// O sync existe nesta versão (o app foi compilado com o cliente OAuth do Google).
+    pub configured: bool,
     pub connected: bool,
+    /// "ok" | "syncing" | "offline" | "error" (preenchido pelo sync).
+    pub state: &'static str,
+    pub error: Option<String>,
+    /// E-mail da conta Google conectada.
+    pub account: Option<String>,
+    /// Notas com mudança ainda não enviada.
+    pub pending: i64,
     pub last_sync_at: Option<Millis>,
     pub note_count: i64,
     pub cache_used_bytes: i64,
@@ -282,6 +318,15 @@ const MIGRATIONS: &[&str] = &[
     r#"
     ALTER TABLE notes ADD COLUMN reminder_repeat TEXT;
     ALTER TABLE notes ADD COLUMN notified_at INTEGER;
+    "#,
+    // 4 — Fase 5 (Sync com o Drive): id do arquivo de cada nota no Drive, arquivos a apagar lá (notas excluídas de
+    // vez) e estados Yjs que não são notas (categorias).
+    r#"
+    ALTER TABLE notes ADD COLUMN drive_file_id TEXT;
+    ALTER TABLE notes ADD COLUMN drive_rev TEXT;
+    CREATE INDEX IF NOT EXISTS notes_drive ON notes (drive_file_id);
+    CREATE TABLE IF NOT EXISTS pending_deletes (drive_file_id TEXT PRIMARY KEY);
+    CREATE TABLE IF NOT EXISTS sync_blobs (key TEXT PRIMARY KEY, value BLOB NOT NULL);
     "#,
 ];
 
@@ -552,7 +597,11 @@ impl Store {
         if name.is_empty() {
             return Err("nome vazio".into());
         }
-        let id = uuid::Uuid::now_v7().to_string();
+        self.insert_category(&uuid::Uuid::now_v7().to_string(), name, color)
+    }
+
+    fn insert_category(&self, id: &str, name: &str, color: &str) -> Result<Category> {
+        let id = id.to_string();
         let sort: i64 = self.conn.query_row("SELECT COALESCE(MAX(sort), -1) + 1 FROM categories", [], |r| r.get(0)).map_err(err)?;
         self.conn
             .execute("INSERT INTO categories (id, name, color, sort, updated_at) VALUES (?1, ?2, ?3, ?4, ?5)", params![id, name, color, sort, now()])
@@ -574,7 +623,18 @@ impl Store {
             .find(|c| !used.contains(&c.to_lowercase()))
             .copied()
             .unwrap_or(CATEGORY_COLORS[cats.len() % CATEGORY_COLORS.len()]);
-        Ok((self.create_category(name, color)?.id, true))
+        // Id que sai do nome: a mesma categoria criada em dois aparelhos (o mesmo Takeout importado nos dois) é uma só.
+        let id = uuid::Uuid::new_v5(&uuid::Uuid::NAMESPACE_URL, format!("ideario:category:{key}").as_bytes()).to_string();
+        let name = name.trim();
+        if name.is_empty() {
+            return Err("nome vazio".into());
+        }
+        if self.conn.query_row("SELECT EXISTS (SELECT 1 FROM categories WHERE id = ?1)", [&id], |r| r.get(0)).map_err(err)? {
+            // Já existiu e foi apagada: volta.
+            self.conn.execute("UPDATE categories SET deleted = 0, name = ?2, updated_at = ?3 WHERE id = ?1", params![id, name, now()]).map_err(err)?;
+            return Ok((id, true));
+        }
+        Ok((self.insert_category(&id, name, color)?.id, true))
     }
 
     pub fn update_category(&self, id: &str, name: Option<&str>, color: Option<&str>) -> Result<()> {
@@ -589,19 +649,23 @@ impl Store {
 
     /// Apaga a categoria; as notas dela ficam sem categoria (nada some).
     pub fn delete_category(&self, id: &str) -> Result<()> {
-        let t = now();
-        self.conn.execute("UPDATE categories SET deleted = 1, updated_at = ?2 WHERE id = ?1", params![id, t]).map_err(err)?;
-        self.conn
-            .execute("UPDATE notes SET category_id = NULL, updated_at = ?2, dirty = 1 WHERE category_id = ?1", params![id, t])
-            .map_err(err)?;
+        self.conn.execute("UPDATE categories SET deleted = 1, updated_at = ?2 WHERE id = ?1", params![id, now()]).map_err(err)?;
+        // Pelo Y.Doc de cada nota, para a mudança ir junto no sync.
+        let mut patch = Map::new();
+        patch.insert("categoryId".into(), Value::Null);
+        for n in self.category_note_ids(id)? {
+            self.patch_note(&n, &patch, true)?;
+        }
         Ok(())
     }
 
     /// Recria uma categoria apagada (Desfazer), com as mesmas notas de antes.
     pub fn restore_category(&self, id: &str, note_ids: &[String]) -> Result<()> {
         self.conn.execute("UPDATE categories SET deleted = 0, updated_at = ?2 WHERE id = ?1", params![id, now()]).map_err(err)?;
+        let mut patch = Map::new();
+        patch.insert("categoryId".into(), Value::from(id));
         for n in note_ids {
-            self.conn.execute("UPDATE notes SET category_id = ?2, dirty = 1 WHERE id = ?1", params![n, id]).map_err(err)?;
+            self.patch_note(n, &patch, false)?;
         }
         Ok(())
     }
@@ -976,6 +1040,12 @@ impl Store {
 
     pub fn delete_note(&self, id: &str) -> Result<bool> {
         let tx = self.conn.unchecked_transaction().map_err(err)?;
+        // Excluída de vez: o arquivo no Drive também sai (no próximo sync).
+        tx.execute(
+            "INSERT OR IGNORE INTO pending_deletes (drive_file_id) SELECT drive_file_id FROM notes WHERE id = ?1 AND drive_file_id IS NOT NULL",
+            [id],
+        )
+        .map_err(err)?;
         for t in ["note_tags", "note_attachments", "notes_fts"] {
             tx.execute(&format!("DELETE FROM {t} WHERE note_id = ?1"), [id]).map_err(err)?;
         }
@@ -1114,6 +1184,238 @@ impl Store {
         Ok(())
     }
 
+    // ---------- sync com o Drive (Fase 5) ----------
+
+    /// Notas com mudança local ainda não enviada: (id, arquivo no Drive, se já tem).
+    pub fn dirty_notes(&self) -> Result<Vec<(String, Option<String>)>> {
+        let mut st = self.conn.prepare_cached("SELECT id, drive_file_id FROM notes WHERE dirty = 1 ORDER BY updated_at").map_err(err)?;
+        let rows = st.query_map([], |r| Ok((r.get(0)?, r.get(1)?))).map_err(err)?;
+        rows.collect::<std::result::Result<_, _>>().map_err(err)
+    }
+
+    /// Nota do arquivo do Drive e a versão do arquivo que este aparelho já tem.
+    pub fn note_by_file(&self, file_id: &str) -> Result<Option<String>> {
+        self.conn.query_row("SELECT id FROM notes WHERE drive_file_id = ?1", [file_id], |r| r.get(0)).optional().map_err(err)
+    }
+
+    /// Arquivo da nota no Drive e a versão dele já juntada aqui.
+    pub fn note_file(&self, id: &str) -> Result<Option<(Option<String>, Option<String>)>> {
+        self.conn.query_row("SELECT drive_file_id, drive_rev FROM notes WHERE id = ?1", [id], |r| Ok((r.get(0)?, r.get(1)?))).optional().map_err(err)
+    }
+
+    /// Junta a versão do Drive na nota local (ou cria a nota). As datas vêm do Drive (de quem enviou): a de edição
+    /// só muda se algo visível mudou. Continua "a subir" se o local tiver algo que o Drive não tem. Devolve se algo
+    /// visível mudou.
+    pub fn merge_remote_note(&self, id: &str, remote: &[u8], file: (&str, &str), created: Millis, edited: Millis) -> Result<bool> {
+        let prev = self.note_input(id)?;
+        let state = ydoc::apply(&self.ydoc(id)?.unwrap_or_default(), remote)?;
+        let mut n = ydoc::to_note(id, &state)?;
+        let mut seen = HashSet::new();
+        n.tags.retain(|t| seen.insert(t.clone()));
+        let changed = !prev.as_ref().is_some_and(|p| same_content(p, &n));
+        self.write_note(&n, false, &state)?;
+        let dirty = ydoc::has_more_than(&state, remote)?;
+        let (fresh, file_id, rev) = (prev.is_none(), file.0, file.1);
+        self.conn
+            .execute(
+                "UPDATE notes SET dirty = ?2, drive_file_id = ?3, drive_rev = ?4, \
+                 updated_at = CASE WHEN ?5 THEN ?7 WHEN ?6 THEN MAX(updated_at, ?7) ELSE updated_at END, \
+                 created_at = CASE WHEN ?5 THEN ?8 ELSE created_at END WHERE id = ?1",
+                params![id, dirty, file_id, rev, fresh, changed, edited, created],
+            )
+            .map_err(err)?;
+        Ok(changed)
+    }
+
+    /// Criação e última edição da nota (vão junto com o arquivo para o Drive).
+    pub fn note_times(&self, id: &str) -> Result<(Millis, Millis)> {
+        self.conn.query_row("SELECT created_at, updated_at FROM notes WHERE id = ?1", [id], |r| Ok((r.get(0)?, r.get(1)?))).map_err(err)
+    }
+
+    /// Enviada: limpa a marca de mudança só se a nota não mudou de novo enquanto subia.
+    pub fn mark_uploaded(&self, id: &str, uploaded: &[u8], file_id: &str, rev: &str) -> Result<()> {
+        self.conn
+            .execute(
+                "UPDATE notes SET drive_file_id = ?3, drive_rev = ?4, dirty = CASE WHEN ydoc = ?2 THEN 0 ELSE dirty END WHERE id = ?1",
+                params![id, uploaded, file_id, rev],
+            )
+            .map_err(err)?;
+        Ok(())
+    }
+
+    /// O arquivo da nota sumiu do Drive (outro aparelho a excluiu de vez): sai daqui também. Se havia mudança aqui
+    /// ainda não enviada, a nota fica (volta ao Drive no próximo envio): nenhuma edição se perde.
+    pub fn remove_synced_note(&self, file_id: &str) -> Result<bool> {
+        let Some(id) = self.note_by_file(file_id)? else { return Ok(false) };
+        self.conn.execute("UPDATE notes SET drive_file_id = NULL, drive_rev = NULL WHERE id = ?1", [&id]).map_err(err)?;
+        let dirty: bool = self.conn.query_row("SELECT dirty FROM notes WHERE id = ?1", [&id], |r| r.get(0)).map_err(err)?;
+        if dirty {
+            return Ok(false);
+        }
+        self.delete_note(&id)
+    }
+
+    pub fn is_pending_delete(&self, file_id: &str) -> Result<bool> {
+        self.conn.query_row("SELECT EXISTS (SELECT 1 FROM pending_deletes WHERE drive_file_id = ?1)", [file_id], |r| r.get(0)).map_err(err)
+    }
+
+    pub fn mark_dirty(&self, id: &str) -> Result<()> {
+        self.conn.execute("UPDATE notes SET dirty = 1 WHERE id = ?1", [id]).map_err(err)?;
+        Ok(())
+    }
+
+    pub fn add_pending_delete(&self, file_id: &str) -> Result<()> {
+        self.conn.execute("INSERT OR IGNORE INTO pending_deletes (drive_file_id) VALUES (?1)", [file_id]).map_err(err)?;
+        Ok(())
+    }
+
+    pub fn pending_deletes(&self) -> Result<Vec<String>> {
+        self.ids("SELECT drive_file_id FROM pending_deletes", [])
+    }
+
+    pub fn clear_pending_delete(&self, file_id: &str) -> Result<()> {
+        self.conn.execute("DELETE FROM pending_deletes WHERE drive_file_id = ?1", [file_id]).map_err(err)?;
+        Ok(())
+    }
+
+    /// Anexos usados por notas e ainda não enviados.
+    pub fn attachments_to_upload(&self) -> Result<Vec<Attachment>> {
+        let hashes = self.ids(
+            "SELECT DISTINCT a.hash FROM attachments a JOIN note_attachments na ON na.hash = a.hash WHERE a.drive_file_id IS NULL AND a.local_state = 'full'",
+            [],
+        )?;
+        self.get_attachments(&hashes)
+    }
+
+    pub fn set_attachment_file(&self, hash: &str, file_id: &str) -> Result<()> {
+        self.conn.execute("UPDATE attachments SET drive_file_id = ?2, uploaded = 1 WHERE hash = ?1", params![hash, file_id]).map_err(err)?;
+        Ok(())
+    }
+
+    /// Anexo que existe no Drive: o arquivo dele (para baixar quando faltar aqui).
+    pub fn attachment_file(&self, hash: &str) -> Result<Option<String>> {
+        self.conn
+            .query_row("SELECT drive_file_id FROM attachments WHERE hash = ?1", [hash], |r| r.get(0))
+            .optional()
+            .map(Option::flatten)
+            .map_err(err)
+    }
+
+    /// Anexo que outro aparelho subiu: entra registrado (com o arquivo no Drive), mas o conteúdo ainda não está aqui.
+    pub fn register_remote_attachment(&self, a: &Attachment, file_id: &str) -> Result<()> {
+        let known: bool = self.conn.query_row("SELECT EXISTS (SELECT 1 FROM attachments WHERE hash = ?1)", [&a.hash], |r| r.get(0)).map_err(err)?;
+        if !known {
+            self.insert_attachment(a)?;
+            self.conn.execute("UPDATE attachments SET local_state = 'missing' WHERE hash = ?1", [&a.hash]).map_err(err)?;
+        }
+        self.set_attachment_file(&a.hash, file_id)
+    }
+
+    /// Anexos registrados sem o conteúdo aqui: (hash, arquivo no Drive, tipo, tamanho).
+    pub fn missing_attachments(&self) -> Result<Vec<(String, String, String, i64)>> {
+        let mut st = self
+            .conn
+            .prepare_cached(
+                "SELECT hash, drive_file_id, kind, bytes FROM attachments WHERE local_state = 'missing' AND drive_file_id IS NOT NULL ORDER BY added_at DESC",
+            )
+            .map_err(err)?;
+        let rows = st.query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?))).map_err(err)?;
+        rows.collect::<std::result::Result<_, _>>().map_err(err)
+    }
+
+    pub fn set_attachment_local(&self, hash: &str) -> Result<()> {
+        self.conn.execute("UPDATE attachments SET local_state = 'full' WHERE hash = ?1", [hash]).map_err(err)?;
+        Ok(())
+    }
+
+    /// Nota de boas-vindas ainda como nasceu (nunca editada nem enviada): sai quando este aparelho entra numa conta
+    /// que já tem notas (não faz sentido ganhar uma cópia dela a cada aparelho).
+    pub fn drop_untouched_welcome(&self) -> Result<bool> {
+        let Some(id) = self.sync_value("welcome_note")? else { return Ok(false) };
+        self.set_sync_value("welcome_note", None)?;
+        let untouched: bool = self
+            .conn
+            .query_row("SELECT EXISTS (SELECT 1 FROM notes WHERE id = ?1 AND created_at = updated_at AND drive_file_id IS NULL)", [&id], |r| r.get(0))
+            .map_err(err)?;
+        if untouched {
+            self.delete_note(&id)?;
+        }
+        Ok(untouched)
+    }
+
+    pub fn sync_blob(&self, key: &str) -> Result<Option<Vec<u8>>> {
+        self.conn.query_row("SELECT value FROM sync_blobs WHERE key = ?1", [key], |r| r.get(0)).optional().map_err(err)
+    }
+
+    pub fn set_sync_blob(&self, key: &str, value: &[u8]) -> Result<()> {
+        self.conn
+            .execute("INSERT INTO sync_blobs (key, value) VALUES (?1, ?2) ON CONFLICT(key) DO UPDATE SET value = excluded.value", params![key, value])
+            .map_err(err)?;
+        Ok(())
+    }
+
+    pub fn sync_value(&self, key: &str) -> Result<Option<String>> {
+        self.conn.query_row("SELECT value FROM sync_state WHERE key = ?1", [key], |r| r.get(0)).optional().map(Option::flatten).map_err(err)
+    }
+
+    pub fn set_sync_value(&self, key: &str, value: Option<&str>) -> Result<()> {
+        match value {
+            Some(v) => self
+                .conn
+                .execute("INSERT INTO sync_state (key, value) VALUES (?1, ?2) ON CONFLICT(key) DO UPDATE SET value = excluded.value", params![key, v]),
+            None => self.conn.execute("DELETE FROM sync_state WHERE key = ?1", [key]),
+        }
+        .map_err(err)?;
+        Ok(())
+    }
+
+    pub fn local_changes(&self) -> Result<LocalChanges> {
+        self.conn
+            .query_row(
+                "SELECT (SELECT COUNT(*) FROM notes WHERE dirty = 1), (SELECT COALESCE(MAX(updated_at), 0) FROM notes WHERE dirty = 1), \
+                 (SELECT COUNT(*) FROM pending_deletes), \
+                 (SELECT COUNT(DISTINCT a.hash) FROM attachments a JOIN note_attachments na ON na.hash = a.hash WHERE a.drive_file_id IS NULL AND a.local_state = 'full'), \
+                 (SELECT COALESCE(MAX(updated_at), 0) FROM categories)",
+                [],
+                |r| Ok(LocalChanges { dirty: r.get(0)?, dirty_edited_at: r.get(1)?, deletes: r.get(2)?, uploads: r.get(3)?, categories_changed_at: r.get(4)? }),
+            )
+            .map_err(err)
+    }
+
+    /// Saiu da conta: as notas ficam, mas nada aqui aponta mais para o Drive. Entrar de novo envia tudo outra vez
+    /// (e junta com o que já estiver lá).
+    pub fn reset_sync(&self) -> Result<()> {
+        self.conn
+            .execute_batch(
+                "BEGIN; UPDATE notes SET drive_file_id = NULL, drive_rev = NULL, dirty = 1; \
+                 UPDATE attachments SET drive_file_id = NULL, uploaded = 0; DELETE FROM pending_deletes; DELETE FROM sync_blobs; \
+                 DELETE FROM sync_state WHERE key IN ('account', 'drive_token', 'last_sync', 'categories_file', 'categories_rev'); COMMIT;",
+            )
+            .map_err(err)
+    }
+
+    /// Todas as categorias, inclusive as apagadas (o sync precisa saber que foram apagadas).
+    pub fn category_rows(&self) -> Result<Vec<CategoryRow>> {
+        let mut st = self.conn.prepare_cached("SELECT id, name, color, sort, deleted FROM categories").map_err(err)?;
+        let rows = st
+            .query_map([], |r| Ok(CategoryRow { id: r.get(0)?, name: r.get(1)?, color: r.get(2)?, sort: r.get(3)?, deleted: r.get(4)? }))
+            .map_err(err)?;
+        rows.collect::<std::result::Result<_, _>>().map_err(err)
+    }
+
+    pub fn put_category_rows(&self, rows: &[CategoryRow]) -> Result<()> {
+        let tx = self.conn.unchecked_transaction().map_err(err)?;
+        for c in rows {
+            tx.execute(
+                "INSERT INTO categories (id, name, color, sort, deleted, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6) \
+                 ON CONFLICT(id) DO UPDATE SET name = excluded.name, color = excluded.color, sort = excluded.sort, deleted = excluded.deleted",
+                params![c.id, c.name, c.color, c.sort, c.deleted, now()],
+            )
+            .map_err(err)?;
+        }
+        tx.commit().map_err(err)
+    }
+
     // ---------- configurações e sync ----------
 
     pub fn get_settings(&self) -> Result<Value> {
@@ -1143,8 +1445,17 @@ impl Store {
                 |r| Ok((r.get(0)?, r.get(1)?)),
             )
             .map_err(err)?;
-        // Sync com o Drive é a Fase 5; até lá, tudo fica só neste aparelho.
-        Ok(SyncStatus { connected: false, last_sync_at: None, note_count: notes, cache_used_bytes: bytes })
+        Ok(SyncStatus {
+            configured: false,
+            state: "ok",
+            error: None,
+            connected: self.sync_value("account")?.is_some(),
+            account: self.sync_value("account")?,
+            last_sync_at: self.sync_value("last_sync")?.and_then(|v| v.parse().ok()),
+            pending: self.conn.query_row("SELECT COUNT(*) FROM notes WHERE dirty = 1", [], |r| r.get(0)).map_err(err)?,
+            note_count: notes,
+            cache_used_bytes: bytes,
+        })
     }
 
     pub fn is_empty(&self) -> Result<bool> {
@@ -1444,7 +1755,12 @@ mod tests {
             let s = Store::open(&path).unwrap();
             s.save_note(&note("m1", "Antiga", "corpo da fase 1")).unwrap();
             // Como era na Fase 1: sem a coluna do estado Yjs, esquema na versão 1.
-            s.conn.execute_batch("ALTER TABLE notes DROP COLUMN ydoc; ALTER TABLE notes DROP COLUMN reminder_repeat; ALTER TABLE notes DROP COLUMN notified_at; PRAGMA user_version = 1").unwrap();
+            s.conn
+                .execute_batch(
+                    "DROP INDEX notes_drive; ALTER TABLE notes DROP COLUMN ydoc; ALTER TABLE notes DROP COLUMN reminder_repeat; \
+                     ALTER TABLE notes DROP COLUMN notified_at; ALTER TABLE notes DROP COLUMN drive_file_id; ALTER TABLE notes DROP COLUMN drive_rev; PRAGMA user_version = 1",
+                )
+                .unwrap();
         }
         let s = Store::open(&path).unwrap();
         let backup = path.with_extension("db.v1.bak");

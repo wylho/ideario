@@ -316,17 +316,24 @@ const sameContent = (a: NoteInput, b: NoteInput) => INPUT_KEYS.every((k) => JSON
 
 function changed() {
   for (const fn of listeners) fn()
-  scheduleSync()
+  if (syncAccount) scheduleSync()
 }
 
 // Simula o ciclo do sync (SPEC §6): alguns instantes depois da última edição, sobe e volta a 'ok'.
+// A prévia começa com uma conta de exemplo conectada.
+let syncAccount: string | null = 'voce@gmail.com'
+let lastSyncAt = Date.now() - 2 * 60_000
+let signIn: ((ok: boolean) => void) | null = null
 const syncListeners = new Set<(s: SyncState) => void>()
 let syncTimer: ReturnType<typeof setTimeout> | undefined
 function scheduleSync() {
   clearTimeout(syncTimer)
   syncTimer = setTimeout(() => {
     syncListeners.forEach((fn) => fn('syncing'))
-    syncTimer = setTimeout(() => syncListeners.forEach((fn) => fn('ok')), 1200)
+    syncTimer = setTimeout(() => {
+      lastSyncAt = Date.now()
+      syncListeners.forEach((fn) => fn('ok'))
+    }, 1200)
   }, 1500)
 }
 
@@ -582,7 +589,43 @@ export const mockApi: Api = {
     return done(undefined)
   },
   syncStatus: () =>
-    done({ connected: true, lastSyncAt: Date.now() - 2 * 60_000, noteCount: notes.size, cacheUsedBytes: 310 * 1024 * 1024 }),
+    done({
+      configured: true,
+      connected: !!syncAccount,
+      account: syncAccount,
+      state: 'ok',
+      error: null,
+      pending: 0,
+      lastSyncAt: syncAccount ? lastSyncAt : null,
+      noteCount: notes.size,
+      cacheUsedBytes: 310 * 1024 * 1024,
+    }),
+  // Na prévia, o "navegador" volta sozinho com o login depois de um instante.
+  async syncSignIn() {
+    const ok = await new Promise<boolean>((resolve) => {
+      signIn = resolve
+      setTimeout(() => resolve(true), 600)
+    })
+    signIn = null
+    if (!ok) throw new Error('login cancelado')
+    syncAccount = 'voce@gmail.com'
+    scheduleSync()
+    return mockApi.syncStatus()
+  },
+  syncCancelSignIn() {
+    signIn?.(false)
+    return done(undefined)
+  },
+  syncSignOut() {
+    syncAccount = null
+    clearTimeout(syncTimer)
+    return done(undefined)
+  },
+  syncNow() {
+    if (syncAccount) scheduleSync()
+    return done(undefined)
+  },
+  syncFocus() {},
 
   imageUrl: (hash) => imageSrc.get(hash) ?? '',
   getAttachments: (hashes) => done(hashes.flatMap((h) => attachments.get(h) ?? [])),
@@ -657,4 +700,6 @@ export const mockApi: Api = {
     syncListeners.add(fn)
     return () => syncListeners.delete(fn)
   },
+  // Na prévia não há outro aparelho.
+  subscribeRemote: () => () => {},
 }

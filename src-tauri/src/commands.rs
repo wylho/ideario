@@ -13,7 +13,7 @@ use tauri::{AppHandle, Emitter, Manager, State};
 
 use crate::{attachments, keep, media};
 use crate::store::{
-    Attachment, AttachmentRow, Category, Filter, NoteDetail, NoteInput, NoteSummary, Result, Store, SyncStatus, TagCount, ViewCounts,
+    Attachment, AttachmentRow, Category, Filter, NoteDetail, NoteInput, NoteSummary, Result, Store, TagCount, ViewCounts,
 };
 
 /// Estado do núcleo: o banco e a pasta de dados do app.
@@ -83,6 +83,7 @@ fn welcome(store: &Store) -> Result<()> {
         tags: vec![],
     };
     store.save_note(&note)?;
+    store.set_sync_value("welcome_note", Some(&note.id))?;
     store.set_flag("welcomed")
 }
 
@@ -232,11 +233,6 @@ pub fn get_settings(core: Core_) -> Result<Value> {
 #[tauri::command]
 pub fn save_settings(core: Core_, settings: Value) -> Result<()> {
     core.with(|s| s.save_settings(&settings))
-}
-
-#[tauri::command]
-pub fn sync_status(core: Core_) -> Result<SyncStatus> {
-    core.with(|s| s.sync_status())
 }
 
 #[tauri::command]

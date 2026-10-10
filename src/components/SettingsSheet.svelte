@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Dialog, Slider, Switch, ToggleGroup } from 'bits-ui'
-  import { CloudCheck, Monitor, Moon, StickyNote, Sun, X } from '@lucide/svelte'
+  import { CloudAlert, CloudCheck, CloudOff, Monitor, Moon, StickyNote, Sun, X } from '@lucide/svelte'
   import { api, coreVersion } from '../lib/api'
   import { app } from '../lib/app.svelte'
   import { ago } from '../lib/format'
@@ -17,11 +17,51 @@
   let version = $state<string | null>(null)
   coreVersion().then((v) => (version = v))
 
+  const loadStatus = () => api.syncStatus().then((s) => (status = s))
   $effect(() => {
     if (!app.settingsOpen) return
     api.getSettings().then((s) => (settings = s))
-    api.syncStatus().then((s) => (status = s))
+    // Acompanha o sync enquanto as configurações estão abertas (última vez, pendências, erro).
+    void app.sync
+    void app.revision
+    void loadStatus()
   })
+
+  // ---------- Google Drive ----------
+  let signingIn = $state(false)
+  async function signIn() {
+    signingIn = true
+    try {
+      status = await api.syncSignIn()
+      app.say('Conectado ao Google Drive')
+    } catch (e) {
+      const msg = String(e instanceof Error ? e.message : e)
+      if (!msg.includes('cancelado')) app.say(`Não foi possível entrar: ${msg}`)
+    } finally {
+      signingIn = false
+    }
+  }
+  function signOut() {
+    app.confirm({
+      title: 'Sair da conta Google?',
+      text: 'As notas continuam neste aparelho, mas param de sincronizar. Para voltar, é só entrar de novo.',
+      confirm: 'Sair',
+      onconfirm: async () => {
+        await api.syncSignOut()
+        await loadStatus()
+      },
+    })
+  }
+  async function syncNow() {
+    await api.syncNow()
+  }
+  function syncLine(s: SyncStatus) {
+    if (s.state === 'error' && s.error) return s.error
+    if (app.sync === 'syncing') return 'Sincronizando…'
+    if (app.sync === 'offline') return 'Sem conexão. As alterações sobem quando voltar.'
+    const pending = s.pending > 0 ? ` · ${s.pending === 1 ? '1 nota a enviar' : `${s.pending} notas a enviar`}` : ''
+    return `${s.lastSyncAt ? `Sincronizado ${ago(s.lastSyncAt)}` : 'Ainda não sincronizou'} · ${s.noteCount} notas${pending}`
+  }
 
   // Grava a cada mudança (não há botão "salvar").
   let runs = 0
@@ -129,20 +169,41 @@
 
           <section class="set-group">
             <h3>Sincronização</h3>
-            <div class="sync-card">
-              <CloudCheck size={22} />
-              <div>
-                <b>{status?.connected ? 'Google Drive conectado' : 'Google Drive desconectado'}</b>
-                {#if status}
-                  <span>Última sincronização {status.lastSyncAt ? ago(status.lastSyncAt) : 'nunca'} · {status.noteCount} notas</span>
+            {#if status && !status.configured}
+              <div class="sync-card off">
+                <CloudOff size={22} />
+                <div>
+                  <b>Só neste aparelho</b>
+                  <span>Esta versão do app não tem a sincronização com o Google Drive ligada.</span>
+                </div>
+              </div>
+            {:else if status?.connected}
+              <div class="sync-card" class:bad={status.state === 'error'}>
+                {#if status.state === 'error'}<CloudAlert size={22} />{:else}<CloudCheck size={22} />{/if}
+                <div>
+                  <b>{status.account}</b>
+                  <span>{syncLine(status)}</span>
+                </div>
+                <button class="btn ghost sm" disabled={app.sync === 'syncing'} onclick={syncNow}>Sincronizar agora</button>
+              </div>
+              <div class="set-row">
+                <span><b>Google Drive</b><small>As notas ficam numa pasta oculta do app no seu Drive: só o Ideario lê e escreve nela.</small></span>
+                <button class="btn ghost" onclick={signOut}>Sair</button>
+              </div>
+            {:else if status}
+              <div class="sync-card off">
+                <CloudOff size={22} />
+                <div>
+                  <b>Só neste aparelho</b>
+                  <span>{signingIn ? 'Continue no navegador. Volte aqui depois de permitir.' : 'Entre com a sua conta Google para ver as mesmas notas em todos os aparelhos.'}</span>
+                </div>
+                {#if signingIn}
+                  <button class="btn ghost sm" onclick={() => api.syncCancelSignIn()}>Cancelar</button>
+                {:else}
+                  <button class="btn primary sm" onclick={signIn}>Entrar com Google</button>
                 {/if}
               </div>
-              <button class="btn ghost sm" onclick={() => app.say('Sincronizando…')}>Agora</button>
-            </div>
-            <label class="set-row" for="so-wifi">
-              <span><b>Sincronizar só no Wi-Fi</b><small>Anexos grandes esperam o Wi-Fi. Texto sincroniza sempre.</small></span>
-              <Switch.Root id="so-wifi" class="switch" bind:checked={settings.wifiOnly}><Switch.Thumb class="thumb" /></Switch.Root>
-            </label>
+            {/if}
           </section>
 
           {#if isTauri()}
