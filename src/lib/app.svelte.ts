@@ -2,7 +2,8 @@
 // Visão (como ver) e filtro (o que ver) são independentes: trocar um nunca desfaz o outro.
 import { SvelteSet } from 'svelte/reactivity'
 import { api } from './api'
-import type { AttachmentRow, NoteSummary, Box, Category, FileGroup, FileSort, Filter, NoteSort, SyncState, TagCount, Tone, View, ViewCounts } from './types'
+import type { AttachmentRow, NoteSummary, Box, Category, FileGroup, FileSort, Filter, NoteSort, OrphanCounts, SyncState, TagCount, Tone, View, ViewCounts } from './types'
+import { NO_CATEGORY, NO_TAGS } from './types'
 import { uuidv7 } from './uuid'
 
 export interface NameDialog {
@@ -120,6 +121,8 @@ class AppState {
   revision = $state(0)
   categories = $state.raw<Category[]>([])
   tags = $state.raw<TagCount[]>([])
+  /** Notas ativas sem categoria e sem tags ("Sem categoria" e "Sem tags" na lateral). */
+  orphans = $state.raw<OrphanCounts>({ uncategorized: 0, untagged: 0 })
   /** Contagem por visão para o filtro e a busca atuais. */
   counts = $state.raw<ViewCounts>({ notes: 0, reminders: 0, overdue: 0, files: 0, moodboard: 0 })
 
@@ -158,9 +161,10 @@ class AppState {
   }
 
   async loadShared() {
-    const [categories, tags] = await Promise.all([api.listCategories(), api.listTags()])
+    const [categories, tags, orphans] = await Promise.all([api.listCategories(), api.listTags(), api.orphanCounts()])
     this.categories = categories
     this.tags = tags
+    this.orphans = orphans
   }
 
   category = (id: string | null | undefined) => (id ? this.categories.find((c) => c.id === id) : undefined)
@@ -169,9 +173,10 @@ class AppState {
     return !!this.filter.categoryId || this.filter.tags.length > 0
   }
 
-  /** "Linvo · #campanha", ou null sem filtro. */
+  /** "Linvo · #campanha", "Sem categoria · Sem tags", ou null sem filtro. */
   get filterLabel(): string | null {
-    const parts = [this.category(this.filter.categoryId)?.name, ...this.filter.tags.map((t) => `#${t}`)].filter(Boolean)
+    const cat = this.filter.categoryId === NO_CATEGORY ? 'Sem categoria' : this.category(this.filter.categoryId)?.name
+    const parts = [cat, ...this.filter.tags.map((t) => (t === NO_TAGS ? 'Sem tags' : `#${t}`))].filter(Boolean)
     return parts.length ? parts.join(' · ') : null
   }
 
@@ -239,10 +244,13 @@ class AppState {
     this.box = 'active'
   }
 
+  /** Liga/desliga a tag no filtro. "Sem tags" não se combina com tags: escolher um tira o outro. */
   toggleTag(tag: string) {
     this.clearSelection()
     const t = this.filter.tags
-    this.filter.tags = t.includes(tag) ? t.filter((x) => x !== tag) : [...t, tag]
+    if (t.includes(tag)) this.filter.tags = t.filter((x) => x !== tag)
+    else if (tag === NO_TAGS) this.filter.tags = [NO_TAGS]
+    else this.filter.tags = [...t.filter((x) => x !== NO_TAGS), tag]
     this.box = 'active'
   }
 
@@ -287,7 +295,11 @@ class AppState {
     this.editor = {
       id: uuidv7(),
       isNew: true,
-      defaults: defaults ?? { categoryId: this.filter.categoryId, tags: [...this.filter.tags] },
+      // "Sem categoria"/"Sem tags" no filtro: a nota nova nasce sem (não com o valor do filtro).
+      defaults: defaults ?? {
+        categoryId: this.filter.categoryId === NO_CATEGORY ? null : this.filter.categoryId,
+        tags: this.filter.tags.filter((t) => t !== NO_TAGS),
+      },
       start,
     }
   }

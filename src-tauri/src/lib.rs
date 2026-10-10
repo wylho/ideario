@@ -120,6 +120,7 @@ pub fn run() {
             commands::delete_category,
             commands::restore_category,
             commands::list_tags,
+            commands::orphan_counts,
             commands::rename_tag,
             commands::get_note,
             commands::save_note,

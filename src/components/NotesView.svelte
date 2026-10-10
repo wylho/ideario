@@ -3,6 +3,7 @@
   import { api } from '../lib/api'
   import { app, live } from '../lib/app.svelte'
   import { createCardDrag } from '../lib/drag.svelte'
+  import { NO_CATEGORY } from '../lib/types'
   import { estimateCard } from '../lib/layout'
   import { marquee } from '../lib/marquee'
   import Empty from './Empty.svelte'
@@ -67,12 +68,15 @@
       return true
     },
     onDrop: (id, after, before) => api.moveNote(id, { after, before }),
-    onDropCategory: (id, categoryId) => {
+    onDropCategory: (id, target) => {
+      // soltar em "Sem categoria" tira a categoria
+      const categoryId = target === NO_CATEGORY ? null : target
       const n = notes.current.find((x) => x.id === id)
       if (!n || n.categoryId === categoryId) return
       const before = n.categoryId
       void api.updateNote(id, { categoryId })
-      app.say(`Movida para ${app.category(categoryId)?.name ?? 'a categoria'}`, { label: 'Desfazer', run: () => void api.updateNote(id, { categoryId: before }) })
+      const msg = categoryId ? `Movida para ${app.category(categoryId)?.name ?? 'a categoria'}` : 'Agora sem categoria'
+      app.say(msg, { label: 'Desfazer', run: () => void api.updateNote(id, { categoryId: before }) })
     },
   })
 </script>

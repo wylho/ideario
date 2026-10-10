@@ -152,8 +152,21 @@ export interface NoteInput {
  * Categoria e tags se combinam (a nota precisa ter todas as tags).
  */
 export interface Filter {
+  /** Id da categoria, ou `NO_CATEGORY` (sem categoria). */
   categoryId: string | null
+  /** Tags (a nota precisa ter todas), ou só `NO_TAGS` (sem tag nenhuma). */
   tags: string[]
+}
+
+/** "Sem categoria" no filtro: não é um id possível. O mesmo valor de `NO_CATEGORY` no núcleo (store.rs). */
+export const NO_CATEGORY = '~none'
+/** "Sem tags" no filtro: não é uma tag possível (`~` não entra em tag). O mesmo valor de `NO_TAGS` no núcleo. */
+export const NO_TAGS = '~none'
+
+/** Notas ativas sem categoria e sem tag nenhuma (contagens da lateral). */
+export interface OrphanCounts {
+  uncategorized: number
+  untagged: number
 }
 
 /** Notas ativas, arquivadas ou na lixeira. Arquivo e Lixeira só existem na visão Notas. */

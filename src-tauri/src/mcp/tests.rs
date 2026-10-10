@@ -103,6 +103,9 @@ fn create_read_search_and_edit() {
     assert_eq!(found["notes"][0]["id"], id);
     assert_eq!(found["notes"][0]["category"], "Casa");
     assert!(json_of(&tool(&core, "search_notes", json!({ "tag": "semana" }), true))["total"] == 1);
+    // sem categoria / sem tags: a nota de boas-vindas (a do mercado tem as duas coisas... até tirar a categoria)
+    let orphans = json_of(&tool(&core, "search_notes", json!({ "no_category": true, "no_tags": true }), true));
+    assert!(orphans["notes"].as_array().unwrap().iter().all(|n| n["id"] != id));
     assert!(tool(&core, "search_notes", json!({ "category": "Trabalho" }), false).contains("Existem: Casa"));
     // trocar um trecho: só aquele
     tool(&core, "edit_note_text", json!({ "id": id, "find": "Para sábado:", "replace": "Para **domingo**:" }), true);

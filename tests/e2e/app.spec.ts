@@ -662,6 +662,53 @@ test('arrastar um card até uma categoria da lateral muda a categoria (com Desfa
   await expect(card()).not.toContainText('Linvo')
 })
 
+test('lateral: "Sem categoria" e "Sem tags" filtram; soltar um card em "Sem categoria" tira a categoria', async ({ page }) => {
+  await page.setViewportSize({ width: 1300, height: 900 })
+  const noCat = page.locator('.sidebar .d-item', { hasText: 'Sem categoria' })
+  const noTags = page.locator('.sidebar .chip', { hasText: 'Sem tags' })
+  // fica por último na lista de categorias, logo antes do separador
+  await expect(page.locator('.sidebar .drawer-scroll > .d-item').filter({ hasNot: page.locator('svg') }).last()).toContainText('Sem categoria')
+  const nCat = Number(await noCat.locator('.count').textContent())
+  expect(nCat).toBeGreaterThan(0)
+  await noCat.click()
+  await expect(page.locator('.filter-title')).toContainText('Sem categoria')
+  await expect(cards(page)).toHaveCount(nCat)
+  await expect(cards(page).locator('.pill.cat')).toHaveCount(0)
+  // sem tags: os cards não têm tag nenhuma
+  const nTags = Number(await noTags.locator('.count').textContent())
+  await page.locator('.filter-title').getByRole('button').click()
+  await noTags.click()
+  await expect(cards(page)).toHaveCount(nTags)
+  await expect(cards(page).locator('.pill.tag')).toHaveCount(0)
+  // escolher uma tag tira o "Sem tags" (não se combinam)
+  await page.locator('.sidebar .chip', { hasText: '#estudo' }).click()
+  await expect(noTags).not.toHaveClass(/\bon\b/)
+  await expect(page.locator('.filter-bar')).toContainText('#estudo')
+  await page.getByRole('button', { name: 'Limpar filtro' }).click()
+  // soltar um card com categoria em "Sem categoria"
+  const card = () => cards(page).filter({ hasText: 'Horários e estacionamento' })
+  await card().scrollIntoViewIfNeeded()
+  let prev = ''
+  await expect.poll(async () => {
+    const b = JSON.stringify(await card().boundingBox())
+    const same = b === prev
+    prev = b
+    return same
+  }).toBe(true)
+  await expect(card().locator('.pill.cat')).toHaveCount(1)
+  const t = (await noCat.boundingBox())!
+  const h = (await card().locator('h3').boundingBox())!
+  await page.mouse.move(h.x + 20, h.y + h.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(h.x + 40, h.y + h.height / 2 + 10, { steps: 3 })
+  await page.mouse.move(t.x + t.width / 2, t.y + t.height / 2, { steps: 12 })
+  await expect(noCat).toHaveClass(/drop-target/)
+  await page.mouse.up()
+  await expect(page.locator('.toast span')).toHaveText('Agora sem categoria')
+  await expect(card().locator('.pill.cat')).toHaveCount(0)
+  await expect(noCat.locator('.count')).toHaveText(String(nCat + 1))
+})
+
 test.describe('ordenar e arrastar', () => {
   const titles = (page: Page, section = 1) =>
     page.locator('.drag-section').nth(section).locator('.card').evaluateAll((els) => els.map((e) => e.getAttribute('aria-label')))

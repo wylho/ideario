@@ -164,6 +164,12 @@ pub fn restore_category(core: Core_, id: String, note_ids: Vec<String>) -> Resul
     core.with(|s| s.restore_category(&id, &note_ids))
 }
 
+/// Quantas notas ativas estão sem categoria e sem tags (para a lateral).
+#[tauri::command]
+pub fn orphan_counts(core: Core_) -> Result<crate::store::OrphanCounts> {
+    core.with(|s| s.orphan_counts())
+}
+
 #[tauri::command]
 pub fn list_tags(core: Core_) -> Result<Vec<TagCount>> {
     core.with(|s| s.list_tags())

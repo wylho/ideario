@@ -1,7 +1,7 @@
 // Camada de dados da UI. No app, os comandos Tauri (`invoke`) do núcleo Rust (SQLite local, Fase 1);
 // no navegador (`npm run dev`, prévia) e nos testes e2e, um mock em memória com dados de exemplo.
 import type {
-  Attachment, AttachmentKind, AttachmentRow, KeepReport, Box, McpInfo, Millis, Category, Filter, NoteDetail, NoteInput, NotePatch, NoteSort, NoteSummary, Settings, SyncState, SyncStatus, TagCount, Tone, ViewCounts,
+  Attachment, AttachmentKind, AttachmentRow, KeepReport, Box, McpInfo, OrphanCounts, Millis, Category, Filter, NoteDetail, NoteInput, NotePatch, NoteSort, NoteSummary, Settings, SyncState, SyncStatus, TagCount, Tone, ViewCounts,
 } from '../types'
 import { invoke, isTauri } from '@tauri-apps/api/core'
 import { mockApi } from './mock'
@@ -23,6 +23,8 @@ export interface Api {
   deleteCategory(id: string): Promise<string[]>
   restoreCategory(id: string, noteIds: string[]): Promise<void>
   listTags(): Promise<TagCount[]>
+  /** Notas ativas sem categoria e sem tag nenhuma. */
+  orphanCounts(): Promise<OrphanCounts>
   /** Renomeia a tag em todas as notas (manuais e #tags do texto); com `to` null, tira a tag (a palavra fica no texto). */
   renameTag(from: string, to: string | null): Promise<number>
 
