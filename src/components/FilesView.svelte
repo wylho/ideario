@@ -31,7 +31,7 @@
 
   const icons: Partial<Record<AttachmentKind, typeof FileIcon>> = { pdf: FileText, sheet: FileSpreadsheet, audio: FileAudio, video: FileVideoCamera }
   // Foto, vídeo e áudio abrem no visualizador (com player); documentos abrem a nota de origem.
-  const open = (r: AttachmentRow) => (['image', 'video', 'audio'].includes(r.kind) ? (app.lightbox = r) : app.openNote(r.noteId))
+  const open = (r: AttachmentRow) => (['image', 'video', 'audio', 'pdf'].includes(r.kind) ? (app.lightbox = r) : app.openNote(r.noteId))
 </script>
 
 <div class="stats">
