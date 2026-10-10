@@ -633,6 +633,35 @@ test('segurar o card arrastado quase parado não fica trocando a ordem (sem trem
   expect(changes).toBe(0)
 })
 
+test('arrastar um card até uma categoria da lateral muda a categoria (com Desfazer)', async ({ page }) => {
+  await page.setViewportSize({ width: 1300, height: 900 })
+  const card = () => cards(page).filter({ hasText: 'Horários e estacionamento' })
+  const target = page.locator('.sidebar [data-drop-category]', { hasText: 'Linvo' })
+  // espera a grade assentar na largura nova (os cards deslizam até o lugar) e rola até o card
+  await card().scrollIntoViewIfNeeded()
+  let prev = ''
+  await expect.poll(async () => {
+    const b = JSON.stringify(await card().boundingBox())
+    const same = b === prev
+    prev = b
+    return same
+  }).toBe(true)
+  const t = (await target.boundingBox())!
+  // pega pelo título
+  const h = (await card().locator('h3').boundingBox())!
+  await page.mouse.move(h.x + 20, h.y + h.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(h.x + 40, h.y + h.height / 2 + 10, { steps: 3 })
+  await page.mouse.move(t.x + t.width / 2, t.y + t.height / 2, { steps: 12 })
+  await expect(target).toHaveClass(/drop-target/)
+  await page.mouse.up()
+  await expect(page.locator('.toast span')).toHaveText('Movida para Linvo')
+  await expect(page.locator('.editor')).toHaveCount(0)
+  await expect(card()).toContainText('Linvo')
+  await page.locator('.toast').getByRole('button', { name: 'Desfazer' }).click()
+  await expect(card()).not.toContainText('Linvo')
+})
+
 test.describe('ordenar e arrastar', () => {
   const titles = (page: Page, section = 1) =>
     page.locator('.drag-section').nth(section).locator('.card').evaluateAll((els) => els.map((e) => e.getAttribute('aria-label')))

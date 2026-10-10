@@ -15,6 +15,8 @@ interface Options {
   beforeStart?: () => boolean
   /** Soltou numa nova posição: vizinhos na nova ordem (null nas pontas). */
   onDrop: (id: string, after: string | null, before: string | null) => Promise<void> | void
+  /** Soltou numa categoria da lateral: a nota vai para ela (a ordem não muda). */
+  onDropCategory?: (id: string, categoryId: string) => void
 }
 
 export function createCardDrag(opts: Options) {
@@ -87,7 +89,19 @@ export function createCardDrag(opts: Options) {
           begin()
         }
         e.preventDefault()
-        ghost!.style.transform = `translate(${e.clientX - start.offX}px, ${e.clientY - start.offY}px) rotate(1.2deg) scale(1.03)`
+        // Em cima de uma categoria da lateral: soltar ali muda a categoria; a grade volta à ordem de antes.
+        const cat = opts.onDropCategory ? document.elementFromPoint(e.clientX, e.clientY)?.closest<HTMLElement>('[data-drop-category]') : null
+        app.dropCategory = cat?.dataset.dropCategory ?? null
+        ghost!.classList.toggle('over-target', !!cat)
+        ghost!.style.transform = cat
+          ? `translate(${e.clientX - 24}px, ${e.clientY - 16}px) scale(.35)`
+          : `translate(${e.clientX - start.offX}px, ${e.clientY - start.offY}px) rotate(1.2deg) scale(1.03)`
+        if (cat) {
+          if (override && override.ids.join() !== startIds.join()) override = { key, ids: startIds }
+          lastSlot = ''
+          moved = null
+          return
+        }
         reorderAt(e.clientX, e.clientY)
       }
 
@@ -164,12 +178,14 @@ export function createCardDrag(opts: Options) {
         if (!start || e.pointerId !== start.pointerId) return
         if (!active) return cleanup()
         const id = start.id
+        const category = app.dropCategory
         const order = override?.ids ?? []
-        const changed = order.join() !== startIds.join()
+        const changed = !category && order.join() !== startIds.join()
         // O clique que termina o arraste não abre a nota.
         window.addEventListener('click', swallow, { capture: true, once: true })
         setTimeout(() => window.removeEventListener('click', swallow, { capture: true }), 0)
         cleanup(true)
+        if (category) opts.onDropCategory?.(id, category)
         if (changed) {
           const i = order.indexOf(id)
           await opts.onDrop(id, order[i - 1] ?? null, order[i + 1] ?? null)
@@ -198,6 +214,7 @@ export function createCardDrag(opts: Options) {
         ghost = null
         document.documentElement.classList.remove('dragging-card')
         if (active) app.dragId = null
+        app.dropCategory = null
         if (!keepOverride && active) override = null
         active = false
         armed = false
