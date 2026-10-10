@@ -91,6 +91,8 @@ class AppState {
   filesKind = $state<FileGroup | null>(null)
   /** Moodboard: tom mostrado (null = todos). */
   moodTone = $state<Tone | null>(null)
+  /** Moodboard com as fotos das notas arquivadas também. */
+  moodArchived = $state(false)
   /** Lembretes: mostrar os concluídos no fim da lista. */
   showDone = $state(false)
   /** Card sendo arrastado (para o resto da UI reagir). */

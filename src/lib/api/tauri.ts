@@ -51,7 +51,7 @@ export const tauriApi: Api = {
   listNotes: ({ filter, box, query, sort }) => invoke('list_notes', { filter, box, query, sort }),
   listReminders: ({ filter, query, includeDone }) => invoke('list_reminders', { filter, query, includeDone }),
   listAttachments: ({ filter, query }) => invoke('list_attachments', { filter, query }),
-  listImages: ({ filter, query, tone }) => invoke('list_images', { filter, query, tone }),
+  listImages: ({ filter, query, tone, archived }) => invoke('list_images', { filter, query, tone, archived: !!archived }),
   viewCounts: ({ filter, query }) => invoke('view_counts', { filter, query }),
 
   listCategories: () => invoke('list_categories'),

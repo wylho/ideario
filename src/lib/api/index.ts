@@ -13,7 +13,7 @@ export interface Api {
   /** Todos os anexos (fotos e arquivos) das notas ativas que passam no filtro. */
   listAttachments(p: { filter: Filter; query: string }): Promise<AttachmentRow[]>
   /** Imagens das notas ativas que passam no filtro, para o Moodboard. */
-  listImages(p: { filter: Filter; query: string; tone: Tone | null }): Promise<AttachmentRow[]>
+  listImages(p: { filter: Filter; query: string; tone: Tone | null; archived?: boolean }): Promise<AttachmentRow[]>
   /** Contagem por visão para o filtro e a busca atuais (notas ativas). */
   viewCounts(p: { filter: Filter; query: string }): Promise<ViewCounts>
   listCategories(): Promise<Category[]>

@@ -1168,17 +1168,20 @@ impl Store {
     /// Anexos das notas ativas que passam no filtro (mais recentes primeiro, na ordem do corpo), filtrados pela busca
     /// no nome do arquivo ou da nota.
     pub fn list_attachments(&self, filter: &Filter, query: &str) -> Result<Vec<AttachmentRow>> {
-        self.attachment_rows(filter, "", None, |r, q| q.is_empty() || fold(&format!("{} {}", r.a.name, r.note_title)).contains(q), query)
+        self.attachment_rows("active", filter, "", None, |r, q| q.is_empty() || fold(&format!("{} {}", r.a.name, r.note_title)).contains(q), query)
     }
 
     /// Fotos das notas ativas que passam no filtro e na busca, para o Moodboard.
-    pub fn list_images(&self, filter: &Filter, query: &str, tone: Option<&str>) -> Result<Vec<AttachmentRow>> {
-        let rows = self.attachment_rows(filter, query, Some("image"), |_, _| true, "")?;
+    /// Fotos para o Moodboard; com `archived`, as das notas arquivadas também.
+    pub fn list_images(&self, filter: &Filter, query: &str, tone: Option<&str>, archived: bool) -> Result<Vec<AttachmentRow>> {
+        let box_ = if archived { "live" } else { "active" };
+        let rows = self.attachment_rows(box_, filter, query, Some("image"), |_, _| true, "")?;
         Ok(rows.into_iter().filter(|r| tone.is_none() || r.a.tone.as_deref() == tone).collect())
     }
 
     fn attachment_rows(
         &self,
+        box_: &str,
         filter: &Filter,
         note_query: &str,
         kind: Option<&str>,
@@ -1186,7 +1189,7 @@ impl Store {
         name_query: &str,
     ) -> Result<Vec<AttachmentRow>> {
         let mut args = Vec::new();
-        let mut w = Self::where_clause("active", filter, note_query, &mut args);
+        let mut w = Self::where_clause(box_, filter, note_query, &mut args);
         if let Some(k) = kind {
             args.push(k.to_string().into());
             w.push_str(&format!(" AND a.kind = ?{}", args.len()));
@@ -1884,9 +1887,19 @@ mod tests {
         assert_eq!((sum.cover[0].width, sum.image_count, sum.file_count), (200, 1, 1));
         assert_eq!(s.list_attachments(&Filter::default(), "").unwrap().len(), 2);
         assert_eq!(s.list_attachments(&Filter::default(), "doc").unwrap().len(), 1);
-        assert_eq!(s.list_images(&Filter::default(), "", None).unwrap().len(), 1);
+        assert_eq!(s.list_images(&Filter::default(), "", None, false).unwrap().len(), 1);
         assert_eq!(s.get_note("a").unwrap().unwrap().media.len(), 2);
         assert_eq!(s.view_counts(&Filter::default(), "").unwrap().files, 2);
+        // Moodboard: a foto da nota arquivada só aparece pedindo os arquivados; a da lixeira, nunca
+        let mut p = Map::new();
+        p.insert("archived".into(), json!(true));
+        s.update_note("a", &p).unwrap();
+        assert!(s.list_images(&Filter::default(), "", None, false).unwrap().is_empty());
+        assert_eq!(s.list_images(&Filter::default(), "", None, true).unwrap().len(), 1);
+        let mut p = Map::new();
+        p.insert("trashedAt".into(), json!(now()));
+        s.update_note("a", &p).unwrap();
+        assert!(s.list_images(&Filter::default(), "", None, true).unwrap().is_empty());
     }
 
     #[test]

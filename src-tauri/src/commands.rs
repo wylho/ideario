@@ -125,8 +125,8 @@ pub fn list_attachments(core: Core_, filter: Filter, query: String) -> Result<Ve
 }
 
 #[tauri::command]
-pub fn list_images(core: Core_, filter: Filter, query: String, tone: Option<String>) -> Result<Vec<AttachmentRow>> {
-    core.with(|s| s.list_images(&filter, &query, tone.as_deref()))
+pub fn list_images(core: Core_, filter: Filter, query: String, tone: Option<String>, archived: Option<bool>) -> Result<Vec<AttachmentRow>> {
+    core.with(|s| s.list_images(&filter, &query, tone.as_deref(), archived.unwrap_or(false)))
 }
 
 #[tauri::command]

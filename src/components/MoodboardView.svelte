@@ -11,7 +11,7 @@
 
   // O tom é escolhido na barra superior (ViewActions).
   const tone = $derived(app.moodTone)
-  const items = live(() => api.listImages({ filter: $state.snapshot(app.filter), query: app.query, tone }), [] as AttachmentRow[])
+  const items = live(() => api.listImages({ filter: $state.snapshot(app.filter), query: app.query, tone, archived: app.moodArchived }), [] as AttachmentRow[])
 </script>
 
 {#if items.ready && !items.current.length}
