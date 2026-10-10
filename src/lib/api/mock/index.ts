@@ -54,8 +54,16 @@ const blobSrc = new Map<string, string>()
 const listeners = new Set<() => void>()
 const projections = new WeakMap<RichDoc, Projection>()
 /** Categorias (as de exemplo, e as que se criam na sessão). */
-const categories = SEED_CATEGORIES.map((c) => ({ ...c, deleted: false }))
+const categories = SEED_CATEGORIES.map((c) => ({ ...c, deleted: false, hidden: false, pin: null as string | null }))
 const liveCategories = () => categories.filter((c) => !c.deleted)
+/** Categorias com PIN desbloqueadas nesta sessão (como a tabela temporária do núcleo). */
+const unlocked = new Set<string>()
+/** Categoria oculta ou com PIN: as notas dela ficam fora das listas, a não ser `selected` (com PIN, só desbloqueada). */
+function hiddenFrom(n: StoredNote, selected: string | null) {
+  const c = categories.find((x) => x.id === n.categoryId && !x.deleted)
+  if (!c || (!c.hidden && !c.pin)) return false
+  return !(c.id === selected && (!c.pin || unlocked.has(c.id)))
+}
 let settings: Settings = { wifiOnly: true, photoQuality: 'balanced', cacheLimitGb: 2 }
 
 // ---------- seed ----------
@@ -260,6 +268,7 @@ function inBox(n: StoredNote, box: Box) {
 const uncategorized = (n: StoredNote) => !n.categoryId || !liveCategories().some((c) => c.id === n.categoryId)
 
 function passes(n: StoredNote, f: Filter) {
+  if (hiddenFrom(n, f.categoryId)) return false
   if (f.categoryId === NO_CATEGORY ? !uncategorized(n) : f.categoryId && n.categoryId !== f.categoryId) return false
   if (!f.tags.length) return true
   const tags = tagsOf(n)
@@ -438,14 +447,19 @@ export const mockApi: Api = {
 
   listCategories() {
     const live = [...notes.values()].filter(isLive)
-    return done(liveCategories().map<Category>((c) => ({ id: c.id, name: c.name, color: c.color, icon: null, noteCount: live.filter((n) => n.categoryId === c.id).length })))
+    return done(
+      liveCategories().map<Category>((c) => ({
+        id: c.id, name: c.name, color: c.color, icon: null, noteCount: live.filter((n) => n.categoryId === c.id).length,
+        hidden: c.hidden, locked: !!c.pin, unlocked: unlocked.has(c.id),
+      })),
+    )
   },
 
   createCategory(name, color) {
-    const c = { id: uuidv7(), name: name.trim(), color, deleted: false }
+    const c = { id: uuidv7(), name: name.trim(), color, deleted: false, hidden: false, pin: null }
     categories.push(c)
     changed()
-    return done({ id: c.id, name: c.name, color, icon: null, noteCount: 0 })
+    return done({ id: c.id, name: c.name, color, icon: null, noteCount: 0, hidden: false, locked: false, unlocked: false })
   },
 
   updateCategory(id, p) {
@@ -456,6 +470,41 @@ export const mockApi: Api = {
       changed()
     }
     return done(undefined)
+  },
+
+  setCategoryHidden(id, hidden) {
+    const c = categories.find((x) => x.id === id)
+    if (c) c.hidden = hidden
+    changed()
+    return done(undefined)
+  },
+  setCategoryPin(id, current, pin) {
+    const c = categories.find((x) => x.id === id)
+    if (!c) return done(undefined)
+    if (c.pin && c.pin !== current) return Promise.reject(new Error('O PIN atual não confere.'))
+    if (pin !== null && !/^\d{4,8}$/.test(pin)) return Promise.reject(new Error('o PIN tem de 4 a 8 números'))
+    c.pin = pin
+    if (pin) unlocked.add(id)
+    else unlocked.delete(id)
+    changed()
+    return done(undefined)
+  },
+  unlockCategory(id, pin) {
+    const c = categories.find((x) => x.id === id)
+    const ok = !!c?.pin && c.pin === pin
+    if (ok) unlocked.add(id)
+    changed()
+    return done(ok)
+  },
+  lockCategory(id) {
+    unlocked.delete(id)
+    changed()
+    return done(undefined)
+  },
+  noteLocked(id) {
+    const n = notes.get(id)
+    const c = n && categories.find((x) => x.id === n.categoryId && !x.deleted)
+    return done(!!c?.pin && !unlocked.has(c.id))
   },
 
   deleteCategory(id) {
@@ -504,12 +553,13 @@ export const mockApi: Api = {
 
   orphanCounts() {
     const live = [...notes.values()].filter(isLive)
-    return done({ uncategorized: live.filter(uncategorized).length, untagged: live.filter((n) => tagsOf(n).length === 0).length })
+    const shown = live.filter((n) => !hiddenFrom(n, null))
+    return done({ uncategorized: shown.filter(uncategorized).length, untagged: shown.filter((n) => tagsOf(n).length === 0).length })
   },
 
   listTags() {
     const m = new Map<string, number>()
-    for (const n of notes.values()) if (isLive(n)) for (const t of tagsOf(n)) m.set(t, (m.get(t) ?? 0) + 1)
+    for (const n of notes.values()) if (isLive(n) && !hiddenFrom(n, null)) for (const t of tagsOf(n)) m.set(t, (m.get(t) ?? 0) + 1)
     return done([...m].map<TagCount>(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count || a.name.localeCompare(b.name)))
   },
 

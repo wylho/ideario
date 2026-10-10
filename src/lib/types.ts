@@ -23,6 +23,12 @@ export interface Category {
   icon: string | null
   /** Notas visíveis (fora do arquivo e da lixeira). */
   noteCount: number
+  /** Oculta: as notas dela não aparecem em Tudo, na busca nem nas outras visões (só abrindo a categoria). */
+  hidden: boolean
+  /** Tem PIN: oculta e só abre com o PIN. */
+  locked: boolean
+  /** Com PIN, mas desbloqueada até o app fechar. */
+  unlocked: boolean
 }
 
 export interface TagCount {

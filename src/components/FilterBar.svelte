@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Dialog } from 'bits-ui'
-  import { Hash, X } from '@lucide/svelte'
+  import { EyeOff, Hash, Lock, X } from '@lucide/svelte'
   import { app } from '../lib/app.svelte'
   import { categoryMenu } from '../lib/menus'
   import ContextMenu from './ContextMenu.svelte'
@@ -52,8 +52,9 @@
     {#each app.categories as c (c.id)}
       <ContextMenu items={() => categoryMenu(c.id)}>
         {#snippet children(trigger)}
-          <button {...trigger} class="chip" class:on={app.filter.categoryId === c.id} aria-pressed={app.filter.categoryId === c.id} onclick={() => app.setCategory(c.id)}>
+          <button {...trigger} class="chip" class:on={app.filter.categoryId === c.id} aria-pressed={app.filter.categoryId === c.id} onclick={() => app.openCategory(c.id)}>
             <i class="dot" style:background={c.color}></i>{c.name}
+            {#if c.locked && !c.unlocked}<Lock size={12} class="cat-flag" />{:else if c.hidden}<EyeOff size={12} class="cat-flag" />{/if}
           </button>
         {/snippet}
       </ContextMenu>

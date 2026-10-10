@@ -527,7 +527,16 @@ fn run(core: &Core, name: &str, a: &Args) -> Result<Out> {
             let cats: Vec<Value> = s
                 .list_categories()?
                 .into_iter()
-                .map(|c| json!({ "id": c.id, "name": c.name, "color": c.color, "colorName": color_name(&c.color), "notes": c.note_count }))
+                .map(|c| {
+                    let mut v = json!({ "id": c.id, "name": c.name, "color": c.color, "colorName": color_name(&c.color), "notes": c.note_count });
+                    if c.hidden {
+                        v["hidden"] = json!(true);
+                    }
+                    if c.locked {
+                        v["protectedByPin"] = json!(true);
+                    }
+                    v
+                })
                 .collect();
             Ok(Out::Json(Value::Array(cats)))
         }),
@@ -549,6 +558,7 @@ fn run(core: &Core, name: &str, a: &Args) -> Result<Out> {
         }),
         "update_category" => core.with(|s| {
             let id = category_id(s, a.need("category")?)?;
+            not_protected(s, &id)?;
             let color = a.str("color").map(category_color).transpose()?;
             s.update_category(&id, a.str("name").map(str::trim).filter(|n| !n.is_empty()), color.as_deref())?;
             s.log_external(None, false)?;
@@ -556,6 +566,7 @@ fn run(core: &Core, name: &str, a: &Args) -> Result<Out> {
         }),
         "delete_category" => core.with(|s| {
             let id = category_id(s, a.need("category")?)?;
+            not_protected(s, &id)?;
             let notes = s.category_note_ids(&id)?;
             s.delete_category(&id)?;
             for n in &notes {
@@ -644,16 +655,29 @@ fn repeat_label(r: Option<&str>) -> &'static str {
 
 // ---------- notas ----------
 
+const PROTECTED: &str = "esta nota está numa categoria protegida por PIN; o Claude não tem acesso a ela";
+
 fn existing(s: &Store, id: &str) -> Result<String> {
-    if s.note_exists(id)? {
-        Ok(id.to_string())
-    } else {
-        Err(format!("não existe nota com id {id} (use search_notes)"))
+    if !s.note_exists(id)? {
+        return Err(format!("não existe nota com id {id} (use search_notes)"));
     }
+    if s.note_locked(id)? {
+        return Err(PROTECTED.into());
+    }
+    Ok(id.to_string())
 }
 
 fn note(s: &Store, id: &str) -> Result<NoteInput> {
+    existing(s, id)?;
     s.note_input(id)?.ok_or_else(|| format!("não existe nota com id {id} (use search_notes)"))
+}
+
+/// Categoria com PIN: o Claude não renomeia nem apaga (apagar soltaria as notas dela).
+fn not_protected(s: &Store, id: &str) -> Result<()> {
+    if s.list_categories()?.iter().any(|c| c.id == id && c.locked) {
+        return Err("categoria protegida por PIN; só no app".into());
+    }
+    Ok(())
 }
 
 fn names(s: &Store) -> impl Fn(&str) -> Option<String> + '_ {
@@ -1313,6 +1337,7 @@ fn list_attachments(core: &Core, a: &Args) -> Result<Out> {
         let tone = a.str("tone");
         let keep = |at: &Attachment| kind.map_or(true, |k| at.kind == k) && tone.map_or(true, |t| at.tone.as_deref() == Some(t));
         let rows: Vec<Value> = if let Some(id) = a.str("note_id") {
+            existing(s, id)?;
             let d = s.get_note(id)?.ok_or_else(|| format!("não existe nota com id {id}"))?;
             d.media.iter().chain(d.files.iter()).filter(|x| keep(x)).take(limit).map(attachment_json).collect()
         } else {

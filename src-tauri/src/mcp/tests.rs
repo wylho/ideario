@@ -250,6 +250,24 @@ fn attachments_in_and_out() {
 }
 
 #[test]
+fn pin_protected_categories_are_off_limits() {
+    let (core, _t) = setup();
+    let cat = core.with(|s| s.create_category("Senhas", "#C0392B")).unwrap();
+    let id = id_in(&tool(&core, "create_note", json!({ "title": "Banco", "content": "agência 1234", "category": "Senhas" }), true));
+    core.with(|s| s.set_category_pin(&cat.id, Some("2468"))).unwrap();
+    // (o processo do MCP é outro: nunca está desbloqueado)
+    core.with(|s| s.lock_category(&cat.id)).unwrap();
+    assert!(tool(&core, "get_note", json!({ "id": id }), false).contains("protegida por PIN"));
+    assert!(tool(&core, "edit_note_text", json!({ "id": id, "find": "1234", "replace": "x" }), false).contains("protegida"));
+    assert!(tool(&core, "move_note", json!({ "id": id, "to": "trash" }), false).contains("protegida"));
+    assert_eq!(json_of(&tool(&core, "search_notes", json!({ "query": "agencia" }), true))["total"], 0);
+    assert_eq!(json_of(&tool(&core, "search_notes", json!({ "category": "Senhas" }), true))["total"], 0);
+    assert!(tool(&core, "delete_category", json!({ "category": "Senhas" }), false).contains("protegida"));
+    let cats = json_of(&tool(&core, "list_categories", json!({}), true));
+    assert_eq!(cats[0]["protectedByPin"], true);
+}
+
+#[test]
 fn overview_says_what_time_it_is() {
     let (core, _t) = setup();
     let o = json_of(&tool(&core, "app_overview", json!({}), true));

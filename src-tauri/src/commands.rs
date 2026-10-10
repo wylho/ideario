@@ -149,6 +149,41 @@ pub fn update_category(core: Core_, id: String, name: Option<String>, color: Opt
     core.with(|s| s.update_category(&id, name.as_deref(), color.as_deref()))
 }
 
+/// Oculta (ou mostra) a categoria: as notas dela saem de Tudo, da busca e das outras visões.
+#[tauri::command]
+pub fn set_category_hidden(core: Core_, id: String, hidden: bool) -> Result<()> {
+    core.with(|s| s.set_category_hidden(&id, hidden))
+}
+
+/// Põe, troca ou tira (`pin` nulo) o PIN. Se a categoria já tem PIN, `current` precisa conferir.
+#[tauri::command]
+pub fn set_category_pin(core: Core_, id: String, current: Option<String>, pin: Option<String>) -> Result<()> {
+    core.with(|s| {
+        let has_pin = s.list_categories()?.iter().any(|c| c.id == id && c.locked);
+        if has_pin && !s.check_pin(&id, current.as_deref().unwrap_or(""))? {
+            return Err("O PIN atual não confere.".into());
+        }
+        s.set_category_pin(&id, pin.as_deref())
+    })
+}
+
+/// Desbloqueia até o app fechar (ou bloquear de novo). Devolve se o PIN conferiu.
+#[tauri::command]
+pub fn unlock_category(core: Core_, id: String, pin: String) -> Result<bool> {
+    core.with(|s| s.unlock_category(&id, &pin))
+}
+
+#[tauri::command]
+pub fn lock_category(core: Core_, id: String) -> Result<()> {
+    core.with(|s| s.lock_category(&id))
+}
+
+/// A nota está numa categoria com PIN ainda bloqueada (abrir pede o PIN).
+#[tauri::command]
+pub fn note_locked(core: Core_, id: String) -> Result<bool> {
+    core.with(|s| s.note_locked(&id))
+}
+
 /// Apaga a categoria e devolve as notas que estavam nela (para o "Desfazer").
 #[tauri::command]
 pub fn delete_category(core: Core_, id: String) -> Result<Vec<String>> {

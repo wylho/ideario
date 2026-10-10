@@ -74,6 +74,12 @@ pub struct Category {
     pub color: String,
     pub icon: Option<String>,
     pub note_count: i64,
+    /// Oculta: as notas dela não aparecem em Tudo, na busca nem nas outras visões (só abrindo a categoria).
+    pub hidden: bool,
+    /// Tem PIN: oculta e só abre com o PIN.
+    pub locked: bool,
+    /// Com PIN, mas já desbloqueada nesta sessão do app.
+    pub unlocked: bool,
 }
 
 #[derive(Debug, Serialize)]
@@ -188,6 +194,9 @@ pub struct CategoryRow {
     pub color: String,
     pub sort: i64,
     pub deleted: bool,
+    pub hidden: bool,
+    /// Hash do PIN (o mesmo em todos os aparelhos).
+    pub pin: Option<String>,
 }
 
 /// O que mudou aqui e ainda não foi para o Drive (a linha do sync compara duas olhadas seguidas: igual = a escrita
@@ -361,7 +370,31 @@ const MIGRATIONS: &[&str] = &[
       removed INTEGER NOT NULL DEFAULT 0
     );
     "#,
+    // 7 — categoria oculta e categoria com PIN (os dois vão no categories.ydoc, valem em todos os aparelhos).
+    r#"
+    ALTER TABLE categories ADD COLUMN hidden INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE categories ADD COLUMN pin_hash TEXT;
+    "#,
 ];
+
+/// SQL: a nota não está numa categoria oculta ou com PIN — a não ser a categoria escolhida (`?N`, ou NULL), que mostra
+/// as notas dela (com PIN, só depois de desbloquear nesta sessão: `temp.unlocked`).
+fn private_clause(selected: usize) -> String {
+    format!(
+        "NOT EXISTS (SELECT 1 FROM categories c WHERE c.id = n.category_id AND c.deleted = 0 AND (c.hidden = 1 OR c.pin_hash IS NOT NULL) \
+         AND NOT (c.id IS ?{selected} AND (c.pin_hash IS NULL OR c.id IN (SELECT id FROM temp.unlocked))))"
+    )
+}
+
+/// O mesmo, sem categoria escolhida (contagens da lateral, tags).
+const NOT_PRIVATE: &str = "NOT EXISTS (SELECT 1 FROM categories c WHERE c.id = n.category_id AND c.deleted = 0 AND (c.hidden = 1 OR c.pin_hash IS NOT NULL))";
+
+/// Hash do PIN da categoria (o id entra junto: o mesmo PIN em duas categorias dá hashes diferentes).
+fn pin_hash(category: &str, pin: &str) -> String {
+    use sha2::{Digest, Sha256};
+    let digest = Sha256::digest(format!("ideario-pin:{category}:{pin}").as_bytes());
+    digest.iter().map(|b| format!("{b:02x}")).collect()
+}
 
 /// Mudança feita por outro processo no banco (o MCP).
 #[derive(Debug, Clone, PartialEq)]
@@ -403,6 +436,9 @@ impl Store {
         for (i, sql) in MIGRATIONS.iter().enumerate().skip(version) {
             conn.execute_batch(&format!("BEGIN; {sql}; PRAGMA user_version = {}; COMMIT;", i + 1)).map_err(err)?;
         }
+        // Categorias com PIN desbloqueadas nesta sessão: tabela temporária, só desta conexão (fechar o app bloqueia
+        // de novo; o MCP, outro processo, nunca vê as desbloqueadas aqui).
+        conn.execute_batch("CREATE TEMP TABLE IF NOT EXISTS unlocked (id TEXT PRIMARY KEY)").map_err(err)?;
         let store = Store { conn };
         store.backfill_ydocs()?;
         store.reproject_if_outdated()?;
@@ -466,6 +502,12 @@ impl Store {
             "live" => "n.trashed_at IS NULL".to_string(),
             _ => "n.archived = 0 AND n.trashed_at IS NULL".to_string(),
         }];
+        // Categorias ocultas e com PIN ficam de fora (a escolhida no filtro mostra as dela).
+        args.push(match filter.category_id.as_deref() {
+            Some(NO_CATEGORY) | None => rusqlite::types::Value::Null,
+            Some(c) => c.to_string().into(),
+        });
+        w.push(private_clause(args.len()));
         match filter.category_id.as_deref() {
             Some(NO_CATEGORY) => w.push(UNCATEGORIZED.into()),
             Some(c) => {
@@ -639,12 +681,24 @@ impl Store {
             .conn
             .prepare_cached(
                 "SELECT c.id, c.name, c.color, \
-                 (SELECT COUNT(*) FROM notes n WHERE n.category_id = c.id AND n.archived = 0 AND n.trashed_at IS NULL) \
+                 (SELECT COUNT(*) FROM notes n WHERE n.category_id = c.id AND n.archived = 0 AND n.trashed_at IS NULL), \
+                 c.hidden, c.pin_hash IS NOT NULL, c.id IN (SELECT id FROM temp.unlocked) \
                  FROM categories c WHERE c.deleted = 0 ORDER BY c.sort, c.name",
             )
             .map_err(err)?;
         let rows = st
-            .query_map([], |r| Ok(Category { id: r.get(0)?, name: r.get(1)?, color: r.get(2)?, icon: None, note_count: r.get(3)? }))
+            .query_map([], |r| {
+                Ok(Category {
+                    id: r.get(0)?,
+                    name: r.get(1)?,
+                    color: r.get(2)?,
+                    icon: None,
+                    note_count: r.get(3)?,
+                    hidden: r.get(4)?,
+                    locked: r.get(5)?,
+                    unlocked: r.get(6)?,
+                })
+            })
             .map_err(err)?;
         rows.collect::<std::result::Result<_, _>>().map_err(err)
     }
@@ -663,7 +717,7 @@ impl Store {
         self.conn
             .execute("INSERT INTO categories (id, name, color, sort, updated_at) VALUES (?1, ?2, ?3, ?4, ?5)", params![id, name, color, sort, now()])
             .map_err(err)?;
-        Ok(Category { id, name: name.to_string(), color: color.to_string(), icon: None, note_count: 0 })
+        Ok(Category { id, name: name.to_string(), color: color.to_string(), icon: None, note_count: 0, hidden: false, locked: false, unlocked: false })
     }
 
     /// Categoria pelo nome (sem diferenciar maiúsculas nem acentos); se não existe, cria com a próxima cor livre.
@@ -704,6 +758,62 @@ impl Store {
         Ok(())
     }
 
+    /// Oculta (ou mostra) a categoria nas listas.
+    pub fn set_category_hidden(&self, id: &str, hidden: bool) -> Result<()> {
+        self.conn.execute("UPDATE categories SET hidden = ?2, updated_at = ?3 WHERE id = ?1", params![id, hidden, now()]).map_err(err)?;
+        Ok(())
+    }
+
+    /// Põe (4 a 8 números) ou tira (`None`) o PIN da categoria. Quem chama confere o PIN antigo.
+    pub fn set_category_pin(&self, id: &str, pin: Option<&str>) -> Result<()> {
+        let hash = match pin {
+            Some(p) if (4..=8).contains(&p.len()) && p.chars().all(|c| c.is_ascii_digit()) => Some(pin_hash(id, p)),
+            Some(_) => return Err("o PIN tem de 4 a 8 números".into()),
+            None => None,
+        };
+        self.conn.execute("UPDATE categories SET pin_hash = ?2, updated_at = ?3 WHERE id = ?1", params![id, hash, now()]).map_err(err)?;
+        // PIN novo: a categoria começa desbloqueada (quem acabou de pôr o PIN está vendo); sem PIN, nada a lembrar.
+        match hash {
+            Some(_) => self.conn.execute("INSERT OR IGNORE INTO temp.unlocked (id) VALUES (?1)", [id]),
+            None => self.conn.execute("DELETE FROM temp.unlocked WHERE id = ?1", [id]),
+        }
+        .map_err(err)?;
+        Ok(())
+    }
+
+    /// O PIN confere?
+    pub fn check_pin(&self, id: &str, pin: &str) -> Result<bool> {
+        let saved: Option<String> =
+            self.conn.query_row("SELECT pin_hash FROM categories WHERE id = ?1", [id], |r| r.get(0)).optional().map_err(err)?.flatten();
+        Ok(saved.is_some_and(|h| h == pin_hash(id, pin)))
+    }
+
+    /// Desbloqueia a categoria até o app fechar (ou `lock_category`). Devolve se o PIN conferiu.
+    pub fn unlock_category(&self, id: &str, pin: &str) -> Result<bool> {
+        if !self.check_pin(id, pin)? {
+            return Ok(false);
+        }
+        self.conn.execute("INSERT OR IGNORE INTO temp.unlocked (id) VALUES (?1)", [id]).map_err(err)?;
+        Ok(true)
+    }
+
+    pub fn lock_category(&self, id: &str) -> Result<()> {
+        self.conn.execute("DELETE FROM temp.unlocked WHERE id = ?1", [id]).map_err(err)?;
+        Ok(())
+    }
+
+    /// A nota está numa categoria com PIN ainda bloqueada.
+    pub fn note_locked(&self, id: &str) -> Result<bool> {
+        self.conn
+            .query_row(
+                "SELECT EXISTS (SELECT 1 FROM notes n JOIN categories c ON c.id = n.category_id WHERE n.id = ?1 AND c.deleted = 0 \
+                 AND c.pin_hash IS NOT NULL AND c.id NOT IN (SELECT id FROM temp.unlocked))",
+                [id],
+                |r| r.get(0),
+            )
+            .map_err(err)
+    }
+
     /// Apaga a categoria; as notas dela ficam sem categoria (nada some).
     pub fn delete_category(&self, id: &str) -> Result<()> {
         self.conn.execute("UPDATE categories SET deleted = 1, updated_at = ?2 WHERE id = ?1", params![id, now()]).map_err(err)?;
@@ -736,7 +846,7 @@ impl Store {
             .query_row(
                 &format!(
                     "SELECT COALESCE(SUM({UNCATEGORIZED}), 0), COALESCE(SUM({UNTAGGED}), 0) FROM notes n \
-                     WHERE n.archived = 0 AND n.trashed_at IS NULL"
+                     WHERE n.archived = 0 AND n.trashed_at IS NULL AND {NOT_PRIVATE}"
                 ),
                 [],
                 |r| Ok(OrphanCounts { uncategorized: r.get(0)?, untagged: r.get(1)? }),
@@ -748,8 +858,10 @@ impl Store {
         let mut st = self
             .conn
             .prepare_cached(
-                "SELECT t.tag, COUNT(DISTINCT t.note_id) AS c FROM note_tags t JOIN notes n ON n.id = t.note_id \
-                 WHERE n.archived = 0 AND n.trashed_at IS NULL GROUP BY t.tag ORDER BY c DESC, t.tag",
+                &format!(
+                    "SELECT t.tag, COUNT(DISTINCT t.note_id) AS c FROM note_tags t JOIN notes n ON n.id = t.note_id \
+                     WHERE n.archived = 0 AND n.trashed_at IS NULL AND {NOT_PRIVATE} GROUP BY t.tag ORDER BY c DESC, t.tag"
+                ),
             )
             .map_err(err)?;
         let rows = st.query_map([], |r| Ok(TagCount { name: r.get(0)?, count: r.get(1)? })).map_err(err)?;
@@ -991,17 +1103,20 @@ impl Store {
     /// Lembretes vencidos até `now` que este aparelho ainda não avisou.
     /// Só notas ativas ou arquivadas (lixeira não avisa) e não concluídas.
     pub fn due_reminders(&self, now: Millis) -> Result<Vec<DueReminder>> {
+        // Nota de categoria com PIN avisa sem mostrar o título (a notificação aparece na tela de qualquer jeito).
+        const LABEL: &str = "CASE WHEN EXISTS (SELECT 1 FROM categories c WHERE c.id = n.category_id AND c.deleted = 0 AND c.pin_hash IS NOT NULL) \
+                             THEN 'Nota protegida' ELSE n.label END";
         let mut st = self
             .conn
-            .prepare_cached(
-                "SELECT id, label, reminder_at, reminder_repeat, 0 FROM notes \
+            .prepare_cached(&format!(
+                "SELECT id, {LABEL}, reminder_at, reminder_repeat, 0 FROM notes n \
                  WHERE reminder_at IS NOT NULL AND reminder_at <= ?1 AND reminder_done = 0 AND trashed_at IS NULL \
                  AND (notified_at IS NULL OR notified_at < reminder_at) \
                  UNION ALL \
-                 SELECT id, label, snoozed_until, reminder_repeat, 1 FROM notes \
+                 SELECT id, {LABEL}, snoozed_until, reminder_repeat, 1 FROM notes n \
                  WHERE snoozed_until IS NOT NULL AND snoozed_until <= ?1 AND trashed_at IS NULL \
-                 ORDER BY 3",
-            )
+                 ORDER BY 3"
+            ))
             .map_err(err)?;
         let rows = st
             .query_map([now], |r| {
@@ -1503,9 +1618,11 @@ impl Store {
 
     /// Todas as categorias, inclusive as apagadas (o sync precisa saber que foram apagadas).
     pub fn category_rows(&self) -> Result<Vec<CategoryRow>> {
-        let mut st = self.conn.prepare_cached("SELECT id, name, color, sort, deleted FROM categories").map_err(err)?;
+        let mut st = self.conn.prepare_cached("SELECT id, name, color, sort, deleted, hidden, pin_hash FROM categories").map_err(err)?;
         let rows = st
-            .query_map([], |r| Ok(CategoryRow { id: r.get(0)?, name: r.get(1)?, color: r.get(2)?, sort: r.get(3)?, deleted: r.get(4)? }))
+            .query_map([], |r| {
+                Ok(CategoryRow { id: r.get(0)?, name: r.get(1)?, color: r.get(2)?, sort: r.get(3)?, deleted: r.get(4)?, hidden: r.get(5)?, pin: r.get(6)? })
+            })
             .map_err(err)?;
         rows.collect::<std::result::Result<_, _>>().map_err(err)
     }
@@ -1516,10 +1633,12 @@ impl Store {
         let tx = self.conn.unchecked_transaction().map_err(err)?;
         for c in rows {
             tx.execute(
-                "INSERT INTO categories (id, name, color, sort, deleted, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, 0) \
-                 ON CONFLICT(id) DO UPDATE SET name = excluded.name, color = excluded.color, sort = excluded.sort, deleted = excluded.deleted \
-                 WHERE name IS NOT excluded.name OR color IS NOT excluded.color OR sort IS NOT excluded.sort OR deleted IS NOT excluded.deleted",
-                params![c.id, c.name, c.color, c.sort, c.deleted],
+                "INSERT INTO categories (id, name, color, sort, deleted, hidden, pin_hash, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 0) \
+                 ON CONFLICT(id) DO UPDATE SET name = excluded.name, color = excluded.color, sort = excluded.sort, deleted = excluded.deleted, \
+                 hidden = excluded.hidden, pin_hash = excluded.pin_hash \
+                 WHERE name IS NOT excluded.name OR color IS NOT excluded.color OR sort IS NOT excluded.sort OR deleted IS NOT excluded.deleted \
+                 OR hidden IS NOT excluded.hidden OR pin_hash IS NOT excluded.pin_hash",
+                params![c.id, c.name, c.color, c.sort, c.deleted, c.hidden, c.pin],
             )
             .map_err(err)?;
         }
@@ -1781,6 +1900,69 @@ mod tests {
     }
 
     #[test]
+    fn hidden_and_pin_protected_categories() {
+        let s = Store::memory();
+        let senhas = s.create_category("Senhas", "#C0392B").unwrap();
+        let casa = s.create_category("Casa", "#4F8A3E").unwrap();
+        let mut a = note("a", "Banco", "agência 123 #financas");
+        a.category_id = Some(senhas.id.clone());
+        a.reminder_at = Some(now() - 1000);
+        let mut b = note("b", "Mercado", "leite #compras");
+        b.category_id = Some(casa.id.clone());
+        for n in [&a, &b, &note("c", "Solta", "texto")] {
+            s.save_note(n).unwrap();
+        }
+        let list = |f: Filter, q: &str| {
+            let mut t: Vec<String> = s.list_notes(&f, "active", q, "updated").unwrap().into_iter().map(|n| n.label).collect();
+            t.sort();
+            t
+        };
+        let cat = |id: &str| Filter { category_id: Some(id.into()), tags: vec![] };
+        let tags = || s.list_tags().unwrap().into_iter().map(|t| t.name).collect::<Vec<_>>();
+        assert_eq!(list(Filter::default(), ""), vec!["Banco", "Mercado", "Solta"]);
+        // ocultar Casa: some de Tudo, da busca e das tags; abrir a categoria mostra
+        s.set_category_hidden(&casa.id, true).unwrap();
+        assert_eq!(list(Filter::default(), ""), vec!["Banco", "Solta"]);
+        assert!(list(Filter::default(), "leite").is_empty());
+        assert_eq!(list(cat(&casa.id), ""), vec!["Mercado"]);
+        assert!(!tags().contains(&"compras".to_string()));
+        // PIN em Senhas: some de tudo e, mesmo escolhida, só abre depois do PIN
+        s.set_category_pin(&senhas.id, Some("1234")).unwrap();
+        assert_eq!(list(Filter::default(), ""), vec!["Solta"]);
+        // quem acabou de pôr o PIN continua vendo, até bloquear (ou fechar o app)
+        assert_eq!(list(cat(&senhas.id), ""), vec!["Banco"]);
+        s.lock_category(&senhas.id).unwrap();
+        assert!(list(cat(&senhas.id), "").is_empty());
+        assert!(s.note_locked("a").unwrap());
+        assert!(!s.unlock_category(&senhas.id, "0000").unwrap());
+        assert!(s.unlock_category(&senhas.id, "1234").unwrap());
+        assert_eq!(list(cat(&senhas.id), ""), vec!["Banco"]);
+        assert_eq!(list(Filter::default(), ""), vec!["Solta"], "desbloqueada continua fora do Tudo");
+        assert!(!s.note_locked("a").unwrap());
+        s.lock_category(&senhas.id).unwrap();
+        assert!(list(cat(&senhas.id), "").is_empty());
+        // o lembrete avisa sem mostrar o título
+        assert_eq!(s.due_reminders(now()).unwrap()[0].title, "Nota protegida");
+        let cats = s.list_categories().unwrap();
+        let get = |id: &str| cats.iter().find(|c| c.id == id).unwrap();
+        assert!(get(&senhas.id).locked && !get(&senhas.id).unlocked && !get(&senhas.id).hidden);
+        assert!(get(&casa.id).hidden && !get(&casa.id).locked);
+        // PIN de 4 a 8 números
+        for bad in ["12", "abcd", "123456789"] {
+            assert!(s.set_category_pin(&senhas.id, Some(bad)).is_err(), "{bad}");
+        }
+        // vai para o sync (os outros aparelhos recebem o mesmo PIN)
+        let rows = s.category_rows().unwrap();
+        let row = rows.iter().find(|r| r.id == senhas.id).unwrap();
+        assert!(row.pin.as_deref().is_some_and(|p| p.len() == 64 && !p.contains("1234")));
+        assert!(rows.iter().find(|r| r.id == casa.id).unwrap().hidden);
+        // tirar o PIN e mostrar
+        s.set_category_pin(&senhas.id, None).unwrap();
+        s.set_category_hidden(&casa.id, false).unwrap();
+        assert_eq!(list(Filter::default(), ""), vec!["Banco", "Mercado", "Solta"]);
+    }
+
+    #[test]
     fn saving_same_content_keeps_the_date_and_new_notes_go_on_top() {
         let s = Store::memory();
         let a = s.save_note(&note("a", "A", "x")).unwrap();
@@ -1940,7 +2122,8 @@ mod tests {
                 .execute_batch(
                     "DROP INDEX notes_drive; ALTER TABLE notes DROP COLUMN ydoc; ALTER TABLE notes DROP COLUMN reminder_repeat; \
                      ALTER TABLE notes DROP COLUMN notified_at; ALTER TABLE notes DROP COLUMN drive_file_id; ALTER TABLE notes DROP COLUMN drive_rev; \
-                     ALTER TABLE notes DROP COLUMN snoozed_until; DROP TABLE external_changes; PRAGMA user_version = 1",
+                     ALTER TABLE notes DROP COLUMN snoozed_until; DROP TABLE external_changes; \
+                     ALTER TABLE categories DROP COLUMN hidden; ALTER TABLE categories DROP COLUMN pin_hash; PRAGMA user_version = 1",
                 )
                 .unwrap();
         }

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Archive, ChevronDown, Hash, LayoutGrid, Plus, Settings, Trash2 } from '@lucide/svelte'
+  import { Archive, ChevronDown, EyeOff, Hash, LayoutGrid, Lock, LockOpen, Plus, Settings, Trash2 } from '@lucide/svelte'
   import { app } from '../lib/app.svelte'
   import { categoryMenu, newCategory, tagMenu } from '../lib/menus'
   import { NO_CATEGORY, NO_TAGS } from '../lib/types'
@@ -29,7 +29,7 @@
   const showNoTags = $derived(app.filter.tags.includes(NO_TAGS) || (app.orphans.untagged > 0 && app.tags.length > 0))
   const pickCategory = (id: string | null) => {
     if (id === null) app.filter.categoryId = null
-    else app.setCategory(id)
+    else app.openCategory(id)
     app.box = 'active'
     app.drawerOpen = false
   }
@@ -49,6 +49,7 @@
     <button
       {...trigger}
       class="d-item"
+      class:is-hidden={c.hidden || (c.locked && !c.unlocked)}
       class:on={app.filter.categoryId === c.id && app.box === 'active'}
       class:drop-target={app.dropCategory === c.id}
       data-drop-category={c.id}
@@ -58,7 +59,12 @@
     >
       <i class="dot lg" style:background={c.color}></i>
       <span class="grow">{c.name}</span>
-      <span class="count">{c.noteCount}</span>
+      {#if c.locked}
+        {#if c.unlocked}<LockOpen size={14} class="cat-flag" aria-label="desbloqueada" />{:else}<Lock size={14} class="cat-flag" aria-label="protegida com PIN" />{/if}
+      {:else if c.hidden}
+        <EyeOff size={14} class="cat-flag" aria-label="oculta" />
+      {/if}
+      {#if !c.locked || c.unlocked}<span class="count">{c.noteCount}</span>{/if}
     </button>
       {/snippet}
     </ContextMenu>
