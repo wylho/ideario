@@ -80,6 +80,7 @@ fn welcome(store: &Store) -> Result<()> {
         reminder_at: None,
         reminder_done: false,
         reminder_repeat: None,
+        emoji: None,
         tags: vec![],
     };
     store.save_note(&note)?;
@@ -473,6 +474,7 @@ impl Core {
                 reminder_at: None,
                 reminder_done: false,
                 reminder_repeat: None,
+                emoji: None,
                 tags,
             };
             self.with(|s| {

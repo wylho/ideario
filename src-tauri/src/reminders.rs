@@ -275,6 +275,7 @@ mod tests {
             reminder_at: reminder,
             reminder_done: false,
             reminder_repeat: repeat.map(str::to_string),
+            emoji: None,
             tags: vec![],
         }
     }
@@ -416,6 +417,7 @@ mod snooze_tests {
             reminder_at: Some(reminder),
             reminder_done: false,
             reminder_repeat: repeat.map(str::to_string),
+            emoji: None,
             tags: vec![],
         }
     }

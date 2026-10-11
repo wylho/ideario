@@ -26,6 +26,17 @@ const TRASH_DAYS: Millis = 30;
 const STEP: f64 = 1024.0;
 /// Repetições de lembrete que existem.
 pub const REPEATS: [&str; 4] = ["day", "week", "month", "year"];
+
+/// Emoji de capa aceito: um emoji só (sequências com ZWJ, tom de pele, bandeiras e teclas incluídas), sem letras nem
+/// espaços. Qualquer outra coisa vira "sem emoji".
+pub fn clean_emoji(s: &str) -> Option<String> {
+    let s = s.trim();
+    let ok = !s.is_empty()
+        && s.len() <= 32
+        && s.chars().any(|c| !c.is_ascii())
+        && !s.chars().any(|c| c.is_whitespace() || c.is_control() || c.is_ascii_alphabetic());
+    ok.then(|| s.to_string())
+}
 /// Cores das categorias (as mesmas de src/lib/colors.ts).
 const CATEGORY_COLORS: [&str; 10] = ["#C26A3D", "#B8901F", "#4F8A3E", "#3E8E7E", "#3D63D6", "#8A6BC4", "#C2557A", "#C0392B", "#8B5E3C", "#5F7380"];
 /// Formato da projeção gravada (2: blocos de arquivo levam o hash, para a miniatura).
@@ -114,6 +125,8 @@ pub struct NoteSummary {
     pub reminder_done: bool,
     /// Repetição do lembrete: "day" | "week" | "month" | "year" (None = uma vez).
     pub reminder_repeat: Option<String>,
+    /// Emoji grande de capa (None = sem).
+    pub emoji: Option<String>,
     pub tags: Vec<String>,
     pub created_at: Millis,
     pub updated_at: Millis,
@@ -160,6 +173,7 @@ pub struct NoteDetail {
     pub reminder_at: Option<Millis>,
     pub reminder_done: bool,
     pub reminder_repeat: Option<String>,
+    pub emoji: Option<String>,
     pub tags: Vec<String>,
     pub files: Vec<Attachment>,
     pub media: Vec<Attachment>,
@@ -182,6 +196,8 @@ pub struct NoteInput {
     pub reminder_done: bool,
     #[serde(default)]
     pub reminder_repeat: Option<String>,
+    #[serde(default)]
+    pub emoji: Option<String>,
     #[serde(default)]
     pub tags: Vec<String>,
 }
@@ -375,6 +391,10 @@ const MIGRATIONS: &[&str] = &[
     ALTER TABLE categories ADD COLUMN hidden INTEGER NOT NULL DEFAULT 0;
     ALTER TABLE categories ADD COLUMN pin_hash TEXT;
     "#,
+    // 8 — emoji grande de capa da nota (projeção do meta do Y.Doc).
+    r#"
+    ALTER TABLE notes ADD COLUMN emoji TEXT;
+    "#,
 ];
 
 /// SQL: a nota não está numa categoria oculta ou com PIN — a não ser a categoria escolhida (`?N`, ou NULL), que mostra
@@ -546,7 +566,7 @@ impl Store {
     }
 
     const SUMMARY_COLS: &'static str = "n.id, n.title, n.label, NULL, n.preview_json, n.cover_json, n.image_count, n.file_count, \
-        n.category_id, n.color, n.pinned, n.archived, n.trashed_at, n.reminder_at, n.reminder_done, n.created_at, n.updated_at, n.position, n.reminder_repeat";
+        n.category_id, n.color, n.pinned, n.archived, n.trashed_at, n.reminder_at, n.reminder_done, n.created_at, n.updated_at, n.position, n.reminder_repeat, n.emoji";
 
     fn summaries(&self, sql: &str, args: &[rusqlite::types::Value]) -> Result<Vec<NoteSummary>> {
         let mut st = self.conn.prepare_cached(sql).map_err(err)?;
@@ -582,6 +602,7 @@ impl Store {
             reminder_at: r.get(13)?,
             reminder_done: r.get(14)?,
             reminder_repeat: r.get(18)?,
+            emoji: r.get(19)?,
             tags: Vec::new(),
             created_at: r.get(15)?,
             updated_at: r.get(16)?,
@@ -901,7 +922,7 @@ impl Store {
     pub fn note_input(&self, id: &str) -> Result<Option<NoteInput>> {
         self.conn
             .query_row(
-                "SELECT id, title, body_json, category_id, color, pinned, archived, trashed_at, reminder_at, reminder_done, reminder_repeat FROM notes WHERE id = ?1",
+                "SELECT id, title, body_json, category_id, color, pinned, archived, trashed_at, reminder_at, reminder_done, reminder_repeat, emoji FROM notes WHERE id = ?1",
                 [id],
                 |r| {
                     Ok(NoteInput {
@@ -916,6 +937,7 @@ impl Store {
                         reminder_at: r.get(8)?,
                         reminder_done: r.get(9)?,
                         reminder_repeat: r.get(10)?,
+                        emoji: r.get(11)?,
                         tags: Vec::new(),
                     })
                 },
@@ -956,6 +978,7 @@ impl Store {
             reminder_at: n.reminder_at,
             reminder_done: n.reminder_done,
             reminder_repeat: n.reminder_repeat,
+            emoji: n.emoji,
             tags: n.tags,
             files: atts(false)?,
             media: atts(true)?,
@@ -1027,14 +1050,14 @@ impl Store {
         let tx = self.conn.unchecked_transaction().map_err(err)?;
         tx.execute(
             "INSERT INTO notes (id, body_json, title, label, label_fold, body_text, preview_json, cover_json, image_count, file_count, \
-             category_id, color, pinned, archived, trashed_at, reminder_at, reminder_done, position, created_at, updated_at, ydoc, reminder_repeat, dirty) \
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, 1) \
+             category_id, color, pinned, archived, trashed_at, reminder_at, reminder_done, position, created_at, updated_at, ydoc, reminder_repeat, emoji, dirty) \
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, 1) \
              ON CONFLICT(id) DO UPDATE SET ydoc = excluded.ydoc, body_json = excluded.body_json, title = excluded.title, label = excluded.label, \
              label_fold = excluded.label_fold, body_text = excluded.body_text, preview_json = excluded.preview_json, \
              cover_json = excluded.cover_json, image_count = excluded.image_count, file_count = excluded.file_count, \
              category_id = excluded.category_id, color = excluded.color, pinned = excluded.pinned, archived = excluded.archived, \
              trashed_at = excluded.trashed_at, reminder_at = excluded.reminder_at, reminder_done = excluded.reminder_done, \
-             reminder_repeat = excluded.reminder_repeat, \
+             reminder_repeat = excluded.reminder_repeat, emoji = excluded.emoji, \
              updated_at = excluded.updated_at, dirty = 1",
             params![
                 n.id,
@@ -1059,6 +1082,7 @@ impl Store {
                 updated,
                 state,
                 n.reminder_repeat,
+                n.emoji,
             ],
         )
         .map_err(err)?;
@@ -1174,6 +1198,7 @@ impl Store {
                 "reminderAt" => n.reminder_at = v.as_i64(),
                 "reminderDone" => n.reminder_done = v.as_bool().unwrap_or(n.reminder_done),
                 "reminderRepeat" => n.reminder_repeat = v.as_str().filter(|r| REPEATS.contains(r)).map(str::to_string),
+                "emoji" => n.emoji = v.as_str().and_then(clean_emoji),
                 _ => {}
             }
         }
@@ -1800,6 +1825,7 @@ fn same_content(a: &NoteInput, b: &NoteInput) -> bool {
         && a.reminder_at == b.reminder_at
         && a.reminder_done == b.reminder_done
         && a.reminder_repeat == b.reminder_repeat
+        && a.emoji == b.emoji
         && a.tags == b.tags
 }
 
@@ -1883,6 +1909,7 @@ mod tests {
             reminder_at: None,
             reminder_done: false,
             reminder_repeat: None,
+            emoji: None,
             tags: vec![],
         }
     }
@@ -2156,6 +2183,38 @@ mod tests {
     }
 
     #[test]
+    fn cover_emoji_set_listed_and_cleared() {
+        let s = Store::memory();
+        s.save_note(&note("e1", "Receitas", "bolo")).unwrap();
+        let mut patch = Map::new();
+        patch.insert("emoji".into(), json!("🍰"));
+        assert!(s.update_note("e1", &patch).unwrap());
+        assert_eq!(s.get_note("e1").unwrap().unwrap().emoji.as_deref(), Some("🍰"));
+        assert_eq!(s.list_notes(&Filter::default(), "active", "", "custom").unwrap()[0].emoji.as_deref(), Some("🍰"));
+        assert_eq!(ydoc::to_note("e1", &s.ydoc("e1").unwrap().unwrap()).unwrap().emoji.as_deref(), Some("🍰"), "vai no Y.Doc (sincroniza)");
+        // texto não é emoji: não muda nada
+        patch.insert("emoji".into(), json!("oi"));
+        assert!(s.update_note("e1", &patch).unwrap(), "inválido = sem emoji");
+        assert_eq!(s.get_note("e1").unwrap().unwrap().emoji, None);
+        patch.insert("emoji".into(), json!("👨‍👩‍👧"));
+        s.update_note("e1", &patch).unwrap();
+        patch.insert("emoji".into(), Value::Null);
+        assert!(s.update_note("e1", &patch).unwrap());
+        assert_eq!(s.list_notes(&Filter::default(), "active", "", "custom").unwrap()[0].emoji, None);
+    }
+
+    #[test]
+    fn what_counts_as_a_cover_emoji() {
+        for ok in ["🍰", "👨‍👩‍👧‍👦", "🇧🇷", "1️⃣", "#️⃣", "👍🏽", "❤️", " 🌎 ", "🏴\u{e0067}\u{e0062}\u{e0073}\u{e0063}\u{e0074}\u{e007f}"] {
+            assert!(clean_emoji(ok).is_some(), "{ok}");
+        }
+        assert_eq!(clean_emoji(" 🌎 ").as_deref(), Some("🌎"));
+        for bad in ["", "  ", "a", "oi", "12", "🍰 bolo", "🍰\n🍰", "🍰\u{7}", "🍰🍰🍰🍰🍰🍰🍰🍰🍰"] {
+            assert!(clean_emoji(bad).is_none(), "{bad:?}");
+        }
+    }
+
+    #[test]
     fn phase_1_notes_get_a_ydoc_on_open() {
         let path = std::env::temp_dir().join(format!("ideario-mig-{}.db", uuid::Uuid::now_v7()));
         {
@@ -2164,7 +2223,7 @@ mod tests {
             // Como era na Fase 1: sem a coluna do estado Yjs, esquema na versão 1.
             s.conn
                 .execute_batch(
-                    "DROP INDEX notes_drive; ALTER TABLE notes DROP COLUMN ydoc; ALTER TABLE notes DROP COLUMN reminder_repeat; \
+                    "DROP INDEX notes_drive; ALTER TABLE notes DROP COLUMN ydoc; ALTER TABLE notes DROP COLUMN reminder_repeat; ALTER TABLE notes DROP COLUMN emoji; \
                      ALTER TABLE notes DROP COLUMN notified_at; ALTER TABLE notes DROP COLUMN drive_file_id; ALTER TABLE notes DROP COLUMN drive_rev; \
                      ALTER TABLE notes DROP COLUMN snoozed_until; DROP TABLE external_changes; \
                      ALTER TABLE categories DROP COLUMN hidden; ALTER TABLE categories DROP COLUMN pin_hash; PRAGMA user_version = 1",
@@ -2207,6 +2266,7 @@ mod bench {
                 reminder_at: None,
                 reminder_done: false,
                 reminder_repeat: None,
+                emoji: None,
                 tags: vec![],
             })
             .unwrap();

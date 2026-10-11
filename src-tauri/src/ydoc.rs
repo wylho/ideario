@@ -54,7 +54,7 @@ fn encode(doc: &Doc) -> Vec<u8> {
 /// a mesma nota criada em dois aparelhos sem sync (o mesmo Takeout importado nos dois) junta sem duplicar o texto;
 /// conteúdos diferentes têm autores diferentes e nunca se confundem. As edições seguintes usam autores aleatórios.
 pub(crate) fn from_note(n: &NoteInput) -> Vec<u8> {
-    let key = json!([n.id, n.title, n.body, n.category_id, n.color, n.pinned, n.archived, n.trashed_at, n.reminder_at, n.reminder_done, n.reminder_repeat, n.tags]);
+    let key = json!([n.id, n.title, n.body, n.category_id, n.color, n.pinned, n.archived, n.trashed_at, n.reminder_at, n.reminder_done, n.reminder_repeat, n.emoji, n.tags]);
     let digest = Sha256::digest(key.to_string());
     let client = u32::from_le_bytes([digest[0], digest[1], digest[2], digest[3]]).max(2);
     build(n, u64::from(client))
@@ -116,6 +116,7 @@ pub(crate) fn to_note(id: &str, state: &[u8]) -> Result<NoteInput> {
         reminder_at: ms("reminderAt"),
         reminder_done: b("reminderDone"),
         reminder_repeat: s("reminderRepeat"),
+        emoji: s("emoji").as_deref().and_then(crate::store::clean_emoji),
         tags,
     })
 }
@@ -280,6 +281,7 @@ fn write_meta(meta: &MapRef, txn: &mut TransactionMut, n: &NoteInput, prev: Opti
     set("reminderAt", num(n.reminder_at), p.is_some_and(|p| p.reminder_at != n.reminder_at));
     set("reminderDone", Any::Bool(n.reminder_done), p.is_some_and(|p| p.reminder_done != n.reminder_done));
     set("reminderRepeat", opt_str(&n.reminder_repeat), p.is_some_and(|p| p.reminder_repeat != n.reminder_repeat));
+    set("emoji", opt_str(&n.emoji), p.is_some_and(|p| p.emoji != n.emoji));
     let tags: Vec<Any> = n.tags.iter().map(|t| Any::from(t.as_str())).collect();
     set("tags", Any::Array(tags.into()), p.is_some_and(|p| p.tags != n.tags));
 }
@@ -632,6 +634,7 @@ mod tests {
             reminder_at: Some(1_791_573_277_130),
             reminder_done: false,
             reminder_repeat: None,
+            emoji: None,
             tags: vec!["casa".into()],
         }
     }
@@ -686,6 +689,33 @@ mod tests {
         assert_eq!((x.pinned, x.color.as_str()), (false, "sky"));
         assert_eq!(x.title, y.title);
         assert_eq!(x.body, y.body);
+    }
+
+    #[test]
+    fn emoji_goes_in_the_meta_and_merges_with_other_edits() {
+        let base = from_note(&note(rich()));
+        assert_eq!(to_note("n1", &base).unwrap().emoji, None);
+        // um aparelho põe o emoji, o outro muda o título: os dois ficam
+        let mut a = to_note("n1", &base).unwrap();
+        a.emoji = Some("🍰".into());
+        let sa = update(&base, &a, false).unwrap();
+        let mut b = to_note("n1", &base).unwrap();
+        b.title = "Doces".into();
+        let sb = update(&base, &b, false).unwrap();
+        let x = to_note("n1", &apply(&sa, &sb).unwrap()).unwrap();
+        assert_eq!((x.emoji.as_deref(), x.title.as_str()), (Some("🍰"), "Doces"));
+        // tirar o emoji
+        let mut c = x.clone();
+        c.emoji = None;
+        assert_eq!(to_note("n1", &update(&apply(&sa, &sb).unwrap(), &c, false).unwrap()).unwrap().emoji, None);
+    }
+
+    #[test]
+    fn emoji_that_is_not_an_emoji_is_ignored_on_read() {
+        // outro aparelho (ou versão) gravou lixo no meta: a nota lê como sem emoji
+        let mut n = note(rich());
+        n.emoji = Some("texto comprido".into());
+        assert_eq!(to_note("n1", &from_note(&n)).unwrap().emoji, None);
     }
 
     #[test]
@@ -884,6 +914,7 @@ pub(crate) fn tests_note() -> NoteInput {
         reminder_at: None,
         reminder_done: false,
         reminder_repeat: None,
+        emoji: None,
         tags: vec![],
     }
 }
@@ -956,6 +987,7 @@ mod props {
             reminder_at: when,
             reminder_done: false,
             reminder_repeat: None,
+            emoji: None,
             tags,
         }
     }
