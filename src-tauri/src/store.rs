@@ -33,7 +33,7 @@ pub fn clean_emoji(s: &str) -> Option<String> {
     let s = s.trim();
     let ok = !s.is_empty()
         && s.len() <= 32
-        && s.chars().any(|c| !c.is_ascii())
+        && !s.is_ascii()
         && !s.chars().any(|c| c.is_whitespace() || c.is_control() || c.is_ascii_alphabetic());
     ok.then(|| s.to_string())
 }
