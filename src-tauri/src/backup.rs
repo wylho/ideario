@@ -470,6 +470,7 @@ mod tests {
             reminder_at: None,
             reminder_done: false,
             reminder_repeat: None,
+            emoji: None,
             tags: vec![],
         }
     }

@@ -10,7 +10,7 @@ use serde_json::{json, Map, Value};
 
 use crate::commands::Core;
 use crate::markdown::{from_markdown, to_markdown, ATT};
-use crate::store::{Attachment, Filter, Millis, NoteInput, Result, Store, NO_CATEGORY, NO_TAGS, REPEATS};
+use crate::store::{clean_emoji, Attachment, Filter, Millis, NoteInput, Result, Store, NO_CATEGORY, NO_TAGS, REPEATS};
 use crate::text::{fold, normalize_tag};
 use crate::{attachments, reminders};
 
@@ -64,6 +64,7 @@ fn strings(desc: &str) -> Value {
 
 const ID: &str = "id da nota (de search_notes ou create_note)";
 const WHEN: &str = "data e hora em ISO 8601, no fuso do usuário (ex.: 2026-10-11T09:00) ou com fuso; só a data = 9h";
+const EMOJI: &str = "emoji grande de capa do card (um emoji só, ex.: 🍰); vazio tira";
 
 fn defs() -> Vec<Def> {
     let colors = NOTE_COLORS.map(|c| c.0);
@@ -116,6 +117,7 @@ fn defs() -> Vec<Def> {
                 "category": s("nome ou id de uma categoria existente"),
                 "tags": strings("tags (sem #)"),
                 "color": one_of(&colors, "cor do card"),
+                "emoji": s(EMOJI),
                 "pinned": b("fixar no topo"),
                 "reminder": s(WHEN),
                 "repeat": one_of(&repeat, "repetição do lembrete"),
@@ -127,7 +129,7 @@ fn defs() -> Vec<Def> {
         Def {
             name: "update_note",
             title: "Alterar nota",
-            description: "Muda título, corpo (Markdown: substitui o corpo inteiro), categoria, tags, cor ou fixada. Só o que vier muda. Para trocar um trecho do texto, prefira edit_note_text.",
+            description: "Muda título, corpo (Markdown: substitui o corpo inteiro), categoria, tags, cor, emoji de capa ou fixada. Só o que vier muda. Para trocar um trecho do texto, prefira edit_note_text.",
             params: json!({
                 "id": s(ID),
                 "title": s("título novo"),
@@ -135,6 +137,7 @@ fn defs() -> Vec<Def> {
                 "category": s("nome ou id da categoria; vazio = sem categoria"),
                 "tags": strings("tags manuais (substituem as atuais; as #tags do texto continuam)"),
                 "color": one_of(&colors, "cor do card"),
+                "emoji": s(EMOJI),
                 "pinned": b("fixada"),
             }),
             required: &["id"],
@@ -764,6 +767,14 @@ fn note_color(c: &str) -> Result<String> {
         .ok_or_else(|| format!("cor desconhecida: {c} (use {})", NOTE_COLORS.map(|c| c.0).join(", ")))
 }
 
+/// Emoji de capa: vazio tira; senão precisa ser um emoji.
+fn emoji_of(e: &str) -> Result<Option<String>> {
+    if e.trim().is_empty() {
+        return Ok(None);
+    }
+    clean_emoji(e).map(Some).ok_or_else(|| format!("não é um emoji: {e} (mande um emoji só, ou vazio para tirar)"))
+}
+
 fn repeat_of(a: &Args) -> Result<Option<String>> {
     match a.str("repeat") {
         None | Some("none") | Some("") => Ok(None),
@@ -799,6 +810,9 @@ fn note_text(s: &Store, id: &str) -> Result<String> {
     }
     if d.color != "none" {
         head.push(format!("cor: {}", d.color));
+    }
+    if let Some(e) = &d.emoji {
+        head.push(format!("emoji: {e}"));
     }
     if d.pinned {
         head.push("fixada: sim".into());
@@ -898,6 +912,9 @@ fn summary_json(s: &Store, n: &crate::store::NoteSummary, cats: &HashMap<String,
     if n.color != "none" {
         o.insert("color".into(), json!(n.color));
     }
+    if let Some(e) = &n.emoji {
+        o.insert("emoji".into(), json!(e));
+    }
     if n.pinned {
         o.insert("pinned".into(), json!(true));
     }
@@ -970,6 +987,7 @@ fn create(core: &Core, a: &Args) -> Result<Out> {
             reminder_at,
             reminder_done: false,
             reminder_repeat: if reminder_at.is_some() { repeat_of(a)? } else { None },
+            emoji: a.str("emoji").map(emoji_of).transpose()?.flatten(),
             tags: clean_tags(a.strings("tags").unwrap_or_default()),
         };
         s.save_note(&input)?;
@@ -1013,6 +1031,9 @@ fn update(core: &Core, a: &Args) -> Result<Out> {
         }
         if let Some(c) = a.str("color") {
             n.color = note_color(c)?;
+        }
+        if let Some(e) = a.str("emoji") {
+            n.emoji = emoji_of(e)?;
         }
         if let Some(p) = a.bool("pinned") {
             n.pinned = p;

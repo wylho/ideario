@@ -223,7 +223,7 @@ fn kind_label(kind: &str) -> &'static str {
 }
 
 const CSS: &str = "body{margin:0;background:#fff;color:#1f2328;font:17px/1.7 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif}\
-main{max-width:720px;margin:0 auto;padding:48px 24px 64px}h1{font-size:2em;line-height:1.2;margin:0 0 .3em}\
+main{max-width:720px;margin:0 auto;padding:48px 24px 64px}.emoji{font-size:64px;line-height:1;margin-bottom:.2em}h1{font-size:2em;line-height:1.2;margin:0 0 .3em}\
 .meta{color:#6b7280;font-size:14px;margin-bottom:2em}h2{font-size:1.35em;margin:1.4em 0 .4em}p{margin:.5em 0}\
 img{max-width:100%;border-radius:12px;display:block}figure{margin:1em 0}figure.row{display:flex;gap:8px}figure.row img{flex:1;min-width:0;object-fit:cover}\
 ul.tasks{list-style:none;padding-left:0}ul.tasks ul.tasks{padding-left:1.6em}li.task{display:flex;gap:.6em;align-items:flex-start}li.task input{margin-top:.45em}\
@@ -236,13 +236,14 @@ a.link span{color:#6b7280;font-size:14px}a.link small{color:#6b7280;font-size:12
 @media (prefers-color-scheme:dark){body{background:#17191c;color:#e6e8eb}.meta,figure.file figcaption,p.file span,li.task.done>div>p{color:#9aa1a9}pre{background:#23262b}figure.file{border-color:#30343a}a{color:#7aa7ff}}";
 
 /// A nota como uma página HTML (sozinha, sem nada de fora: abre em qualquer navegador).
-fn html_page(title: &str, meta: &str, body: &Value, assets: &HashMap<String, Asset>) -> String {
+fn html_page(title: &str, emoji: Option<&str>, meta: &str, body: &Value, assets: &HashMap<String, Asset>) -> String {
     let content: String = kids(body).iter().map(|b| block_html(b, assets)).collect();
+    let cover = emoji.map(|e| format!("<div class=\"emoji\">{}</div>\n", esc(e))).unwrap_or_default();
     let h1 = if title.trim().is_empty() { String::new() } else { format!("<h1>{}</h1>\n", esc(title)) };
     let meta = if meta.is_empty() { String::new() } else { format!("<div class=\"meta\">{}</div>\n", esc(meta)) };
     format!(
         "<!doctype html>\n<html lang=\"pt-BR\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n\
-         <title>{}</title>\n<style>{CSS}</style>\n</head>\n<body>\n<main>\n{h1}{meta}{content}</main>\n</body>\n</html>\n",
+         <title>{}</title>\n<style>{CSS}</style>\n</head>\n<body>\n<main>\n{cover}{h1}{meta}{content}</main>\n</body>\n</html>\n",
         esc(if title.trim().is_empty() { "Nota" } else { title })
     )
 }
@@ -283,11 +284,13 @@ pub fn export_note(core: &Core, id: &str, format: &str, dest: &Path) -> Result<E
             for (hash, a) in &assets {
                 md = md.replace(&format!("({}{hash})", markdown::ATT), &format!("(<{}>)", a.href));
             }
-            let head = if note.title.trim().is_empty() { String::new() } else { format!("# {}\n\n", markdown::escape_line(&note.title)) };
+            // O emoji de capa vai na frente do título (ou sozinho, se não houver título).
+            let title = [note.emoji.as_deref().unwrap_or(""), note.title.trim()].join(" ");
+            let head = if title.trim().is_empty() { String::new() } else { format!("# {}\n\n", markdown::escape_line(title.trim())) };
             let meta = if meta.is_empty() { String::new() } else { format!("{meta}\n\n") };
             format!("{head}{meta}{md}\n")
         }
-        _ => html_page(&note.title, &meta, &note.body, &assets),
+        _ => html_page(&note.title, note.emoji.as_deref(), &meta, &note.body, &assets),
     };
     let stem = file_stem(&note.title);
     let zipped = dest.extension().and_then(|e| e.to_str()).is_some_and(|e| e.eq_ignore_ascii_case("zip"));
@@ -380,6 +383,7 @@ mod tests {
             reminder_at: None,
             reminder_done: false,
             reminder_repeat: None,
+            emoji: Some("🏖️".into()),
             tags: vec![],
         };
         c.with(|s| s.save_note(&n).map(|_| ())).unwrap();
@@ -403,7 +407,7 @@ mod tests {
         let r = export_note(&c, &id, "html", &dest).unwrap();
         assert_eq!((r.attachments, r.missing), (2, 0));
         let html = String::from_utf8(zip_entry(&dest, "Viagem _SP_.html").unwrap()).unwrap();
-        assert!(html.contains("<h1>Viagem &lt;SP&gt;</h1>"), "título escapado");
+        assert!(html.contains("<div class=\"emoji\">🏖️</div>\n<h1>Viagem &lt;SP&gt;</h1>"), "emoji de capa e título escapado");
         assert!(html.contains("<div class=\"meta\">#ferias</div>"));
         assert!(html.contains("Roteiro <strong>bom</strong>"));
         assert!(html.contains("<li class=\"task done\"><input type=\"checkbox\" disabled checked>"));
@@ -421,7 +425,7 @@ mod tests {
         let dest = dir.join("Viagem.zip");
         export_note(&c, &id, "md", &dest).unwrap();
         let md = String::from_utf8(zip_entry(&dest, "Viagem _SP_.md").unwrap()).unwrap();
-        assert!(md.starts_with("# Viagem \\<SP>\n\n#ferias\n\nRoteiro **bom** #ferias\n\n- [x] Passagem\n\n"), "{md}");
+        assert!(md.starts_with("# 🏖️ Viagem \\<SP>\n\n#ferias\n\nRoteiro **bom** #ferias\n\n- [x] Passagem\n\n"), "{md}");
         assert!(md.contains("![minha praia.webp](<anexos/minha praia.webp>)"), "{md}");
         assert!(md.contains("[📎 aula 1.m4a](<anexos/aula 1.m4a>)"), "{md}");
         // sem zip: um arquivo só

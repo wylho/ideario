@@ -123,6 +123,21 @@ fn create_read_search_and_edit() {
 }
 
 #[test]
+fn cover_emoji() {
+    let (core, _t) = setup();
+    let created = tool(&core, "create_note", json!({ "title": "Receitas", "content": "bolo", "emoji": "🍰" }), true);
+    let id = id_in(&created);
+    assert!(created.contains("emoji: 🍰"), "{created}");
+    let found = json_of(&tool(&core, "search_notes", json!({ "query": "receitas" }), true));
+    assert_eq!(found["notes"][0]["emoji"], "🍰");
+    tool(&core, "update_note", json!({ "id": id, "emoji": "🇧🇷" }), true);
+    assert!(tool(&core, "get_note", json!({ "id": id }), true).contains("emoji: 🇧🇷"));
+    assert!(tool(&core, "update_note", json!({ "id": id, "emoji": "bolo" }), false).contains("não é um emoji"));
+    tool(&core, "update_note", json!({ "id": id, "emoji": "" }), true);
+    assert!(!tool(&core, "get_note", json!({ "id": id }), true).contains("emoji:"));
+}
+
+#[test]
 fn checklist_tools() {
     let (core, _t) = setup();
     let id = id_in(&tool(&core, "create_note", json!({ "title": "Viagem", "content": "- [ ] Documentos\n  - [ ] Passaporte\n  - [ ] RG\n- [ ] Mala" }), true));

@@ -22,6 +22,7 @@
     "@tiptap/pm": "^3.31.4",
     "@tiptap/starter-kit": "^3.31.4",
     "@tiptap/y-tiptap": "^3.0.9",
+    "emojibase-data": "^17.0.0",
     "pdfjs-dist": "^4.10.38",
     "yjs": "^13.6.33"
   },
