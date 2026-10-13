@@ -30,6 +30,7 @@ arrasta para onde quiser.
 - Checklists com subitens, como no Keep
 - Grave áudio ou tire foto sem sair da nota
 - Cole um link e ele vira um cartão com título e imagem
+- Um emoji grande de capa para achar a nota de longe
 
 <img src="site/img/nota.webp" alt="Nota aberta com três fotos lado a lado, um checklist e um PDF anexado">
 
@@ -94,7 +95,7 @@ Ideario is a Google Keep–style notes app for Windows, macOS and Linux. It open
 your notes on your computer. Optionally, it syncs between your computers through your own Google Drive, in a hidden
 app folder. There is no Ideario server and no data collection.
 
-- Notes with checklists, side-by-side photos, PDFs, audio, video and link cards
+- Notes with checklists, side-by-side photos, PDFs, audio, video, link cards and a big cover emoji
 - Reminders with system notifications, snooze and repeat
 - Moodboard of all your images, filterable by color
 - Document mode and export to Markdown, HTML or PDF
