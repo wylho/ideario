@@ -118,7 +118,7 @@ O Automerge foi considerado e **descartado** em favor do Yjs por causa do editor
 - Lê o `.zip` do **Google Takeout** (pasta `Keep/`, um JSON por nota mais as mídias).
 - Mapeamento: marcadores viram categorias (o primeiro marcador vira a categoria e os demais viram tags), `listContent` vira checklist, `color` vai para a paleta mais próxima, e `isPinned`, `isArchived`, `isTrashed` e os timestamps são preservados.
 - As imagens passam pelo mesmo pipeline de otimização.
-- **Validar os nomes de campos contra uma exportação real** antes de implementar. O usuário tem as categorias atuais: Aurora, Inglês, Trabalho, Bem-estar, Lumen e Curso de Fotografia.
+- **Validar os nomes de campos contra uma exportação real** antes de implementar.
 
 ### 3.10 Configurações
 - Sincronização: status do Drive, última sincronização, "Sincronizar agora" e "Sincronizar só no Wi-Fi" (o texto sempre sincroniza; os anexos grandes esperam o Wi-Fi).
@@ -367,8 +367,7 @@ sand #f6e9d6/#3a3125  sage #e1eedd/#26352a  sky #dde8f8/#22304a
 rose #f8e0e4/#3d262c  lilac #e9e2f6/#2f2842 butter #f8f0c8/#39351e
 
 Cores sugeridas para categorias:
-Aurora #C26A3D · Inglês #3E8E7E · Trabalho #8A6BC4
-Bem-estar #C25478 · Lumen #3D63D6 · Curso #B08A1E
+#C26A3D · #3E8E7E · #8A6BC4 · #C25478 · #3D63D6 · #B08A1E
 ```
 - **Tipografia**: **fonte do sistema** em toda a UI, para o app parecer nativo (Segoe UI no Windows, San Francisco no macOS, a fonte do GNOME/KDE no Linux, Roboto ou a do fabricante no Android). Pesos 500–700 em títulos e marca; corpo 15–16 px; monoespaçada do sistema para números, tamanhos, horários e hex, com `tabular-nums`. *(O protótipo usava Bricolage Grotesque, Figtree e JetBrains Mono; trocado por decisão do usuário.)*
 - Raios: cards 16 px, pílulas 999 px, FAB 20 px, sheets 24 px. Rótulos de seção em caixa alta 11 px com espaçamento 0,09em.

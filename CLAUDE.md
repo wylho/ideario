@@ -12,6 +12,9 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
   Exceção: qualidade **Original** (escolha do usuário) fica intacta, inclusive com GPS e demais metadados (SPEC §7). Só fotos são comprimidas.
 - Fidelidade visual ao protótipo (`prototype/index.css` tem os tokens), exceto a tipografia: fonte do sistema, nunca CDN.
 - UI em **português do Brasil**. Código e identificadores em inglês.
+- **Dados de exemplo sempre fictícios** (mock, testes, protótipo, docs, prints do site/README): nunca nomes de clientes,
+  empresas, cursos, saúde ou qualquer coisa da vida do usuário, nem tirados do Takeout dele. O repositório é público.
+  Antes de publicar um print, olhar o print inteiro.
 - Trabalhar por fases (SPEC §10). Antes de começar uma fase, conferir as decisões pendentes (SPEC §11) e perguntar o que estiver em aberto.
 - Ao fim de cada fase: compilar, rodar e verificar o critério "Pronto quando".
 

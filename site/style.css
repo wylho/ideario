@@ -51,3 +51,9 @@ footer{margin-top:48px;color:var(--muted);font-size:14px}
   .home header a{font-size:20px}
   .home header img{width:36px;height:36px}
 }
+.cta{margin-top:24px !important}
+.btn-gh{display:inline-flex;align-items:center;gap:10px;background:#1f2328;color:#fff;text-decoration:none;font-weight:600;font-size:16px;padding:11px 20px;border-radius:10px;border:1px solid rgba(240,246,252,.1);transition:background .15s}
+.btn-gh:hover{background:#32383f}
+@media (prefers-color-scheme:dark){.btn-gh{background:#f0f3f6;color:#1f2328}.btn-gh:hover{background:#d8dee4}}
+.home header nav{align-items:center}
+.home header nav a.gh{display:inline-flex;color:var(--fg)}
