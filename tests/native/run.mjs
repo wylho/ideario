@@ -554,6 +554,26 @@ try {
     }
   })
 
+  await test('emoji de capa: escolhido pelo seletor (busca em português), gravado pelo núcleo e grande no card', async () => {
+    await s.clickText('.card', 'Bolo da vó')
+    await s.waitFor(`return document.querySelector('#titulo')?.value === 'Bolo da vó'`, 'nota aberta')
+    await s.exec(`document.querySelector('[aria-label="Mais opções"]').click(); return true`)
+    await s.waitFor(`return [...document.querySelectorAll('[role=menuitem]')].some((e) => e.textContent.includes('Emoji de capa'))`, 'menu')
+    await s.clickText('[role=menuitem]', 'Emoji de capa')
+    await s.waitFor(`return document.activeElement?.getAttribute('aria-label') === 'Buscar emoji'`, 'busca do seletor')
+    await s.keys('foguete')
+    await s.waitFor(`return [...document.querySelectorAll('.emoji-cell')].some((b) => b.textContent === '🚀')`, 'resultado em português', 10000)
+    await s.keys('\uE007')
+    await s.waitFor(`return document.querySelector('.ed-emoji')?.textContent === '🚀'`, 'emoji no editor')
+    await sleep(700)
+    await s.exec(`document.querySelector('[aria-label="Voltar e salvar"]').click(); return true`)
+    await s.waitFor(`const c = [...document.querySelectorAll('.card')].find((c) => c.getAttribute('aria-label') === 'Bolo da vó'); return c?.querySelector('.card-emoji')?.textContent === '🚀'`, 'emoji no card')
+    const db = new DatabaseSync(join(DATA, IDENTIFIER, 'ideario.db'), { readOnly: true })
+    const row = db.prepare("SELECT emoji FROM notes WHERE title = 'Bolo da vó'").get()
+    db.close()
+    if (row?.emoji !== '🚀') throw new Error(`banco: ${JSON.stringify(row)}`)
+  })
+
   await test('tema escuro: a janela (barra de título e fundo) acompanha e fica guardado para a próxima abertura', async () => {
     await s.exec(`[...document.querySelectorAll('.sidebar button')].find((b) => b.textContent.includes('Configurações'))?.click(); return true`)
     await s.waitFor(`return !!document.querySelector('.seg-item[data-value="dark"], [data-value="dark"]')`, 'opção Escuro')

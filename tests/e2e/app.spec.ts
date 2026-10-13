@@ -850,6 +850,50 @@ test('categoria com PIN: some de Tudo, abre só com o PIN; bloquear, mudar e tir
   await expect(card()).toHaveCount(1)
 })
 
+test('emoji de capa: escolher pela busca em português, aparece grande no card; mudar pelo menu e remover', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 })
+  // nota de exemplo que já tem emoji
+  await expect(cards(page).filter({ hasText: 'Pão de fermentação natural' }).locator('.card-emoji')).toHaveText('🍞')
+  await cards(page).filter({ hasText: 'Mercado da semana' }).first().click()
+  // sem emoji, nada ocupa espaço acima do título; o seletor abre pelo menu ⋮
+  const titleOffset = () =>
+    page.locator('#titulo').evaluate((t) => {
+      const sc = t.closest('.ed-scroll')!
+      return t.getBoundingClientRect().top - sc.getBoundingClientRect().top + sc.scrollTop
+    })
+  const titleTop = await titleOffset()
+  expect(titleTop).toBeLessThan(16)
+  await page.getByRole('button', { name: 'Mais opções' }).click()
+  await page.getByRole('menuitem', { name: 'Emoji de capa' }).click()
+  const search = page.getByLabel('Buscar emoji')
+  await expect(search).toBeFocused()
+  await search.fill('carrinho')
+  await expect(page.getByRole('option', { name: /carrinho de compras/ })).toBeVisible()
+  await page.keyboard.press('Enter')
+  await expect(page.getByRole('button', { name: 'Mudar o emoji de capa' })).toHaveText('🛒')
+  await back(page)
+  const card = cards(page).filter({ hasText: 'Mercado da semana' }).first()
+  await expect(card.locator('.card-emoji')).toHaveText('🛒')
+  // emoji colado direto na busca (ou pelo seletor do sistema); pelo menu ⋮
+  await card.click()
+  await page.getByRole('button', { name: 'Mais opções' }).click()
+  await page.getByRole('menuitem', { name: 'Mudar emoji de capa' }).click()
+  // o nome vem antes das palavras-chave: "foguete" é o 🚀, não o astronauta
+  await search.fill('foguete')
+  await expect(page.locator('.emoji-pop .emoji-cell').first()).toHaveText('🚀')
+  await search.fill('🦊')
+  await page.keyboard.press('Enter')
+  await expect(page.getByRole('button', { name: 'Mudar o emoji de capa' })).toHaveText('🦊')
+  // recentes guardam os últimos
+  await page.getByRole('button', { name: 'Mudar o emoji de capa' }).click()
+  await expect(page.locator('.emoji-pop .emoji-group').first()).toHaveText('Recentes')
+  await page.getByRole('button', { name: 'Remover emoji' }).click()
+  await expect(page.getByRole('button', { name: 'Mudar o emoji de capa' })).toHaveCount(0)
+  expect(Math.abs((await titleOffset()) - titleTop)).toBeLessThan(2)
+  await back(page)
+  await expect(card.locator('.card-emoji')).toHaveCount(0)
+})
+
 test('modo documento: a nota vira página inteira, e ela lembra; imprimir deixa só a nota no papel', async ({ page }) => {
   await page.setViewportSize({ width: 1300, height: 900 })
   await cards(page).filter({ hasText: 'Ideias de campanha Q4' }).first().click()

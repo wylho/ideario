@@ -50,7 +50,7 @@
       {#if n.reminderDone}<Check size={14} strokeWidth={3} />{/if}
     </button>
     <button class="r-main" onclick={() => app.openNote(n.id)}>
-      <span class="r-title">{n.label}</span>
+      <span class="r-title">{#if n.emoji}{n.emoji} {/if}{n.label}</span>
       <span class="r-sub">
         {#if cat}<i class="dot" style:background={cat.color}></i>{cat.name}{:else}Sem categoria{/if}
       </span>

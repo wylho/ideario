@@ -7,7 +7,7 @@
     Archive, ArchiveRestore, ArrowLeft, Bold, Camera, Check, ChevronDown, ChevronLeft, ChevronRight, Columns2, Heading, Image, Italic, List,
     ListChecks, Mic, MoreVertical, SquareCode, Palette, Paperclip, Pin, PinOff, Plus, Redo2, Rows2, Square, Tag, Trash2, Undo2, X,
     ArrowDown, ArrowUp, Copy, CopyPlus, Download, Eye, GripVertical, ListTodo, Pilcrow, Scissors, SquareCheck, SquareDashed, ExternalLink,
-    ListIndentDecrease, ListIndentIncrease, BookOpen, Minimize2, FileDown, Link2, RefreshCw,
+    ListIndentDecrease, ListIndentIncrease, BookOpen, Minimize2, FileDown, Link2, RefreshCw, SmilePlus,
   } from '@lucide/svelte'
   import { exportEntries, printNote } from '../lib/exporting'
   import { bareUrl, fillPreview, insertLinkCard } from '../lib/editor/link'
@@ -33,6 +33,7 @@
   import { ago, fmtBytes, hashTags } from '../lib/format'
   import ReminderPopover from './ReminderPopover.svelte'
   import TagInput from './TagInput.svelte'
+  import EmojiPicker from './EmojiPicker.svelte'
   import type { Attachment, NoteColor, NoteInput, RichDoc, RichNode } from '../lib/types'
 
   let { target }: { target: EditorTarget } = $props()
@@ -49,6 +50,7 @@
   const { id, isNew, defaults, start, print } = target
   // Modo documento: a nota em página inteira, coluna de leitura e letra maior. Lembrado por nota.
   let docMode = $state(isDocNote(id))
+  let emojiOpen = $state(false)
   function toggleDoc() {
     docMode = !docMode
     setDocNote(id, docMode)
@@ -120,7 +122,7 @@
   if (isNew) {
     meta = {
       title: '', categoryId: defaults?.categoryId ?? null, color: 'none', pinned: false, archived: false,
-      trashedAt: null, reminderAt: null, reminderDone: false, reminderRepeat: null, tags: defaults?.tags ?? [],
+      trashedAt: null, reminderAt: null, reminderDone: false, reminderRepeat: null, emoji: null, tags: defaults?.tags ?? [],
     }
   } else {
     Promise.all([api.getNoteState(id), api.getNote(id)]).then(([state, n]) => {
@@ -629,6 +631,7 @@
                       {/each}
                     </DropdownMenu.SubContent>
                   </DropdownMenu.Sub>
+                  <DropdownMenu.Item class="menu-item" onSelect={() => (emojiOpen = true)}><SmilePlus size={16} />{meta.emoji ? 'Mudar emoji de capa' : 'Emoji de capa'}</DropdownMenu.Item>
                   <DropdownMenu.Separator class="menu-sep" />
                   <DropdownMenu.Item class="menu-item" onSelect={() => meta && close({ archived: !meta.archived }, meta.archived ? 'Nota desarquivada' : 'Nota arquivada')}>
                     {#if meta.archived}<ArchiveRestore size={16} />Desarquivar{:else}<Archive size={16} />Arquivar{/if}
@@ -642,6 +645,9 @@
         </div>
 
         <div class="ed-scroll" onscroll={() => tick++}>
+          <div class="ed-cover" class:has={!!meta.emoji}>
+            <EmojiPicker value={meta.emoji} onchange={(v) => meta && (meta.emoji = v)} bind:open={emojiOpen} />
+          </div>
           <Dialog.Title>
             {#snippet child({ props })}
               <input

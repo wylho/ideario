@@ -959,3 +959,24 @@ button { cursor: pointer; }
 .pv-link svg { flex: none; color: var(--muted); }
 .pv-link-t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pv-link-s { flex: none; font-size: 12px; color: var(--muted); }
+
+/* ---------- emoji de capa ---------- */
+.card-emoji { font-size: 34px; line-height: 40px; height: 40px; }
+.ed-cover { position: relative; }
+.ed-cover:not(.has) { height: 0; margin-bottom: -10px; }
+.ed-cover.has { margin: 6px 0 2px; }
+.ed-emoji { font-size: 52px; line-height: 1; padding: 4px 6px; margin-left: -6px; border-radius: 12px; background: none; }
+.ed-emoji:hover, .ed-emoji[data-state='open'] { background: var(--raised); }
+.ed-emoji-anchor { position: absolute; left: 0; top: 0; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.emoji-pop { width: 360px; gap: 8px; }
+.emoji-search { width: 100%; height: 38px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--fg); font-size: 14px; outline: 0; }
+.emoji-search:focus { border-color: var(--accent); }
+.emoji-scroll { height: 300px; overflow-y: auto; overscroll-behavior: contain; margin: 0 -4px; padding: 0 4px; }
+.emoji-section { content-visibility: auto; contain-intrinsic-size: auto 400px; }
+.emoji-group { font-size: 12px; font-weight: 600; color: var(--muted); margin: 8px 2px 4px; }
+.emoji-grid { display: grid; grid-template-columns: repeat(8, 1fr); }
+.emoji-cell { aspect-ratio: 1; font-size: 24px; line-height: 1; border-radius: 8px; display: grid; place-items: center; background: none; }
+.emoji-cell:hover, .emoji-cell:focus-visible { background: var(--raised); outline: 0; }
+.emoji-none { font-size: 14px; color: var(--muted); padding: 24px 4px; text-align: center; }
+.editor[data-doc] .ed-emoji { font-size: 64px; }
+@media print { body.print-note .ed-emoji { font-size: 48pt; } }

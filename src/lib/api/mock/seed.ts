@@ -42,6 +42,7 @@ export interface SeedNote {
   reminderAt: number | null
   reminderDone?: boolean
   reminderRepeat?: import('../../types').RepeatKind
+  emoji?: string
   archived?: boolean
   trashedDaysAgo?: number
   updatedAt: number
@@ -224,7 +225,7 @@ export function seedNotes(): SeedNote[] {
       ),
     },
     {
-      id: 'n17', title: 'Rotina de treino', categoryId: 'cat-bemestar', tags: ['treino'], color: 'rose', pinned: false,
+      id: 'n17', title: 'Rotina de treino', emoji: '🏃', categoryId: 'cat-bemestar', tags: ['treino'], color: 'rose', pinned: false,
       reminderAt: null, updatedAt: hoursAgo(90),
       body: doc(check([['Alongamento', true], ['Corrida leve de 5 km', false], ['Treino de força', false], ['Marcar avaliação física', false]])),
     },
@@ -244,7 +245,7 @@ export function seedNotes(): SeedNote[] {
       body: doc(p('Renovar o seguro do carro e mandar as fotos da vistoria.')),
     },
     {
-      id: 'n21', title: 'Viagem para Paraty', categoryId: null, tags: ['viagem'], color: 'sky', pinned: false,
+      id: 'n21', title: 'Viagem para Paraty', emoji: '🏝️', categoryId: null, tags: ['viagem'], color: 'sky', pinned: false,
       reminderAt: at(9, 8), updatedAt: hoursAgo(40),
       body: doc(row('img-praia', 'img-folhagem', 'img-mata'), check([['Reservar pousada', true], ['Protetor solar', false], ['Repelente', false], ['Câmera e baterias', false]])),
     },
@@ -254,7 +255,7 @@ export function seedNotes(): SeedNote[] {
       body: doc(ul('Grotesca com itálico de verdade', 'Mono para números das telas', 'Serifada só para citações'), p('Comparar legibilidade em 12px no celular.')),
     },
     {
-      id: 'n23', title: 'Pão de fermentação natural', categoryId: null, tags: ['receita', 'casa'], color: 'sand', pinned: false,
+      id: 'n23', title: 'Pão de fermentação natural', emoji: '🍞', categoryId: null, tags: ['receita', 'casa'], color: 'sand', pinned: false,
       reminderAt: null, updatedAt: hoursAgo(160),
       body: doc(img('img-pao'), h3('Ingredientes'), ul('500 g de farinha', '350 ml de água', '100 g de levain', '10 g de sal'), p('Dobras a cada 30 min nas primeiras 2 horas.')),
     },

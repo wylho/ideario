@@ -15,6 +15,7 @@ export function estimateCard(n: NoteSummary, w: number): number {
   let h = 26 // padding do corpo
   // Capa: uma foto ou uma linha de fotos com a mesma altura (largura / soma das proporções).
   if (n.cover.length) h += Math.min(260, (w - 2 * (n.cover.length - 1)) / n.cover.reduce((s, c) => s + c.width / c.height, 0))
+  if (n.emoji) h += 46
   if (n.title) h += lines(n.title, 9) * 20 + 6
   // Só um anexo: miniatura quadrada (até 220 px) e o nome do arquivo numa linha.
   if (!n.cover.length && n.preview.length === 1 && n.preview[0].kind === 'file') {

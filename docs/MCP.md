@@ -55,8 +55,8 @@ Onde fica o executável:
 | `app_overview` | Data e hora de agora, contagens, categorias, tags, sync |
 | `search_notes` | Busca (sem acento, por prefixo) e filtros: categoria, tag, Arquivo, Lixeira; ordem |
 | `get_note` | A nota inteira: metadados e corpo em Markdown, mais os anexos |
-| `create_note` | Nova nota: título, Markdown, categoria, tags, cor, fixada, lembrete |
-| `update_note` | Muda título, corpo, categoria, tags, cor e fixada |
+| `create_note` | Nova nota: título, Markdown, categoria, tags, cor, emoji de capa, fixada, lembrete |
+| `update_note` | Muda título, corpo, categoria, tags, cor, emoji de capa (vazio tira) e fixada |
 | `edit_note_text` | Troca um trecho do corpo sem mexer no resto |
 | `append_to_note` | Acrescenta no fim (ou no começo) |
 | `set_checklist_items` | Marca e desmarca itens pelo texto (marcar o pai marca os subitens) |

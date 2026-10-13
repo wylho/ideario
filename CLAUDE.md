@@ -124,7 +124,7 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
   Fica para a Fase 5: cache com limite (LRU) dos anexos, que depende do Drive.
 - Skills do usuário para todas as fases: testes em Rust (TDD, proptest, provar que o teste pega erro quebrando o
   código de propósito, clippy sem avisos no CI) e padrões idiomáticos de Rust (sem `unwrap` em produção, `pub` mínimo).
-- Pedidos do usuário para a fase certa: emoji grande de capa na nota; arrastar card até categoria da lateral; baixar em
+- Pedidos do usuário para a fase certa: arrastar card até categoria da lateral; baixar em
   Downloads ou escolher a pasta (diálogo nativo); prévia de PDFs e documentos; bug: card tremendo ao arrastar e cards
   quebrados ao redimensionar a janela (Masonry) — feito.
 - **Importar do Keep (Fase 6, antecipada): concluída.** `keep.rs` lê o zip do Takeout (nomes em UTF-8 sem a marca, como o
@@ -180,5 +180,8 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
   para a linha de baixo (`insertLinkCard`). Prévia pelo núcleo (`src-tauri/src/link.rs`: ureq, Open Graph/`<title>`,
   imagem → `media::thumbnail` → `data:image/webp` nos atributos; só http/https); `open_url` abre no navegador.
   Projeção `Block::Link` (título/descrição entram na busca); Markdown `[🔗 título](url)` e `keep_link_meta` no MCP.
+- Emoji de capa: `emoji` no meta do Y.Doc → coluna `notes.emoji` (migração 8), `clean_emoji` no núcleo e `cleanEmoji`
+  no front (`src/lib/emoji.ts`, mesma regra). Seletor `EmojiPicker.svelte` (lista do `emojibase-data` em português,
+  carregada só ao abrir; nome antes das palavras-chave na busca). Sem emoji, não ocupa espaço (abre pelo ⋮).
 - Filtro "Sem categoria"/"Sem tags": sentinelas `NO_CATEGORY`/`NO_TAGS` (`~none`) no `Filter` (TS e Rust).
 - **Próximo passo: Fase 7 (Android).**

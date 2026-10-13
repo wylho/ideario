@@ -75,6 +75,8 @@ export interface NoteSummary {
   reminderAt: Millis | null
   reminderDone: boolean
   reminderRepeat: RepeatKind | null
+  /** Emoji grande de capa (null = sem). */
+  emoji: string | null
   tags: string[]
   createdAt: Millis
   updatedAt: Millis
@@ -127,6 +129,8 @@ export interface NoteDetail {
   reminderAt: Millis | null
   reminderDone: boolean
   reminderRepeat: RepeatKind | null
+  /** Emoji grande de capa (null = sem). */
+  emoji: string | null
   /** Tags manuais. As `#tags` do corpo são derivadas e não ficam aqui. */
   tags: string[]
   /** Anexos que não aparecem no corpo (arquivos). */
@@ -138,7 +142,7 @@ export interface NoteDetail {
 }
 
 /** Campos que os menus de contexto mudam sem abrir o editor. */
-export type NotePatch = Partial<Pick<NoteInput, 'pinned' | 'color' | 'categoryId' | 'archived' | 'trashedAt' | 'reminderAt' | 'reminderDone' | 'reminderRepeat'>>
+export type NotePatch = Partial<Pick<NoteInput, 'pinned' | 'color' | 'categoryId' | 'archived' | 'trashedAt' | 'reminderAt' | 'reminderDone' | 'reminderRepeat' | 'emoji'>>
 
 export interface NoteInput {
   id: string
@@ -152,6 +156,8 @@ export interface NoteInput {
   reminderAt: Millis | null
   reminderDone: boolean
   reminderRepeat: RepeatKind | null
+  /** Emoji grande de capa (null = sem). */
+  emoji: string | null
   tags: string[]
 }
 

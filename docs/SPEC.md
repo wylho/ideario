@@ -65,7 +65,15 @@ O Automerge foi considerado e **descartado** em favor do Yjs por causa do editor
   HTML, áudio e vídeo tocam com player; no Markdown viram link). **PDF**: impressão do sistema ("Salvar como PDF"),
   com só a nota no papel; áudio e vídeo saem como cartão com o nome e a duração.
 
-### 3.2.2 Bloco de link
+### 3.2.2 Emoji de capa
+- Um emoji grande identifica a nota de longe: aparece acima do título no card e no editor, e na frente do título nos
+  Lembretes. Fica no `meta` do Y.Doc (`emoji`), então sincroniza e junta com as outras edições.
+- Escolher: menu ⋮ do editor → **Emoji de capa** (ou clique no emoji, quando já tem). Busca em português, sem acento
+  (nomes e palavras-chave do Unicode), recentes primeiro; dá para colar ou digitar um emoji direto na busca.
+  Só emojis até a versão 14, para não aparecer quadradinho em sistema mais antigo. Sem emoji, nada ocupa espaço.
+- Exportar: no HTML, grande acima do título; no Markdown, na frente do título. MCP: `emoji` em create/update_note.
+
+### 3.2.3 Bloco de link
 - Colar um endereço (http/https) **sozinho numa linha vazia** vira um cartão: título, descrição, imagem e site da
   página. O cartão aparece na hora com o site; a prévia chega depois (o núcleo busca a página: Open Graph, senão
   `<title>`; a imagem vira miniatura WebP guardada no próprio cartão). Sem rede, fica só com o endereço. Colado no meio

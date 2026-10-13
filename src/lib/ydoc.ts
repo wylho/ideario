@@ -1,5 +1,6 @@
 import * as Y from 'yjs'
 import type { NoteInput } from './types'
+import { cleanEmoji } from './emoji'
 
 // Nota como Y.Doc (SPEC §5), o mesmo formato do núcleo (src-tauri/src/ydoc.rs):
 // `meta` (Y.Map) com os metadados, cada um uma chave (cada uma faz merge sozinha), e `body` (Y.XmlFragment) com o
@@ -10,7 +11,7 @@ export type NoteMeta = Omit<NoteInput, 'id' | 'body'>
 export const META = 'meta'
 export const BODY = 'body'
 
-const KEYS = ['title', 'categoryId', 'color', 'pinned', 'archived', 'trashedAt', 'reminderAt', 'reminderDone', 'reminderRepeat', 'tags'] as const
+const KEYS = ['title', 'categoryId', 'color', 'pinned', 'archived', 'trashedAt', 'reminderAt', 'reminderDone', 'reminderRepeat', 'emoji', 'tags'] as const
 
 export function readMeta(doc: Y.Doc): NoteMeta {
   const m = doc.getMap<unknown>(META)
@@ -27,6 +28,7 @@ export function readMeta(doc: Y.Doc): NoteMeta {
     reminderAt: num('reminderAt'),
     reminderDone: m.get('reminderDone') === true,
     reminderRepeat: (['day', 'week', 'month', 'year'] as const).find((r) => r === m.get('reminderRepeat')) ?? null,
+    emoji: cleanEmoji(str('emoji') ?? ''),
     tags: Array.isArray(tags) ? tags.filter((t): t is string => typeof t === 'string') : [],
   }
 }

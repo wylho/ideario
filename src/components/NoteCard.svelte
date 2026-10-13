@@ -73,6 +73,7 @@
     </div>
   {/if}
   <div class="card-body">
+    {#if n.emoji}<div class="card-emoji" aria-hidden="true">{n.emoji}</div>{/if}
     {#if n.title}<h3>{n.title}</h3>{/if}
     {#if solo}
       <p class="card-file-name">{solo.text}</p>

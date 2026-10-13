@@ -7,6 +7,7 @@ import type {
   Attachment, AttachmentKind, AttachmentRow, BackupStatus, Box, Category, Filter, McpInfo, NoteInput, NotePatch, NoteSort, NoteSummary, PreviewBlock, RichDoc, RichNode, Settings, SyncState, TagCount,
 } from '../../types'
 import * as Y from 'yjs'
+import { cleanEmoji } from '../../emoji'
 import { uuidv7 } from '../../uuid'
 import { NO_CATEGORY, NO_TAGS } from '../../types'
 import { noteToState, stateToNote } from './ydoc'
@@ -87,7 +88,7 @@ for (const s of seedNotes()) {
   notes.set(s.id, {
     id: s.id, title: s.title, body, categoryId: s.categoryId, color: s.color, pinned: s.pinned,
     archived: !!s.archived, trashedAt: s.trashedDaysAgo != null ? Date.now() - s.trashedDaysAgo * DAY : null,
-    reminderAt: s.reminderAt, reminderDone: !!s.reminderDone, reminderRepeat: s.reminderRepeat ?? null, tags: s.tags,
+    reminderAt: s.reminderAt, reminderDone: !!s.reminderDone, reminderRepeat: s.reminderRepeat ?? null, emoji: s.emoji ?? null, tags: s.tags,
     createdAt: s.updatedAt - 2 * DAY, updatedAt: s.updatedAt,
     files: [],
     position: 0,
@@ -233,7 +234,7 @@ function summarize(n: StoredNote): NoteSummary {
     id: n.id, title: n.title, label: labelOf(n), preview: p.preview,
     cover, imageCount: p.images.length, fileCount: n.files.length + p.files.length,
     categoryId: n.categoryId, color: n.color, pinned: n.pinned, archived: n.archived, trashedAt: n.trashedAt,
-    reminderAt: n.reminderAt, reminderDone: n.reminderDone, reminderRepeat: n.reminderRepeat, tags: tagsOf(n), createdAt: n.createdAt, updatedAt: n.updatedAt,
+    reminderAt: n.reminderAt, reminderDone: n.reminderDone, reminderRepeat: n.reminderRepeat, emoji: n.emoji, tags: tagsOf(n), createdAt: n.createdAt, updatedAt: n.updatedAt,
     position: n.position,
   }
 }
@@ -338,7 +339,7 @@ function purgeTrash() {
 }
 
 const INPUT_KEYS: (keyof NoteInput)[] = [
-  'title', 'body', 'categoryId', 'color', 'pinned', 'archived', 'trashedAt', 'reminderAt', 'reminderDone', 'reminderRepeat', 'tags',
+  'title', 'body', 'categoryId', 'color', 'pinned', 'archived', 'trashedAt', 'reminderAt', 'reminderDone', 'reminderRepeat', 'emoji', 'tags',
 ]
 const sameContent = (a: NoteInput, b: NoteInput) => INPUT_KEYS.every((k) => JSON.stringify(a[k]) === JSON.stringify(b[k]))
 
@@ -639,6 +640,7 @@ export const mockApi: Api = {
   updateNote(id, patch) {
     const n = notes.get(id)
     if (!n) return done(undefined)
+    if ('emoji' in patch) patch = { ...patch, emoji: cleanEmoji(patch.emoji ?? '') }
     const keys = Object.keys(patch) as (keyof NotePatch)[]
     if (keys.some((k) => n[k] !== patch[k])) {
       Object.assign(n, patch)
