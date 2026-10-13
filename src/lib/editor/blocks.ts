@@ -36,16 +36,29 @@ export function blockAt(view: EditorView, y: number, x?: number): BlockHit | nul
   const node = doc.nodeAt(blockPos)
   const dom = view.nodeDOM(blockPos) as HTMLElement | null
   if (!node || !dom) return null
-  let item: BlockHit['item'] = null
-  for (let d = $p.depth; d > 1; d--) {
-    if (ITEMS.has($p.node(d).type.name)) {
-      const pos = $p.before(d)
-      const idom = view.nodeDOM(pos) as HTMLElement | null
-      if (idom) item = { pos, node: $p.node(d), dom: idom }
-      break
-    }
-  }
-  return { block: { pos: blockPos, node, dom }, item }
+  return { block: { pos: blockPos, node, dom }, item: itemAtRow(view, blockPos, node, y) }
+}
+
+/** Item de lista/checklist na linha `y`, em qualquer nível. Cada item é dono da faixa que vai do topo dele até onde
+ *  começam os subitens, então a altura basta: na coluna da alça, à esquerda do recuo, o ponteiro ainda está "dentro"
+ *  do item de cima, mas a linha é do subitem. */
+function itemAtRow(view: EditorView, blockPos: number, block: PMNode, y: number): BlockHit['item'] {
+  let hit: BlockHit['item'] = null
+  block.descendants((n, rel) => {
+    if (hit) return false
+    if (!ITEMS.has(n.type.name)) return true
+    const pos = blockPos + 1 + rel
+    const dom = view.nodeDOM(pos) as HTMLElement | null
+    if (!dom) return false
+    const r = dom.getBoundingClientRect()
+    if (y < r.top || y >= r.bottom) return false
+    const sub = [...dom.children].find((c) => c.matches('ul, ol') || !!c.querySelector(':scope > ul, :scope > ol'))
+    const nested = sub?.matches('ul, ol') ? sub : sub?.querySelector(':scope > ul, :scope > ol')
+    const ownBottom = nested ? nested.getBoundingClientRect().top : r.bottom
+    if (y < ownBottom) hit = { pos, node: n, dom }
+    return true
+  })
+  return hit
 }
 
 /** Começa a arrastar o nó em `pos` a partir da alça: o ProseMirror cuida do soltar (e mostra a linha onde vai cair). */

@@ -1644,6 +1644,43 @@ test.describe('blocos no editor', () => {
     await expect(card.locator('.pv-task', { hasText: 'Renovar' })).toHaveAttribute('style', /--depth: 2/)
   })
 
+  test('a alça do subitem fica no subitem quando o mouse vai até ela (não pula para o item de cima)', async ({ page }) => {
+    await back(page)
+    await newNote(page)
+    await page.getByRole('button', { name: 'Checklist' }).click()
+    await page.keyboard.type('Viagem')
+    await page.keyboard.press('Enter')
+    await page.keyboard.press('Tab')
+    await page.keyboard.type('Passaporte')
+    await page.keyboard.press('Enter')
+    await page.keyboard.press('Tab')
+    await page.keyboard.type('Renovar')
+    const handle = page.locator('.blk-handle.item')
+    for (const name of ['Passaporte', 'Renovar']) {
+      const row = (await page.locator('#corpo').getByText(name, { exact: true }).boundingBox())!
+      const y = row.y + row.height / 2
+      // em cima do texto: a alça aparece na linha do subitem
+      await page.mouse.move(row.x + 20, y)
+      await expect(handle).toBeVisible()
+      const h = (await handle.boundingBox())!
+      expect(Math.abs(h.y + h.height / 2 - y)).toBeLessThan(14)
+      // indo para a esquerda, na mesma linha, até a alça (passando pela coluna do item de cima): ela não sai do lugar
+      for (const x of [row.x - 10, row.x - 40, h.x + h.width / 2]) {
+        await page.mouse.move(x, y, { steps: 3 })
+        const now = (await handle.boundingBox())!
+        expect(Math.abs(now.y - h.y), `x=${x}`).toBeLessThan(2)
+        expect(Math.abs(now.x - h.x), `x=${x}`).toBeLessThan(2)
+      }
+    }
+    // o menu da alça é o do subitem: "Diminuir recuo" sobe o Renovar para o nível do Passaporte
+    await handle.click()
+    await page.getByRole('menuitem', { name: 'Diminuir recuo' }).click()
+    const nested = page.locator('#corpo ul[data-type="taskList"] ul[data-type="taskList"]')
+    await expect(nested).toHaveCount(1)
+    await expect(nested.locator('> li')).toHaveCount(2)
+    await expect(nested.locator('> li').nth(1)).toContainText('Renovar')
+  })
+
   test('Ctrl+A numa nota que é só checklist seleciona tudo, à vista; apagar limpa a nota', async ({ page }) => {
     await back(page)
     await newNote(page)
