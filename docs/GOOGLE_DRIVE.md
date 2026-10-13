@@ -31,6 +31,16 @@ protege o login é o PKCE. Mesmo assim, ele fica fora do repositório, nos segre
 > sensíveis, não é preciso passar pela verificação do Google; no máximo aparece o aviso "app não verificado" na
 > primeira vez (clique em *Avançado → Acessar Ideario*).
 
+### Página e política de privacidade
+
+Para publicar o app, o Google pede uma página inicial e uma política de privacidade. Elas estão em `site/`
+(HTML estático, sem build): publique no Cloudflare Pages (Workers & Pages → Criar → Pages → *Enviar ativos* com a
+pasta `site`, ou ligado ao repositório com diretório de saída `site`). Em **Branding**, use `https://<seu-site>/` como
+página inicial e `https://<seu-site>/privacidade/` como política, e ponha o domínio em **Domínios autorizados**.
+
+Logotipo: se enviar um, o Google exige a verificação da marca antes de publicar. Sem logotipo, os escopos acima
+publicam sem verificação.
+
 ## 3. Criar o cliente OAuth
 
 1. **Google Auth Platform → Clientes → Criar cliente**.
@@ -59,7 +69,7 @@ IDEARIO_GOOGLE_CLIENT_ID=… IDEARIO_GOOGLE_CLIENT_SECRET=… npm run tauri buil
 
 ## Como usar
 
-Configurações → Sincronização → **Entrar com Google**. O navegador abre a página do Google; depois de permitir, a
+Configurações → Google Drive → **Entrar com Google**. O navegador abre a página do Google; depois de permitir, a
 aba diz "Pronto!" e o app começa a sincronizar. Faça o mesmo nos outros computadores, com a mesma conta.
 
 - Sincroniza ao abrir, alguns segundos depois de editar, a cada minuto, ao voltar à janela e no "Sincronizar agora".
