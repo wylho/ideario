@@ -4,25 +4,130 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Ideario — notas rápidas, no seu computador</title>
-<meta name="description" content="Ideario é um app de notas no estilo do Google Keep: rápido, funciona sem internet e sincroniza pelo seu Google Drive.">
+<meta name="description" content="Ideario é um app de notas no estilo do Google Keep para Windows, macOS e Linux: rápido, funciona sem internet e sincroniza pelo seu Google Drive.">
+<meta property="og:title" content="Ideario — notas rápidas, no seu computador">
+<meta property="og:description" content="Notas, checklists, lembretes e fotos. Abre na hora, funciona sem internet e sincroniza pelo seu Google Drive.">
+<meta property="og:image" content="https://ideario.pages.dev/img/notas.webp">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/style.css">
 </head>
-<body>
+<body class="home">
 <main>
-<header><img src="/favicon.svg" alt=""><a href="/">Ideario</a></header>
-<h1>Notas rápidas, no seu computador.</h1>
-<p>O Ideario é um app de notas para Windows, macOS e Linux, no estilo do Google Keep: notas, checklists, lembretes,
-fotos e anexos, organizados por categorias e tags. Abre na hora e funciona sem internet.</p>
-<p>Se você quiser, ele sincroniza as notas entre os seus computadores pelo <b>seu próprio Google Drive</b>, numa pasta
-oculta que só o Ideario usa. Não existe servidor do Ideario: suas notas ficam no seu computador e no seu Drive.</p>
-<div class="box">
-<p><b>Privacidade:</b> sem anúncios, sem rastreamento, sem coleta de dados.
-Leia a <a href="/privacidade/">Política de Privacidade</a> e os <a href="/termos/">Termos de Serviço</a>.</p>
+<header>
+  <span style="display:flex;align-items:center;gap:12px"><img src="/favicon.svg" alt=""><a href="/">Ideario</a></span>
+  <nav><a href="#recursos">Recursos</a><a href="/privacidade/">Privacidade</a><a href="#english">English</a></nav>
+</header>
+
+<section class="hero">
+  <span class="pill">Windows · macOS · Linux</span>
+  <h1>Suas ideias, na hora.</h1>
+  <p>Um app de notas no estilo do Google Keep, feito para o computador: abre num instante, funciona sem internet
+  e guarda tudo com você. Se quiser, sincroniza entre os seus computadores pelo seu próprio Google Drive.</p>
+</section>
+
+<picture>
+  <source srcset="/img/notas-escuro.webp" media="(prefers-color-scheme: dark)">
+  <img class="shot hero-shot" src="/img/notas.webp" width="2880" height="1800" alt="Tela principal do Ideario: notas coloridas em cards, com checklists, fotos, lembretes e categorias na lateral">
+</picture>
+
+<section id="recursos">
+<div class="feature">
+  <div class="text">
+    <h2>Tudo numa nota só</h2>
+    <p>Texto, checklist, fotos lado a lado, PDFs, áudio e vídeo convivem na mesma nota, cada um como um bloco que você
+    arrasta para onde quiser.</p>
+    <ul>
+      <li>Checklists com subitens, como no Keep</li>
+      <li>Grave áudio ou tire foto sem sair da nota</li>
+      <li>Cole um link e ele vira um cartão com título e imagem</li>
+    </ul>
+  </div>
+  <img class="shot" src="/img/nota.webp" width="2880" height="1800" loading="lazy" alt="Nota aberta com três fotos lado a lado, um checklist e um PDF anexado">
 </div>
-<p class="muted">English: Ideario is a local-first notes app for desktop that can sync through the user's own Google
-Drive (hidden app folder). <a href="/privacidade/#english">Privacy Policy</a> · <a href="/termos/#english">Terms of Service</a>.</p>
-<footer>Contato: <a href="mailto:wyli4m@gmail.com">wyli4m@gmail.com</a></footer>
+
+<div class="feature flip">
+  <div class="text">
+    <h2>Lembretes que avisam de verdade</h2>
+    <p>Notificação do sistema na hora certa, com Adiar e Concluir. Lembretes que se repetem todo dia, semana, mês ou
+    ano. Se o computador estava desligado, o Ideario avisa o que passou assim que abrir.</p>
+  </div>
+  <img class="shot" src="/img/lembretes.webp" width="2880" height="1800" loading="lazy" alt="Lista de lembretes agrupada em atrasados, hoje, amanhã e próximos">
+</div>
+
+<div class="feature">
+  <div class="text">
+    <h2>Moodboard das suas fotos</h2>
+    <p>Todas as imagens de todas as notas num mural só, com a paleta de cores de cada uma. Filtre por tom e encontre
+    aquela referência sem lembrar em que nota ela estava.</p>
+  </div>
+  <img class="shot" src="/img/moodboard.webp" width="2880" height="1800" loading="lazy" alt="Moodboard com as imagens das notas em mosaico e a paleta de cores de cada uma">
+</div>
+
+<div class="feature flip">
+  <div class="text">
+    <h2>Quando a nota cresce, vira documento</h2>
+    <p>Um clique e a nota abre em página inteira, com coluna de leitura. Exporte em Markdown, HTML ou PDF, com as
+    fotos e anexos juntos.</p>
+  </div>
+  <img class="shot" src="/img/documento.webp" width="2880" height="1800" loading="lazy" alt="Nota aberta no modo documento, em página inteira">
+</div>
+
+<div class="feature">
+  <div class="text">
+    <h2>Funciona com o Claude</h2>
+    <p>Ligue o Ideario no Claude Desktop ou no Claude Code com um clique e peça: “cria uma lista de compras”,
+    “marca o leite como comprado”, “o que eu anotei sobre a viagem?”. O Claude fala com o Ideario direto do seu
+    computador, sem servidor nosso no meio, e as categorias protegidas por PIN ficam de fora.</p>
+  </div>
+  <img class="shot" src="/img/claude.webp" width="2880" height="1800" loading="lazy" alt="Configurações do Ideario com a sincronização do Google Drive e o botão para ligar no Claude Desktop">
+</div>
+
+<div class="feature narrow flip">
+  <div class="text">
+    <h2>Do tamanho que a janela estiver</h2>
+    <p>Janela grande, lateral com categorias e tags. Janela estreita, o layout se ajusta, com as visões numa barra
+    embaixo. Tema claro, escuro ou o do sistema, com as cores de destaque do seu Windows, macOS ou Linux.</p>
+  </div>
+  <img class="shot" src="/img/janela-estreita.webp" width="1170" height="2532" loading="lazy" alt="O Ideario numa janela estreita, com as notas em duas colunas e a barra de visões embaixo">
+</div>
+</section>
+
+<h2 class="section-title">E mais</h2>
+<div class="grid">
+  <div class="box"><h3>Sync pelo seu Drive</h3><p>Numa pasta oculta do app no seu Google Drive. Sem servidor no meio, sem conta nova.</p></div>
+  <div class="box"><h3>Categorias com PIN</h3><p>Esconda uma categoria inteira das listas e da busca, e peça um PIN para abrir.</p></div>
+  <div class="box"><h3>Importa do Google Keep</h3><p>Solte o arquivo do Google Takeout e as notas entram com fotos, cores, marcadores e datas.</p></div>
+  <div class="box"><h3>Backup local</h3><p>Um arquivo com tudo, quando quiser ou toda semana. Restaurar junta com o que já existe.</p></div>
+  <div class="box"><h3>Busca rápida</h3><p>Sem acento, por pedaço de palavra, em milhares de notas, no instante em que você digita.</p></div>
+  <div class="box"><h3>Fotos leves</h3><p>Fotos reduzidas e sem localização por padrão. Quer a original? Uma opção nas configurações.</p></div>
+</div>
+
+<div class="box">
+  <p><b>Privacidade:</b> sem anúncios, sem rastreamento, sem coleta de dados. Suas notas ficam no seu computador e,
+  se você quiser, no seu Google Drive. Leia a <a href="/privacidade/">Política de Privacidade</a> e os
+  <a href="/termos/">Termos de Serviço</a>.</p>
+</div>
+
+<hr>
+
+<section id="english" lang="en">
+  <h2>Ideario, in English</h2>
+  <p>Ideario is a Google Keep–style notes app for Windows, macOS and Linux. It opens instantly, works offline and keeps
+  your notes on your computer. Optionally, it syncs between your computers through your own Google Drive, in a hidden
+  app folder. There is no Ideario server and no data collection.</p>
+  <ul>
+    <li>Notes with checklists, side-by-side photos, PDFs, audio, video and link cards</li>
+    <li>Reminders with system notifications, snooze and repeat</li>
+    <li>Moodboard of all your images, filterable by color</li>
+    <li>Document mode and export to Markdown, HTML or PDF</li>
+    <li>Works with Claude (Desktop and Code) through a local MCP server</li>
+    <li>PIN-protected categories, Google Keep import, local backups</li>
+  </ul>
+  <p><a href="/privacidade/#english">Privacy Policy</a> · <a href="/termos/#english">Terms of Service</a></p>
+</section>
+
+<footer>Ideario · <a href="/privacidade/">Privacidade</a> · <a href="/termos/">Termos</a> · Contato:
+<a href="mailto:wyli4m@gmail.com">wyli4m@gmail.com</a></footer>
 </main>
 </body>
 </html>
