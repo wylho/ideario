@@ -106,6 +106,8 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
 - Verificação: `npm run check`, `npm run test:e2e` (relógio fixo às 10h), `cargo test` em `src-tauri`, testes no app
   nativo (`npx tauri build --debug --no-bundle && xvfb-run -a node tests/native/run.mjs`; precisa de webkit2gtk-driver e
   tauri-driver), desempenho (`tests/native/perf.mjs`, build de release) e `npm run tauri build`.
+- Site (`site/`, Cloudflare Pages em ideario.pages.dev) e `README.md` têm o mesmo conteúdo: ao mudar um, mudar o outro
+  (skill `sync-site`; prints por `scripts/site-shots.mjs`).
 - Release: `.github/workflows/release.yml` (Actions → Release → Run workflow; precisa estar no branch padrão).
 - Graphify (mapa do código, local, sem chave; o usuário pediu para usar sempre que ajudar a achar código): `pip3 install --user graphifyy` e
   `graphify extract . --code-only --out <pasta fora do repo>`; consultas com `graphify explain "X" --graph <…>/graph.json`.
