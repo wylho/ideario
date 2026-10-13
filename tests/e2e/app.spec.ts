@@ -1285,6 +1285,35 @@ test.describe('mídia no editor', () => {
     await expect(page.locator('#corpo .img-row img')).toHaveCount(2)
   })
 
+  test('arrastar uma foto para entre dois parágrafos a leva para lá (linha mostra onde); clique só seleciona', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 })
+    await newNote(page)
+    await page.keyboard.type('Primeiro')
+    await page.keyboard.press('Enter')
+    await page.keyboard.type('Segundo')
+    const photo = page.locator('.editor input[type=file][accept="image/*"]')
+    await photo.setInputFiles({ name: 'a.png', mimeType: 'image/png', buffer: png })
+    const img = page.locator('#corpo > img')
+    await expect(img).toHaveCount(1)
+    const order = () => page.locator('#corpo > *').evaluateAll((els) => els.map((e) => (e.tagName === 'IMG' ? 'foto' : e.textContent)).filter(Boolean))
+    await expect.poll(order).toEqual(['Primeiro', 'Segundo', 'foto'])
+    // clique sem mover: seleciona a foto (aparecem os botões dela), nada sai do lugar
+    await img.click()
+    await expect(page.getByRole('button', { name: 'Remover foto' })).toBeVisible()
+    await expect.poll(order).toEqual(['Primeiro', 'Segundo', 'foto'])
+    // arrastar até a metade de cima do "Segundo"
+    const b = (await img.boundingBox())!
+    const second = (await page.locator('#corpo > p', { hasText: 'Segundo' }).boundingBox())!
+    await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2)
+    await page.mouse.down()
+    await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2 - 10)
+    await page.mouse.move(second.x + 40, second.y + 3, { steps: 8 })
+    await expect(page.locator('.photo-drop-line')).toBeVisible()
+    await page.mouse.up()
+    await expect(page.locator('.photo-drop-line')).toHaveCount(0)
+    await expect.poll(order).toEqual(['Primeiro', 'foto', 'Segundo'])
+  })
+
   test('importar várias fotos de uma vez: entram lado a lado; outros arquivos viram cartão', async ({ page }) => {
     await newNote(page)
     await page.locator('.editor input[type=file][accept="image/*"]').setInputFiles([
@@ -1501,6 +1530,27 @@ test('configurações: ligar o Ideario no Claude Desktop e o comando do Claude C
   await expect(desktop.getByRole('button', { name: 'Ligar' })).toBeVisible()
 })
 
+test('câmera: "+" → Câmera abre a nota nova com a câmera ligada; tirar a foto põe na nota', async ({ page, context }) => {
+  await context.grantPermissions(['camera'])
+  await page.setViewportSize({ width: 1280, height: 900 })
+  await page.getByRole('button', { name: 'Criar' }).click()
+  await page.getByRole('menuitem', { name: 'Câmera' }).click()
+  const cam = page.locator('.camera')
+  await expect(cam).toBeVisible()
+  // o vídeo da câmera chega (dispositivo falso do navegador de teste)
+  await expect.poll(() => cam.locator('video').evaluate((v: HTMLVideoElement) => v.videoWidth)).toBeGreaterThan(0)
+  await page.getByRole('button', { name: 'Tirar foto' }).click()
+  await expect(cam).toHaveCount(0)
+  await expect(page.locator('#corpo img')).toHaveCount(1)
+  // pelo "+" do editor também
+  await page.getByRole('button', { name: 'Inserir' }).click()
+  await page.getByRole('menuitem', { name: 'Câmera' }).click()
+  await expect(cam).toBeVisible()
+  await expect.poll(() => cam.locator('video').evaluate((v: HTMLVideoElement) => v.videoWidth)).toBeGreaterThan(0)
+  await page.getByRole('button', { name: 'Tirar foto' }).click()
+  await expect(page.locator('#corpo img')).toHaveCount(2)
+})
+
 test('"+" em leque: atalhos que já abrem a nota fazendo a coisa', async ({ page }) => {
   await page.getByRole('button', { name: 'Criar' }).click()
   const items = page.getByRole('menuitem')
@@ -1634,8 +1684,44 @@ test.describe('blocos no editor', () => {
     await page.mouse.down()
     await page.mouse.move(h.x + 20, h.y, { steps: 3 })
     await page.mouse.move(t.x + 60, t.y + 3, { steps: 8 })
+    // a linha mostra onde vai cair: em cima do primeiro item
+    const line = (await page.locator('.blk-drop').boundingBox())!
+    expect(Math.abs(line.y - t.y)).toBeLessThan(6)
     await page.mouse.up()
+    await expect(page.locator('.blk-drop')).toHaveCount(0)
     await expect(items(page).first()).toContainText('Repelente')
+    // soltar e clicar sem mover continua abrindo o menu (não vira arraste)
+    await items(page).nth(1).hover()
+    await page.locator('.blk-handle.item').click()
+    await expect(page.getByRole('menuitem', { name: 'Diminuir recuo' })).toBeVisible()
+    await page.keyboard.press('Escape')
+  })
+
+  test('arrastar pela alça leva o subitem para outro nível e para o fim da lista', async ({ page }) => {
+    await back(page)
+    await newNote(page)
+    await page.getByRole('button', { name: 'Checklist' }).click()
+    for (const [t, tab] of [['Viagem', false], ['Passaporte', true], ['Casa', false]] as const) {
+      if (tab) await page.keyboard.press('Tab')
+      await page.keyboard.type(t)
+      await page.keyboard.press('Enter')
+      if (tab) await page.keyboard.press('Shift+Tab')
+    }
+    await page.keyboard.press('Backspace')
+    const top = page.locator('#corpo > ul[data-type="taskList"] > li')
+    await expect(top).toHaveCount(2)
+    // o subitem "Passaporte" vai para depois de "Casa", no primeiro nível
+    const src = (await page.locator('#corpo').getByText('Passaporte', { exact: true }).boundingBox())!
+    await page.mouse.move(src.x + 10, src.y + src.height / 2)
+    const h = (await page.locator('.blk-handle.item').boundingBox())!
+    const dst = (await page.locator('#corpo').getByText('Casa', { exact: true }).boundingBox())!
+    await page.mouse.move(h.x + h.width / 2, h.y + h.height / 2)
+    await page.mouse.down()
+    await page.mouse.move(h.x + 10, dst.y + dst.height - 2, { steps: 10 })
+    await page.mouse.up()
+    await expect(top).toHaveCount(3)
+    await expect(top.nth(2)).toContainText('Passaporte')
+    await expect(page.locator('#corpo ul[data-type="taskList"] ul')).toHaveCount(0)
   })
 
   test('uma alça só: no checklist ela é do item; a checklist inteira fica no menu dele', async ({ page }) => {

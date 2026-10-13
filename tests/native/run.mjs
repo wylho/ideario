@@ -574,6 +574,35 @@ try {
     if (row?.emoji !== '🚀') throw new Error(`banco: ${JSON.stringify(row)}`)
   })
 
+  await test('alça do checklist: arrastar reordena no app de verdade (com o ponteiro, sem o arrastar do HTML)', async () => {
+    await s.exec(`document.querySelector('[aria-label="Criar"]').click(); return true`)
+    await s.waitFor(`return !!document.querySelector('[role=menuitem]')`, 'leque')
+    await s.clickText('[role=menuitem]', 'Nota')
+    await s.waitFor(`return document.activeElement?.id === 'corpo'`, 'editor')
+    await s.type('#titulo', 'Ordem')
+    await s.exec(`document.getElementById('corpo').focus(); document.querySelector('[aria-label="Checklist"]').click(); return true`)
+    await s.keys('Um\uE007Dois\uE007Três')
+    await s.waitFor(`return document.querySelectorAll('#corpo li').length === 3`, 'três itens')
+    const box = (txt) => s.exec(`const p = [...document.querySelectorAll('#corpo li p')].find((e) => e.textContent === arguments[0]); const r = p.getBoundingClientRect(); return [Math.round(r.x), Math.round(r.y), Math.round(r.height)]`, txt)
+    const [tx, ty, th] = await box('Três')
+    const [, uy] = await box('Um')
+    const act = (actions) => wd('POST', s.p('/actions'), { actions: [{ type: 'pointer', id: 'm', parameters: { pointerType: 'mouse' }, actions }] })
+    await act([{ type: 'pointerMove', x: tx + 10, y: ty + Math.round(th / 2), duration: 0 }])
+    await s.waitFor(`return !!document.querySelector('.blk-handle.item')`, 'alça')
+    const [hx, hy] = await s.exec(`const r = document.querySelector('.blk-handle.item').getBoundingClientRect(); return [Math.round(r.x + r.width / 2), Math.round(r.y + r.height / 2)]`)
+    await act([
+      { type: 'pointerMove', x: hx, y: hy, duration: 50 },
+      { type: 'pointerDown', button: 0 },
+      { type: 'pointerMove', x: hx + 6, y: hy - 8, duration: 80 },
+      { type: 'pointerMove', x: hx + 10, y: uy + 2, duration: 200 },
+      { type: 'pointerUp', button: 0 },
+    ])
+    await s.waitFor(`return [...document.querySelectorAll('#corpo li p')].map((p) => p.textContent).join(',') === 'Três,Um,Dois'`, 'Três em primeiro')
+    await sleep(700)
+    await s.exec(`document.querySelector('[aria-label="Voltar e salvar"]').click(); return true`)
+    await s.waitFor(`return !document.querySelector('.editor')`, 'editor fechado')
+  })
+
   await test('tema escuro: a janela (barra de título e fundo) acompanha e fica guardado para a próxima abertura', async () => {
     await s.exec(`[...document.querySelectorAll('.sidebar button')].find((b) => b.textContent.includes('Configurações'))?.click(); return true`)
     await s.waitFor(`return !!document.querySelector('.seg-item[data-value="dark"], [data-value="dark"]')`, 'opção Escuro')

@@ -7,6 +7,7 @@ import { Extension, mergeAttributes, Node } from '@tiptap/core'
 import { Fragment, type Node as PMNode } from '@tiptap/pm/model'
 import { NodeSelection, Plugin, PluginKey, type EditorState, type Transaction } from '@tiptap/pm/state'
 import type { EditorView } from '@tiptap/pm/view'
+import { dropTargetAt, moveNodeTo } from './blocks'
 
 /** Fotos por linha, no máximo. */
 export const ROW_MAX = 4
@@ -25,7 +26,8 @@ export const NoteImage = Node.create<{ media: (hash: string) => MediaInfo; load?
   name: 'noteImage',
   group: 'block',
   atom: true,
-  draggable: true,
+  // Arrastar a foto é pelo ponteiro (photoDrag): o arrastar do HTML não chega à página no macOS e no Windows.
+  draggable: false,
   addOptions: () => ({ media: () => ({ src: '' }) }),
   addAttributes: () => ({
     hash: {
@@ -220,7 +222,7 @@ export function imageActions(state: EditorState, pos: number) {
 const key = new PluginKey('mediaLayout')
 
 /** Zona de soltar: borda esquerda ou direita (35%) de uma foto. */
-function dropZone(view: EditorView, e: DragEvent): { pos: number; side: 'left' | 'right'; el: HTMLElement } | null {
+function dropZone(view: EditorView, e: { target: EventTarget | null; clientX: number }): { pos: number; side: 'left' | 'right'; el: HTMLElement } | null {
   const el = (e.target as Element | null)?.closest?.('img[data-hash]') as HTMLElement | null
   if (!el || !view.dom.contains(el)) return null
   const r = el.getBoundingClientRect()
@@ -241,10 +243,60 @@ function imagePos(view: EditorView, el: Element): number | null {
 }
 
 /**
- * Foto sendo arrastada dentro do editor. Anotada no início do arraste: o ProseMirror guarda o nó só no
- * próprio estado de arraste e o descarta antes de chamar handleDrop.
+ * Arrastar uma foto com o ponteiro: na borda de outra foto, ficam lado a lado (como no Gutenberg); entre os blocos,
+ * a foto vai para lá (a linha mostra onde). Sem mover, é clique (seleciona a foto, com os botões dela).
  */
-let dragFrom: number | null = null
+function photoDrag(view: EditorView, from: number, el: HTMLElement, e: PointerEvent) {
+  const [x0, y0] = [e.clientX, e.clientY]
+  let started = false
+  let zone: ReturnType<typeof dropZone> = null
+  let target: number | null = null
+  const line = document.createElement('div')
+  line.className = 'photo-drop-line'
+  const move = (ev: PointerEvent) => {
+    if (!started) {
+      if (Math.hypot(ev.clientX - x0, ev.clientY - y0) < 6) return
+      started = true
+      document.body.classList.add('photo-dragging')
+      el.classList.add('photo-dragged')
+      document.body.append(line)
+    }
+    const under = document.elementFromPoint(ev.clientX, ev.clientY)
+    zone = under && under !== el ? dropZone(view, { target: under, clientX: ev.clientX }) : null
+    if (zone && zone.pos !== from) {
+      mark(zone.el, zone.side)
+      target = null
+      line.hidden = true
+      return
+    }
+    zone = null
+    mark(null)
+    const t = dropTargetAt(view, from, ev.clientY)
+    target = t?.pos ?? null
+    line.hidden = !t
+    if (t) Object.assign(line.style, { top: `${t.line.top - 1}px`, left: `${t.line.left}px`, width: `${t.line.width}px` })
+  }
+  const up = () => {
+    window.removeEventListener('pointermove', move)
+    window.removeEventListener('pointerup', up)
+    window.removeEventListener('pointercancel', up)
+    document.body.classList.remove('photo-dragging')
+    el.classList.remove('photo-dragged')
+    line.remove()
+    mark(null)
+    if (!started) return
+    // depois do mouseup do ProseMirror (que seleciona a foto clicada), para a seleção ficar no lugar novo
+    setTimeout(() => {
+      if (zone) {
+        const tr = placeBeside(view.state, from, zone.pos, zone.side)
+        if (tr) view.dispatch(tr)
+      } else if (target != null) moveNodeTo(view, from, target)
+    }, 0)
+  }
+  window.addEventListener('pointermove', move)
+  window.addEventListener('pointerup', up)
+  window.addEventListener('pointercancel', up)
+}
 
 let marked: HTMLElement | null = null
 function mark(el: HTMLElement | null, side?: 'left' | 'right') {
@@ -292,47 +344,27 @@ export const MediaLayout = Extension.create<{
               onMenu(pos, e)
               return true
             },
-            dragstart(view, e) {
-              const el = (e.target as Element | null)?.closest?.('img[data-hash]')
-              dragFrom = el ? imagePos(view, el) : null
+            pointerdown(view, e) {
+              if (e.button !== 0 || e.pointerType !== 'mouse') return false
+              const el = (e.target as Element | null)?.closest?.('img[data-hash]') as HTMLElement | null
+              if (!el || !view.dom.contains(el)) return false
+              const from = imagePos(view, el)
+              if (from != null) photoDrag(view, from, el, e)
               return false
             },
-            dragover(view, e) {
-              const from = dragFrom
-              const zone = from != null ? dropZone(view, e) : null
-              if (!zone || zone.pos === from) {
-                mark(null)
-                return false
-              }
+            dragstart(_view, e) {
+              // foto não se arrasta pelo HTML (ver photoDrag)
+              if (!(e.target as Element | null)?.closest?.('img[data-hash]')) return false
               e.preventDefault()
-              mark(zone.el, zone.side)
               return true
-            },
-            dragleave(_view, e) {
-              if (e.target === marked) mark(null)
-              return false
-            },
-            dragend() {
-              mark(null)
-              dragFrom = null
-              return false
             },
           },
-          handleDrop(view, e, _slice, moved) {
-            mark(null)
+          // Arquivos soltos do computador (no navegador; no app eles chegam pelo evento nativo, com o caminho).
+          handleDrop(view, e) {
             const files = [...(e.dataTransfer?.files ?? [])]
-            if (files.length && onFiles) {
-              const at = view.posAtCoords({ left: e.clientX, top: e.clientY })
-              onFiles(files, at ? at.pos : view.state.selection.to)
-              return true
-            }
-            const from = moved ? dragFrom : null
-            dragFrom = null
-            const zone = from != null ? dropZone(view, e) : null
-            if (from == null || !zone) return false
-            const tr = placeBeside(view.state, from, zone.pos, zone.side)
-            if (!tr) return true // linha cheia: não muda nada
-            view.dispatch(tr)
+            if (!files.length || !onFiles) return false
+            const at = view.posAtCoords({ left: e.clientX, top: e.clientY })
+            onFiles(files, at ? at.pos : view.state.selection.to)
             return true
           },
           handlePaste(view, e) {

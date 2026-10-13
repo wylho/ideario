@@ -84,7 +84,9 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
 - Linux: a WebKitGTK vem com microfone/câmera desligados; `lib.rs` (`linux_media`) liga e aceita os pedidos de áudio e
   vídeo. O AppImage leva o GStreamer (`bundleMediaFramework`), senão não há player nem gravador. "+" em leque (`FabMenu`) com atalhos.
 - Blocos (`src/lib/editor/blocks.ts`): cada nó de primeiro nível é um bloco, como no Notion. Uma alça ⋮⋮ só, no hover,
-  colada ao que está sob o ponteiro (`blockAt` usa x e y): arrasta e abre o menu (`MenuAt`). Em lista/checklist ela é do
+  colada ao que está sob o ponteiro (`blockAt`; em lista, o item é o da linha, `itemAtRow`): arrasta e abre o menu (`MenuAt`).
+  **Arrastar no editor é sempre pelo ponteiro, nunca pelo arrastar do HTML** (`dropTargetAt`/`moveNodeTo`; fotos em
+  `photoDrag`): no macOS e no Windows o Tauri fica com todo arraste para receber arquivos e a página nunca recebe o soltar. Em lista/checklist ela é do
   item (reordenar como no Keep; menu com Aumentar/Diminuir recuo e o submenu "Checklist inteira"/"Lista inteira").
   Checklist com subitens em vários níveis (Tab/Shift+Tab; marcar o item marca os subitens, `CheckCascade`).
   "Transformar em" passa por `convertBlock` (lista↔checklist mantém níveis e marcados). Ctrl/⌘+A: `SelectAllDom`

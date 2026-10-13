@@ -14,7 +14,7 @@
   import { isDocNote, setDocNote } from '../lib/docmode'
   import {
     blockAt, canIndent, canMove, checkAll, checkCount, clipNode, convertBlock, deleteChecked, deleteNode, duplicateNode, moveNode, shapeOf,
-    startNodeDrag, type BlockHit, type Shape,
+    dropTargetAt, moveNodeTo, type BlockHit, type Shape,
   } from '../lib/editor/blocks'
   import { SEP, type MenuEntry } from '../lib/menu'
   import MenuAt from './MenuAt.svelte'
@@ -320,7 +320,9 @@
       // Atalhos do "+": já abre gravando, com a câmera ou com os arquivos escolhidos.
       if (start && 'files' in start) void addFiles(start.files)
       else if (start && 'record' in start) void recorder.start()
-      else if (start && 'camera' in start) cameraOpen = true
+      // A câmera é outro diálogo: abrir no mesmo instante em que o editor nasce a deixava "aberta" e invisível
+      // (e os cliques seguintes não faziam nada). Abre depois que o editor terminou de abrir.
+      else if (start && 'camera' in start) setTimeout(() => (cameraOpen = true), 0)
       // PDF pelo menu do card: abre e já imprime (as fotos têm um instante para carregar).
       if (print) setTimeout(() => void printNote(), 400)
       // Soltos no texto entram no ponto; fora dele (título, margens, fundo), no fim da nota.
@@ -397,10 +399,53 @@
     return Math.max(4, dom.getBoundingClientRect().left - blocksEl.getBoundingClientRect().left - marker - 26)
   }
 
-  function dragFromHandle(e: DragEvent, pos: number, dom: HTMLElement) {
-    if (!editor) return
-    handleDragging = true
-    startNodeDrag(editor.view, pos, e, dom)
+  /** Linha que mostra onde o bloco ou item arrastado vai cair (relativa à área dos blocos). */
+  let dropLine = $state.raw<{ top: number; left: number; width: number } | null>(null)
+  let justDragged = false
+
+  /** Arrastar pela alça com o ponteiro: apertar, mover (a linha mostra onde cai) e soltar. Sem mover, é clique (menu).
+   *  Não usa o arrastar do HTML: no macOS e no Windows a janela do Tauri fica com ele para receber arquivos. */
+  function handleDown(e: PointerEvent, pos: number) {
+    if (!editor || e.button !== 0) return
+    const view = editor.view
+    const [x0, y0] = [e.clientX, e.clientY]
+    const scroller = blocksEl?.closest('.ed-scroll') as HTMLElement | null
+    let started = false
+    let target: number | null = null
+    const move = (ev: PointerEvent) => {
+      if (!started) {
+        if (Math.hypot(ev.clientX - x0, ev.clientY - y0) < 4) return
+        started = handleDragging = true
+        document.body.classList.add('blk-grabbing')
+      }
+      ev.preventDefault()
+      if (scroller) {
+        const r = scroller.getBoundingClientRect()
+        if (ev.clientY < r.top + 40) scroller.scrollTop -= 14
+        else if (ev.clientY > r.bottom - 40) scroller.scrollTop += 14
+      }
+      const t = dropTargetAt(view, pos, ev.clientY)
+      target = t?.pos ?? null
+      const base = blocksEl?.getBoundingClientRect()
+      dropLine = t && base ? { top: t.line.top - base.top, left: t.line.left - base.left, width: t.line.width } : null
+    }
+    const up = () => {
+      window.removeEventListener('pointermove', move)
+      window.removeEventListener('pointerup', up)
+      window.removeEventListener('pointercancel', up)
+      document.body.classList.remove('blk-grabbing')
+      if (started) {
+        justDragged = true
+        setTimeout(() => (justDragged = false), 0)
+        if (target != null) moveNodeTo(view, pos, target)
+        hover = null
+      }
+      handleDragging = false
+      dropLine = null
+    }
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', up)
+    window.addEventListener('pointercancel', up)
   }
 
   const TEXTISH = new Set(['paragraph', 'heading', 'bulletList', 'orderedList', 'taskList', 'codeBlock'])
@@ -682,13 +727,14 @@
                 class:item={isItem}
                 style:top="{topOf(t.dom)}px"
                 style:left="{handleLeft(t.dom, isItem)}px"
-                draggable="true"
                 aria-label={isItem ? 'Item: arraste para reordenar ou clique para o menu' : 'Bloco: arraste para mover ou clique para o menu'}
                 title={isItem ? 'Arraste para reordenar · clique para o menu' : 'Arraste para mover · clique para o menu'}
-                ondragstart={(e) => dragFromHandle(e, t.pos, t.dom)}
-                ondragend={() => ((handleDragging = false), (hover = null))}
-                onclick={(e) => openNodeMenu(t.pos, e.clientX, e.clientY)}
+                onpointerdown={(e) => handleDown(e, t.pos)}
+                onclick={(e) => !justDragged && openNodeMenu(t.pos, e.clientX, e.clientY)}
               ><GripVertical size={16} /></button>
+            {/if}
+            {#if dropLine}
+              <div class="blk-drop" style:top="{dropLine.top - 1}px" style:left="{dropLine.left}px" style:width="{dropLine.width}px"></div>
             {/if}
           </div>
           <MenuAt bind:this={blockMenu} />

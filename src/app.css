@@ -980,3 +980,12 @@ button { cursor: pointer; }
 .emoji-none { font-size: 14px; color: var(--muted); padding: 24px 4px; text-align: center; }
 .editor[data-doc] .ed-emoji { font-size: 64px; }
 @media print { body.print-note .ed-emoji { font-size: 48pt; } }
+
+/* arrastar pela alça: a linha onde o bloco ou item vai cair */
+.blk-drop { position: absolute; height: 3px; border-radius: 2px; background: var(--accent); pointer-events: none; z-index: 3; }
+body.blk-grabbing, body.blk-grabbing * { cursor: grabbing !important; user-select: none; }
+/* arrastar foto: linha entre blocos e a foto que está indo */
+.photo-drop-line { position: fixed; height: 3px; border-radius: 2px; background: var(--accent); pointer-events: none; z-index: 70; }
+body.photo-dragging, body.photo-dragging * { cursor: grabbing !important; user-select: none; }
+.photo-dragged { opacity: .5; }
+.ProseMirror img[data-hash] { -webkit-user-drag: none; }

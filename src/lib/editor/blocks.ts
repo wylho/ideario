@@ -61,18 +61,75 @@ function itemAtRow(view: EditorView, blockPos: number, block: PMNode, y: number)
   return hit
 }
 
-/** Começa a arrastar o nó em `pos` a partir da alça: o ProseMirror cuida do soltar (e mostra a linha onde vai cair). */
-export function startNodeDrag(view: EditorView, pos: number, e: DragEvent, image: HTMLElement) {
-  const sel = NodeSelection.create(view.state.doc, pos)
-  view.dispatch(view.state.tr.setSelection(sel))
-  const slice = sel.content()
-  const { dom, text } = view.serializeForClipboard(slice)
-  e.dataTransfer?.clearData()
-  e.dataTransfer?.setData('text/html', dom.innerHTML)
-  e.dataTransfer?.setData('text/plain', text)
-  if (e.dataTransfer) e.dataTransfer.effectAllowed = 'copyMove'
-  e.dataTransfer?.setDragImage(image, 0, 0)
-  ;(view as unknown as { dragging: unknown }).dragging = { slice, move: true, node: sel }
+export interface DropTarget {
+  /** Posição no documento onde o nó entra. */
+  pos: number
+  /** Linha que mostra onde vai cair (coordenadas da tela). */
+  line: { top: number; left: number; width: number }
+}
+
+/**
+ * Onde o nó arrastado pela alça cairia com o ponteiro em `y`. Item de lista cai antes ou depois de outro item do mesmo
+ * tipo (em qualquer nível, levando os subitens junto); bloco cai antes ou depois de outro bloco. Nada dentro dele mesmo.
+ * O arraste é feito com o ponteiro (não com o arrastar do HTML): no macOS e no Windows a janela do Tauri fica com todo
+ * arraste para receber arquivos do sistema, e a página nunca recebia o soltar.
+ */
+export function dropTargetAt(view: EditorView, from: number, y: number): DropTarget | null {
+  const { doc } = view.state
+  const node = doc.nodeAt(from)
+  if (!node) return null
+  const inside = (p: number) => p >= from && p < from + node.nodeSize
+  const at = (pos: number, dom: HTMLElement, before: boolean, ownBottom: number): DropTarget => {
+    const r = dom.getBoundingClientRect()
+    return { pos, line: { top: before ? r.top : ownBottom, left: r.left, width: r.width } }
+  }
+  if (ITEMS.has(node.type.name)) {
+    let target: DropTarget | null = null
+    doc.forEach((block, offset) => {
+      if (target || !['bulletList', 'orderedList', 'taskList'].includes(block.type.name)) return
+      const hit = itemAtRow(view, offset, block, y)
+      if (!hit || hit.node.type !== node.type || inside(hit.pos)) return
+      const r = hit.dom.getBoundingClientRect()
+      const sub = hit.dom.querySelector(':scope > div > ul, :scope > div > ol, :scope > ul, :scope > ol')
+      const ownBottom = sub ? sub.getBoundingClientRect().top : r.bottom
+      const before = y < (r.top + ownBottom) / 2
+      target = at(before ? hit.pos : hit.pos + hit.node.nodeSize, hit.dom, before, r.bottom)
+    })
+    return target
+  }
+  let target: DropTarget | null = null
+  doc.forEach((block, offset) => {
+    if (target || offset === from) return
+    const dom = view.nodeDOM(offset) as HTMLElement | null
+    if (!dom?.getBoundingClientRect) return
+    const r = dom.getBoundingClientRect()
+    if (y < r.top - 4 || y > r.bottom + 4) return
+    const before = y < (r.top + r.bottom) / 2
+    const pos = before ? offset : offset + block.nodeSize
+    if (pos === from || pos === from + node.nodeSize) return
+    target = at(pos, dom, before, r.bottom)
+  })
+  return target
+}
+
+/** Move o nó de `from` para `to` (posições de antes de mover). Uma lista que ficaria vazia sai junto. */
+export function moveNodeTo(view: EditorView, from: number, to: number) {
+  const { doc } = view.state
+  const node = doc.nodeAt(from)
+  if (!node || (to >= from && to <= from + node.nodeSize)) return false
+  let cut = { from, to: from + node.nodeSize }
+  // tirar o único item de uma lista deixaria a lista vazia (inválida): a lista sai inteira
+  for (let $c = doc.resolve(cut.from); $c.depth > 0 && $c.parent.childCount === 1 && $c.parent.type.name.endsWith('List'); $c = doc.resolve($c.before())) {
+    cut = { from: $c.before(), to: $c.after() }
+  }
+  const tr = view.state.tr.delete(cut.from, cut.to)
+  const dest = tr.mapping.map(to)
+  const $d = tr.doc.resolve(dest)
+  if (!$d.parent.canReplaceWith($d.index(), $d.index(), node.type)) return false
+  tr.insert(dest, node)
+  tr.setSelection(NodeSelection.create(tr.doc, dest))
+  view.dispatch(tr.scrollIntoView())
+  return true
 }
 
 /** Sobe ou desce o nó em `pos` entre os irmãos (bloco entre blocos, item entre itens). */
