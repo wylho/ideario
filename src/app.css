@@ -989,3 +989,27 @@ body.blk-grabbing, body.blk-grabbing * { cursor: grabbing !important; user-selec
 body.photo-dragging, body.photo-dragging * { cursor: grabbing !important; user-select: none; }
 .photo-dragged { opacity: .5; }
 .ProseMirror img[data-hash] { -webkit-user-drag: none; }
+/* Menus e listas que podem ser maiores que a janela (ex.: as categorias): cabem no espaço que sobra e rolam por
+   dentro. Cada componente do Bits UI informa esse espaço numa variável própria. */
+.menu {
+  max-height: var(--bits-select-content-available-height, var(--bits-dropdown-menu-content-available-height,
+    var(--bits-context-menu-content-available-height, none)));
+  overflow-y: auto; overscroll-behavior: contain;
+}
+.menu-scroll { max-height: min(420px, var(--bits-select-content-available-height, 420px)); }
+
+/* macOS: barra de título transparente; os três botões da janela ficam no canto de cima, à esquerda (18 px, 25 px).
+   Tudo o que encosta naquele canto abre espaço para eles. */
+:root[data-titlebar='overlay'] .topbar.appbar { padding-left: 86px; }
+:root[data-titlebar='overlay'] .topbar:not(.appbar) { padding-left: 82px; }
+:root[data-titlebar='overlay'] .drawer { padding-top: 40px; }
+:root[data-titlebar='overlay'] .lb-top { padding-left: 84px; }
+:root[data-titlebar='overlay'] .editor[data-doc] .ed-top { padding-left: 84px; }
+@media (max-width: 639px) {
+  :root[data-titlebar='overlay'] .editor .ed-top { padding-left: 84px; }
+  :root[data-titlebar='overlay'] .sheet { max-height: calc(100% - 52px); }
+}
+@media (min-width: 640px) {
+  /* editor e configurações como diálogo: descem um pouco para não encostar nos botões */
+  :root[data-titlebar='overlay'] .editor:not([data-doc]) { inset: 52px 0 24px; height: min(calc(100% - 76px), 880px); }
+}

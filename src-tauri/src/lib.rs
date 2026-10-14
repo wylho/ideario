@@ -31,6 +31,13 @@ use tauri::{Manager, WebviewWindowBuilder};
 use commands::Core;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
+/// Avisa a página que a barra de título é transparente (macOS): ela abre espaço para os botões da janela no canto e
+/// deixa arrastar a janela pela barra do app.
+#[cfg(target_os = "macos")]
+const TITLEBAR_SCRIPT: &str = "document.documentElement.dataset.titlebar = 'overlay';";
+#[cfg(not(target_os = "macos"))]
+const TITLEBAR_SCRIPT: &str = "";
+
 pub fn run() {
     let app = tauri::Builder::default()
         // Janela nativa de abrir arquivo (Importar do Google Keep).
@@ -91,7 +98,7 @@ pub fn run() {
                 .with(|s| Ok((s.sync_value("window_theme")?, s.sync_value("window_bg")?)))
                 .unwrap_or_default();
             let mut window = WebviewWindowBuilder::from_config(app.handle(), &config)?
-                .initialization_script(format!("{}\n{}", system_fonts::init_script(), system_theme::init_script()))
+                .initialization_script(format!("{}\n{}\n{}", system_fonts::init_script(), system_theme::init_script(), TITLEBAR_SCRIPT))
                 .theme(match look.as_deref() {
                     Some("dark") => Some(tauri::Theme::Dark),
                     Some("light") => Some(tauri::Theme::Light),
@@ -99,6 +106,15 @@ pub fn run() {
                 });
             if let Some(color) = bg.as_deref().and_then(commands::parse_hex) {
                 window = window.background_color(color);
+            }
+            // macOS: barra de título transparente, com os três botões por cima da barra do próprio app (como no Notas
+            // e no Finder). Assim ela tem sempre a cor do tema, claro ou escuro, sem depender da aparência do sistema.
+            #[cfg(target_os = "macos")]
+            {
+                window = window
+                    .title_bar_style(tauri::TitleBarStyle::Overlay)
+                    .hidden_title(true)
+                    .traffic_light_position(tauri::LogicalPosition::new(18.0, 25.0));
             }
             window.build()?;
             #[cfg(target_os = "linux")]

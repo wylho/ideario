@@ -850,6 +850,24 @@ test('categoria com PIN: some de Tudo, abre só com o PIN; bloquear, mudar e tir
   await expect(card()).toHaveCount(1)
 })
 
+test('categoria da nota: em janela baixa a lista cabe na tela e rola até a última opção', async ({ page }) => {
+  await page.setViewportSize({ width: 1100, height: 520 })
+  await cards(page).filter({ hasText: 'Mercado da semana' }).first().click()
+  await page.locator('#categoria').click()
+  const list = page.getByRole('listbox')
+  await expect(list).toBeVisible()
+  // depois da animação de abrir: inteira dentro da janela
+  await expect.poll(async () => (await list.boundingBox())!.y).toBeGreaterThanOrEqual(0)
+  const box = (await list.boundingBox())!
+  expect(box.y + box.height).toBeLessThanOrEqual(520)
+  // a última opção dá para alcançar rolando a lista
+  const last = page.getByRole('option', { name: 'Nova categoria' })
+  await last.scrollIntoViewIfNeeded()
+  await expect(last).toBeInViewport()
+  await last.click()
+  await expect(page.getByLabel('Nome', { exact: true })).toBeVisible()
+})
+
 test('emoji de capa: escolher pela busca em português, aparece grande no card; mudar pelo menu e remover', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 })
   // nota de exemplo que já tem emoji

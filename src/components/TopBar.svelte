@@ -1,4 +1,6 @@
 <script lang="ts">
+  // macOS: a barra do app é também a barra de título (transparente): arrastar por ela move a janela.
+  const overlayTitlebar = document.documentElement.dataset.titlebar === 'overlay'
   import { tick } from 'svelte'
   import { Menu, Search, X } from '@lucide/svelte'
   import SyncIndicator from './SyncIndicator.svelte'
@@ -52,7 +54,12 @@
   </label>
 {/snippet}
 
-<header class="topbar" class:appbar={app.wide} class:selecting={app.selected.size > 0}>
+<header
+  class="topbar"
+  class:appbar={app.wide}
+  class:selecting={app.selected.size > 0}
+  data-tauri-drag-region={overlayTitlebar ? 'deep' : undefined}
+>
   {#if app.selected.size}
     <SelectionBar />
   {:else}

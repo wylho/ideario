@@ -760,7 +760,7 @@
                 <ChevronDown size={15} />
               </Select.Trigger>
               <Select.Portal>
-                <Select.Content class="menu" sideOffset={6}>
+                <Select.Content class="menu menu-scroll" sideOffset={6} collisionPadding={8}>
                   <Select.Viewport>
                     <Select.Item value="none" label="Sem categoria" class="menu-item">Sem categoria</Select.Item>
                     {#each app.categories as c (c.id)}
