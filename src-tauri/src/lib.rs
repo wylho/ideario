@@ -114,7 +114,10 @@ pub fn run() {
                 window = window
                     .title_bar_style(tauri::TitleBarStyle::Overlay)
                     .hidden_title(true)
-                    .traffic_light_position(tauri::LogicalPosition::new(18.0, 25.0));
+                    // y = altura da área dos botões, não o topo deles: o AppKit mantém o deslocamento próprio dentro
+                    // dela. 33 põe o centro dos botões no meio da barra de 64 px (medido num print do macOS: com 25
+                    // o centro ficava a 24 px do topo, 8 px acima do ☰ e dos ícones).
+                    .traffic_light_position(tauri::LogicalPosition::new(18.0, 33.0));
             }
             window.build()?;
             #[cfg(target_os = "linux")]

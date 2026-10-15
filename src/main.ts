@@ -16,3 +16,14 @@ document.addEventListener('contextmenu', (e) => {
 })
 
 export default mount(App, { target: document.getElementById('app')! })
+
+// macOS: em tela cheia o sistema esconde os botões da janela; o espaço guardado para eles some junto.
+if (document.documentElement.dataset.titlebar === 'overlay') {
+  void import('@tauri-apps/api/window').then(({ getCurrentWindow }) => {
+    const w = getCurrentWindow()
+    const sync = () =>
+      w.isFullscreen().then((f) => document.documentElement.toggleAttribute('data-fullscreen', f)).catch(() => {})
+    void sync()
+    void w.onResized(sync)
+  })
+}

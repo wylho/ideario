@@ -1,4 +1,6 @@
 <script lang="ts">
+  // macOS: barra de título transparente; com a janela larga, a lateral sobe até o topo (como no Notas e no Finder).
+  const macTitlebar = document.documentElement.dataset.titlebar === 'overlay'
   import { app } from './lib/app.svelte'
   import { makePreviews } from './lib/previews.svelte'
   import TopBar from './components/TopBar.svelte'
@@ -59,6 +61,10 @@
   {#if app.wide}<TopBar />{/if}
   <div class="body">
   {#if app.wide}
+    {#if macTitlebar}
+      <!-- macOS: canto da lateral onde ficam os botões da janela; arrasta a janela, como a barra de título. -->
+      <div class="mac-corner" data-tauri-drag-region></div>
+    {/if}
     <!-- Como no Keep: aberta mostra tudo; recolhida vira um trilho só de ícones. A barra superior não se move. -->
     <aside class="sidebar" aria-label="Navegação">
       <NavList />

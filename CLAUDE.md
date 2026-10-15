@@ -72,9 +72,12 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
   Lixeira: ícone de esvaziar (vassoura, neutro, com confirmação, só quando há notas). Nada de controles soltos no meio do conteúdo.
 - Contorno: tudo o que é card ou miniatura (cards, listas de lembretes/arquivos, miniaturas, moodboard, fotos no
   editor, blocos das configurações) usa o mesmo `--card-edge` translúcido; `--line` fica para controles e separadores.
-- macOS: barra de título transparente (`TitleBarStyle::Overlay` em `lib.rs`, botões em 18×25): a barra do app vai até o
-  topo e arrasta a janela (`data-tauri-drag-region="deep"` no `TopBar`); `data-titlebar="overlay"` no `<html>` abre
-  espaço no canto para os botões (topo, gaveta, editor, visualizador). Motivo: o `setTheme` não escurecia a barra no Mac.
+- macOS: barra de título transparente (`TitleBarStyle::Overlay` em `lib.rs`; botões em x 18, y 33 = centro a 32 px,
+  medido num print). Com a janela larga, **lateral até o topo** (como Notas/Finder): grade de duas colunas só no Mac
+  (`data-titlebar="overlay"` no `<html>`), lateral com fundo próprio e os botões no canto dela (`.mac-corner` arrasta a
+  janela), trilho recolhido com 84 px. Estreita: os botões ficam na barra, que abre espaço (e fecha em tela cheia,
+  `data-fullscreen` em `main.ts`). Barra do app arrasta a janela (`data-tauri-drag-region="deep"` no `TopBar`).
+  Motivo: o `setTheme` não escurecia a barra de título no Mac.
 - Barra de título (macOS/Windows) e fundo da janela acompanham o claro/escuro do app (`theme.svelte.ts` → `setTheme`,
   `setBackgroundColor`); a escolha fica no núcleo (`set_window_look`) e a janela já nasce com ela (`lib.rs`).
 - Temas (`src/lib/palettes.ts`, `theme.svelte.ts`): Sistema (padrão; o núcleo lê destaque/esquema do GNOME, KDE, Windows,

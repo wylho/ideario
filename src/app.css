@@ -998,10 +998,11 @@ body.photo-dragging, body.photo-dragging * { cursor: grabbing !important; user-s
 }
 .menu-scroll { max-height: min(420px, var(--bits-select-content-available-height, 420px)); }
 
-/* macOS: barra de título transparente; os três botões da janela ficam no canto de cima, à esquerda (18 px, 25 px).
+/* macOS: barra de título transparente; os três botões da janela ficam no canto de cima, à esquerda, centrados na
+   altura da barra (32 px). Em tela cheia o macOS esconde os botões e o espaço some ([data-fullscreen]).
    Tudo o que encosta naquele canto abre espaço para eles. */
-:root[data-titlebar='overlay'] .topbar.appbar { padding-left: 86px; }
-:root[data-titlebar='overlay'] .topbar:not(.appbar) { padding-left: 82px; }
+:root[data-titlebar='overlay'] .topbar:not(.appbar) { padding-left: 78px; }
+:root[data-titlebar='overlay'][data-fullscreen] .topbar:not(.appbar) { padding-left: 6px; }
 :root[data-titlebar='overlay'] .drawer { padding-top: 40px; }
 :root[data-titlebar='overlay'] .lb-top { padding-left: 84px; }
 :root[data-titlebar='overlay'] .editor[data-doc] .ed-top { padding-left: 84px; }
@@ -1013,3 +1014,22 @@ body.photo-dragging, body.photo-dragging * { cursor: grabbing !important; user-s
   /* editor e configurações como diálogo: descem um pouco para não encostar nos botões */
   :root[data-titlebar='overlay'] .editor:not([data-doc]) { inset: 52px 0 24px; height: min(calc(100% - 76px), 880px); }
 }
+
+/* macOS com a janela larga: duas colunas. A lateral vai do topo ao pé da janela, com fundo próprio, e os botões da
+   janela ficam no canto dela; a barra de cima e o conteúdo ficam na coluna da direita. Recolhida, o trilho continua
+   largo o bastante para os botões. */
+:root[data-titlebar='overlay'] { --rail-w: 84px; }
+:root[data-titlebar='overlay'] .shell.wide {
+  display: grid; grid-template-columns: var(--side-w) minmax(0, 1fr); grid-template-rows: 64px minmax(0, 1fr);
+  transition: grid-template-columns .24s cubic-bezier(.2, .8, .2, 1);
+}
+:root[data-titlebar='overlay'] .shell.wide.rail { grid-template-columns: var(--rail-w) minmax(0, 1fr); }
+:root[data-titlebar='overlay'] .shell.wide > .body { display: contents; }
+:root[data-titlebar='overlay'] .shell.wide > .topbar { grid-column: 2; grid-row: 1; }
+:root[data-titlebar='overlay'] .shell.wide .sidebar {
+  grid-column: 1; grid-row: 1 / 3; width: auto; padding-top: 64px; transition: none;
+  background: color-mix(in srgb, var(--bg) 95%, var(--fg)); border-right: 1px solid var(--line);
+}
+:root[data-titlebar='overlay'] .shell.wide .main { grid-column: 2; grid-row: 2; height: auto; min-height: 0; }
+:root[data-titlebar='overlay'] .shell.wide .mac-corner { grid-column: 1; grid-row: 1; z-index: 2; }
+:root[data-titlebar='overlay'] .shell.wide.rail .sidebar .drawer-scroll { padding-inline: 16px; }
