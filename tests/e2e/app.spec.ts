@@ -444,14 +444,19 @@ test('desktop: barra superior fixa; lateral recolhe para trilho de ícones e lem
   // O topo não se move.
   expect(await page.getByLabel('Expandir barra lateral').boundingBox()).toEqual(menu)
   expect(await page.locator('.view-switch').boundingBox()).toEqual(visoes)
-  // No trilho, as categorias continuam clicáveis (bolinhas com dica).
+  // No trilho, as categorias viram um ícone só (como as tags), que expande a barra.
+  await expect(page.locator('.sidebar').getByRole('button', { name: 'Bem-estar 2' })).toBeHidden()
+  await page.locator('.sidebar').getByRole('button', { name: 'Categorias' }).click()
+  await expect(page.getByLabel('Recolher barra lateral')).toBeVisible()
   await page.locator('.sidebar').getByRole('button', { name: 'Bem-estar 2' }).click()
   await expect(cards(page)).toHaveCount(2)
+  await page.keyboard.press('Control+\\')
+  await expect(page.locator('.sidebar').getByRole('button', { name: 'Categorias' })).toHaveClass(/\bon\b/)
   await page.reload()
   await expect(page.getByLabel('Expandir barra lateral')).toBeVisible()
   await page.keyboard.press('Control+\\')
   await expect(page.getByLabel('Recolher barra lateral')).toBeVisible()
-  await expect(page.locator('.sidebar .d-item.rail-only')).toBeHidden()
+  for (const it of await page.locator('.sidebar .d-item.rail-only').all()) await expect(it).toBeHidden()
 })
 
 test('prévia do card mantém títulos, tópicos e a ordem do documento', async ({ page }) => {
@@ -1091,7 +1096,7 @@ test('lateral: chevron mostra e oculta as tags e lembra a escolha', async ({ pag
   await expect(page.locator('.sidebar .tag-cloud')).toHaveCount(0)
 })
 
-test('desktop: visões no canto direito e ações ao lado, paradas; busca e nuvem só ocupam a folga', async ({ page }) => {
+test('desktop: visões logo depois do ☰ e ações à direita, paradas; busca e nuvem só ocupam a folga', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 })
   const box = async (sel: string) => (await page.locator(sel).first().boundingBox())!
   const same = (a: { x: number; width: number }, b: { x: number; width: number }) => {
@@ -1100,10 +1105,11 @@ test('desktop: visões no canto direito e ações ao lado, paradas; busca e nuve
   }
   // mede depois que as contagens chegaram (o número de Lembretes muda a largura das visões)
   await expect(page.locator('.view-switch .n')).toHaveText(/\d/)
-  // mede depois que as contagens chegaram (o número de Lembretes muda a largura das visões)
-  await expect(page.locator('.view-switch .n')).toHaveText(/\d/)
   const views = await box('.view-switch')
-  expect(views.x + views.width).toBeCloseTo(1280 - 14, 0)
+  const nav = await box('.nav-btn')
+  expect(views.x).toBeCloseTo(nav.x + nav.width + 6, 0)
+  const actions = await box('.top-actions')
+  expect(actions.x + actions.width).toBeCloseTo(1280 - 14, 0)
   const sort = await box('.top-actions [aria-label^="Ordenar"]')
   const lupa = await box('.top-actions [aria-label="Buscar"]')
   const still = async () => {
@@ -1976,7 +1982,7 @@ test('configurações: continuar aberto ao fechar a janela, com o nome do lugar 
 test('texto da interface não se seleciona; no editor, sim', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 })
   const selected = () => page.evaluate(() => window.getSelection()?.toString() ?? '')
-  await page.locator('.brand').dblclick()
+  await page.locator('.lens').first().dblclick()
   await page.locator('.card h3').first().click({ clickCount: 3, modifiers: ['Shift'] }).catch(() => {})
   await page.keyboard.press('Escape')
   await page.locator('.section-label').first().dblclick()

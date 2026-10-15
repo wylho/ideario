@@ -56,8 +56,8 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
 - A UI só fala com `src/lib/api` (interface `Api`). No navegador (`npm run dev`, prévia) e nos testes e2e ela é atendida
   pelo mock (`src/lib/api/mock`, dados de exemplo), que precisa acompanhar o núcleo método a método.
 - Layout responsivo (pedido do usuário: desktop primeiro): < 640 px = protótipo de celular; 640–959 px = gaveta + abas,
-  largura total; ≥ 960 px = como o Google Keep: barra superior fixa (☰ e marca à esquerda; ações e visões ancoradas à direita, visões no canto; nuvem e campo de busca só crescem na folga, sem mover nada) e, abaixo, lateral (`NavList`)
-  que recolhe para um trilho de ícones (o topo não se move), editor e configurações como diálogo central.
+  largura total; ≥ 960 px = como o Google Keep: barra superior fixa (☰ e visões à esquerda, sem logo nem nome; ações ancoradas à direita; nuvem e campo de busca só crescem na folga, sem mover nada) e, abaixo, lateral (`NavList`)
+  que recolhe para um trilho de ícones (o topo não se move; categorias e tags viram um ícone cada, que expande a barra), editor e configurações como diálogo central.
   Masonry é JS (`Masonry.svelte` + `estimateCard`), porque a WebKitGTK não equilibra `columns:` do CSS. Cada card é
   posicionado por coordenadas numa lista só (nunca é recriado ao redimensionar ou reordenar; só desliza). O arraste
   (`drag.svelte.ts`) acha o card sob o ponteiro pela posição final (`data-x`/`data-y`), não pela animada, e só troca de
@@ -65,8 +65,8 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
 - Princípio de design: só mostrar o que tem motivo para aparecer (ex.: nuvem do sync só ao sincronizar, sem
   conexão ou com erro; nada de controles que ainda não funcionam).
 - Navegação (proposta A): `app.view` (como ver) e `app.filter` (categoria + tags, o que ver) são independentes; `app.box`
-  = active/archive/trash só na visão Notas. Seletor de visão: no desktop no canto direito da barra superior (busca é ícone ao lado), no celular barra flutuante (pílula) embaixo; número só em Lembretes (`app.counts`).
-- Barra superior = ☰ + marca | **menu dinâmico** (`ViewActions.svelte`) | visões. O menu dinâmico tem tudo o que depende
+  = active/archive/trash só na visão Notas. Seletor de visão: no desktop logo depois do ☰ (busca é ícone à direita), no celular barra flutuante (pílula) embaixo; número só em Lembretes (`app.counts`).
+- Barra superior = ☰ + visões | folga | **menu dinâmico** (`ViewActions.svelte`). O menu dinâmico tem tudo o que depende
   da visão ou do lugar, sempre na mesma ordem e com os mesmos componentes: filtro da visão (`FilterGroup`: ícones no
   desktop, um menu no celular) → ordenar (`SortMenu`) → lista/grade (`LayoutToggle`). Lembretes: mostrar concluídos;
   Lixeira: ícone de esvaziar (vassoura, neutro, com confirmação, só quando há notas). Nada de controles soltos no meio do conteúdo.

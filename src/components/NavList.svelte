@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Archive, ChevronDown, EyeOff, Hash, LayoutGrid, Lock, LockOpen, Plus, Settings, Trash2 } from '@lucide/svelte'
+  import { Archive, ChevronDown, EyeOff, Folder, Hash, LayoutGrid, Lock, LockOpen, Plus, Settings, Trash2 } from '@lucide/svelte'
   import { app } from '../lib/app.svelte'
   import { categoryMenu, newCategory, tagMenu } from '../lib/menus'
   import { NO_CATEGORY, NO_TAGS } from '../lib/types'
@@ -48,7 +48,7 @@
       {#snippet children(trigger)}
     <button
       {...trigger}
-      class="d-item"
+      class="d-item cat"
       class:is-hidden={c.hidden || (c.locked && !c.unlocked)}
       class:on={app.filter.categoryId === c.id && app.box === 'active'}
       class:drop-target={app.dropCategory === c.id}
@@ -71,7 +71,7 @@
   {/each}
   {#if showNoCategory}
     <button
-      class="d-item"
+      class="d-item cat"
       class:on={app.filter.categoryId === NO_CATEGORY && app.box === 'active'}
       class:drop-target={app.dropCategory === NO_CATEGORY}
       data-drop-category={NO_CATEGORY}
@@ -85,8 +85,12 @@
     </button>
   {/if}
 
+  <!-- No trilho recolhido as categorias e as tags viram um ícone cada, que expande a barra. -->
+  <button class="d-item rail-only" class:on={!!app.filter.categoryId && app.box === 'active'} title="Categorias" aria-label="Categorias" onclick={() => app.toggleSidebar()}>
+    <Folder size={19} />
+  </button>
+
   <div class="d-sep"></div>
-  <!-- No trilho recolhido as tags viram um ícone que expande a barra. -->
   <button class="d-item rail-only" class:on={app.filter.tags.length > 0} title="Tags" aria-label="Tags" onclick={() => app.toggleSidebar()}>
     <Hash size={19} />
   </button>

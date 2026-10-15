@@ -5,13 +5,13 @@
   import { Menu, Search, X } from '@lucide/svelte'
   import SyncIndicator from './SyncIndicator.svelte'
   import ViewActions from './ViewActions.svelte'
-  import BrandMark from './BrandMark.svelte'
   import SelectionBar from './SelectionBar.svelte'
   import ViewSwitch from './ViewSwitch.svelte'
   import { app } from '../lib/app.svelte'
   import { viewInfo } from '../lib/views'
 
-  // Desktop: barra superior fixa. ☰ e marca à esquerda; o resto ancorado à direita, com as visões no canto.
+  // Desktop: barra superior fixa. ☰ e as visões à esquerda (o nome do app já está no Dock/barra de título);
+  // o resto ancorado à direita.
   // O que aparece ou cresce (nuvem, campo de busca) fica à esquerda dos itens fixos e só ocupa a folga livre:
   // nada que já estava ali sai do lugar. A busca é um ícone que vira campo e fica aberto enquanto houver texto.
   // Celular: ☰ + campo de busca no topo do conteúdo.
@@ -74,10 +74,7 @@
       <Menu size={20} />
     </button>
     {#if app.wide}
-      <span class="brand-area">
-        <BrandMark />
-        <span class="brand">Ideario</span>
-      </span>
+      <ViewSwitch />
     {:else}
       {@render searchField()}
     {/if}
@@ -95,10 +92,5 @@
     <ViewActions />
   </div>
 
-  {/if}
-
-  {#if app.wide}
-    <span class="top-sep" aria-hidden="true"></span>
-    <ViewSwitch />
   {/if}
 </header>
