@@ -26,4 +26,12 @@ if (document.documentElement.dataset.titlebar === 'overlay') {
     void sync()
     void w.onResized(sync)
   })
+  // Lateral recolhida da largura do canto dos botões da janela, com a mesma folga dos dois lados (medida no núcleo).
+  void import('@tauri-apps/api/core').then(({ invoke }) =>
+    invoke<number | null>('mac_lights_width')
+      .then((px) => {
+        if (px) document.documentElement.style.setProperty('--rail-w', `${Math.round(px)}px`)
+      })
+      .catch(() => {}),
+  )
 }

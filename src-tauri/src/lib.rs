@@ -127,6 +127,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::import_path,
             commands::set_window_look,
+            commands::mac_lights_width,
             commands::pending_previews,
             commands::inspect_takeout,
             commands::import_keep,

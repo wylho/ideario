@@ -1012,9 +1012,10 @@ body.photo-dragging, body.photo-dragging * { cursor: grabbing !important; user-s
 }
 
 /* macOS com a janela larga: duas colunas. A lateral vai do topo ao pé da janela, com fundo próprio, e os botões da
-   janela ficam no canto dela; a barra de cima e o conteúdo ficam na coluna da direita. Recolhida, o trilho continua
-   largo o bastante para os botões. */
-:root[data-titlebar='overlay'] { --rail-w: 84px; }
+   janela ficam no canto dela; a barra de cima e o conteúdo ficam na coluna da direita. Recolhida, o trilho tem a
+   largura dos botões com a mesma folga dos dois lados (medida no núcleo, `mac_lights_width`; 96 px é o macOS 26) e
+   os ícones ficam centrados sob eles. */
+:root[data-titlebar='overlay'] { --rail-w: 96px; }
 :root[data-titlebar='overlay'] .shell.wide {
   display: grid; grid-template-columns: var(--side-w) minmax(0, 1fr); grid-template-rows: 64px minmax(0, 1fr);
   transition: grid-template-columns .24s cubic-bezier(.2, .8, .2, 1);
@@ -1028,4 +1029,4 @@ body.photo-dragging, body.photo-dragging * { cursor: grabbing !important; user-s
 }
 :root[data-titlebar='overlay'] .shell.wide .main { grid-column: 2; grid-row: 2; height: auto; min-height: 0; }
 :root[data-titlebar='overlay'] .shell.wide .mac-corner { grid-column: 1; grid-row: 1; z-index: 2; }
-:root[data-titlebar='overlay'] .shell.wide.rail .sidebar .drawer-scroll { padding-inline: 16px; }
+:root[data-titlebar='overlay'] .shell.wide.rail .sidebar .drawer-scroll { padding-inline: calc((var(--rail-w) - 52px) / 2); }

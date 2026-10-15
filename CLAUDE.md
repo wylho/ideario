@@ -75,7 +75,7 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
 - macOS: barra de título transparente (`TitleBarStyle::Overlay` em `lib.rs`; botões em x 18, y 33 = centro a 32 px,
   medido num print). Com a janela larga, **lateral até o topo** (como Notas/Finder): grade de duas colunas só no Mac
   (`data-titlebar="overlay"` no `<html>`), lateral com fundo próprio e os botões no canto dela (`.mac-corner` arrasta a
-  janela), trilho recolhido com 84 px. Estreita: os botões ficam na barra, que abre espaço (e fecha em tela cheia,
+  janela), trilho recolhido da largura dos botões com a mesma folga dos dois lados (`mac_lights_width` mede no AppKit; 96 px no macOS 26) e ícones centrados sob eles. Estreita: os botões ficam na barra, que abre espaço (e fecha em tela cheia,
   `data-fullscreen` em `main.ts`). Barra do app arrasta a janela (`data-tauri-drag-region="deep"` no `TopBar`).
   Motivo: o `setTheme` não escurecia a barra de título no Mac.
 - Barra de título (macOS/Windows) e fundo da janela acompanham o claro/escuro do app (`theme.svelte.ts` → `setTheme`,

@@ -64,9 +64,10 @@ webkit2gtk = { version = "2.0", features = ["v2_40"] }
 [target.'cfg(target_os = "windows")'.dependencies]
 winreg = "0.56"
 
-# macOS: cor de destaque do sistema (NSColor.controlAccentColor), para o tema Sistema.
+# macOS: cor de destaque do sistema (NSColor.controlAccentColor), para o tema Sistema; e onde ficam os botões da
+# janela (NSWindow.standardWindowButton), para a lateral ter a largura deles.
 [target.'cfg(target_os = "macos")'.dependencies]
-objc2-app-kit = { version = "0.3", default-features = false, features = ["std", "NSColor", "NSColorSpace", "objc2-core-foundation"] }
+objc2-app-kit = { version = "0.3", default-features = false, features = ["std", "NSColor", "NSColorSpace", "NSWindow", "NSButton", "NSControl", "NSView", "NSResponder", "objc2-core-foundation"] }
 
 [dev-dependencies]
 proptest = "1"

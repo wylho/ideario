@@ -100,6 +100,30 @@ pub fn set_window_look(core: Core_, theme: String, background: String) -> Result
     })
 }
 
+/// macOS: largura do canto com os três botões da janela, com a mesma folga dos dois lados (da borda da janela ao
+/// vermelho = do verde ao fim do canto). A lateral recolhida usa essa largura, e os ícones dela ficam centrados sob
+/// os botões. O tamanho e o espaçamento dos botões mudam entre versões do macOS, por isso é medido, não fixo.
+/// Sem `async`: roda na linha principal, como o AppKit exige.
+#[tauri::command]
+pub fn mac_lights_width(window: tauri::WebviewWindow) -> Option<f64> {
+    #[cfg(target_os = "macos")]
+    {
+        use objc2_app_kit::{NSWindow, NSWindowButton};
+        let ptr = window.ns_window().ok()?.cast::<NSWindow>();
+        // SAFETY: o Tauri devolve o NSWindow vivo desta janela; só lemos, na linha principal.
+        let ns = unsafe { ptr.as_ref() }?;
+        let close = ns.standardWindowButton(NSWindowButton::CloseButton)?.frame();
+        let zoom = ns.standardWindowButton(NSWindowButton::ZoomButton)?.frame();
+        let width = zoom.origin.x + zoom.size.width + close.origin.x;
+        (width > 0.0 && width < 200.0).then_some(width)
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = window;
+        None
+    }
+}
+
 /// "#rrggbb" → cor da janela.
 pub fn parse_hex(s: &str) -> Option<tauri::window::Color> {
     let h = s.trim().strip_prefix('#')?;
