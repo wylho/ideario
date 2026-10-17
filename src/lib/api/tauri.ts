@@ -1,7 +1,7 @@
 // A interface `Api` atendida pelo núcleo Rust (comandos em src-tauri/src/commands.rs). Tudo local: SQLite no aparelho.
 import { convertFileSrc, invoke } from '@tauri-apps/api/core'
 import type { Api } from '.'
-import type { SyncState } from '../types'
+import type { SyncState, UpdateInfo } from '../types'
 
 const listeners = new Set<() => void>()
 let soon: ReturnType<typeof setTimeout> | undefined
@@ -140,6 +140,10 @@ export const tauriApi: Api = {
   },
   importPath: (path) => invoke('import_path', { path }),
   downloadAttachment: (a) => invoke<string>('download_attachment', { hash: a.hash, name: a.name }),
+
+  // Sem o comando (Android), não há atualizador: como "sem novidade".
+  checkUpdate: () => invoke<UpdateInfo | null>('update_check'),
+  installUpdate: (onProgress) => withProgress('update-progress', onProgress, () => invoke<void>('update_install')),
 
   subscribe(fn) {
     listeners.add(fn)

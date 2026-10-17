@@ -1,0 +1,10 @@
+# Repositórios Linux do Ideario (apt e dnf). Índices assinados e pacotes ficam no último Release do GitHub
+# (scripts/linux-repos.sh); aqui só o endereço fixo. Os mais específicos primeiro.
+/apt/dists/stable/InRelease                       https://github.com/wylho/ideario/releases/latest/download/apt-InRelease 302
+/apt/dists/stable/Release                         https://github.com/wylho/ideario/releases/latest/download/apt-Release 302
+/apt/dists/stable/Release.gpg                     https://github.com/wylho/ideario/releases/latest/download/apt-Release.gpg 302
+/apt/dists/stable/main/binary-amd64/Packages      https://github.com/wylho/ideario/releases/latest/download/apt-Packages 302
+/apt/dists/stable/main/binary-amd64/Packages.gz   https://github.com/wylho/ideario/releases/latest/download/apt-Packages.gz 302
+/apt/pool/:file                                   https://github.com/wylho/ideario/releases/latest/download/:file 302
+/rpm/repodata/:file                               https://github.com/wylho/ideario/releases/latest/download/rpm-:file 302
+/rpm/:file                                        https://github.com/wylho/ideario/releases/latest/download/:file 302

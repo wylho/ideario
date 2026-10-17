@@ -7,6 +7,7 @@
   import { ago, fmtBytes } from '../lib/format'
   import { paletteColors, theme, type ThemePref } from '../lib/theme.svelte'
   import { background } from '../lib/background.svelte'
+  import { updates } from '../lib/updates.svelte'
   import { pickKeepTakeout } from '../lib/keep.svelte'
   import { backupNow, pickBackupDir, restoreBackup } from '../lib/backup.svelte'
   import { isTauri } from '@tauri-apps/api/core'
@@ -18,6 +19,11 @@
   let status = $state.raw<SyncStatus | null>(null)
   let version = $state<string | null>(null)
   coreVersion().then((v) => (version = v))
+  // No celular quem atualiza é a loja (ou o APK novo): sem "Procurar atualizações".
+  const desktop = !/Android|iPhone|iPad/i.test(navigator.userAgent)
+  async function checkNow() {
+    if (!(await updates.check())) app.say('Você já tem a versão mais recente.')
+  }
 
   const loadStatus = () => api.syncStatus().then((s) => (status = s))
   // As configurações são lidas uma vez, ao abrir (reler a cada mudança no núcleo poderia trazer de volta um valor
@@ -359,7 +365,18 @@
               <small>Texto e miniaturas ficam sempre aqui. Fotos e anexos grandes que vêm de outros aparelhos descem quando você abre.</small>
             </div>
           </section>
-          <p class="footnote">{isTauri() ? `Ideario${version ? ` v${version}` : ''}` : 'Prévia no navegador · dados de exemplo'}</p>
+          <p class="footnote">
+            {isTauri() ? `Ideario${version ? ` v${version}` : ''}` : 'Prévia no navegador · dados de exemplo'}
+            {#if updates.info}
+              · <button class="link" onclick={() => updates.install()} disabled={updates.phase === 'downloading'}>
+                {updates.phase === 'downloading' ? 'Atualizando…' : `Atualizar para a v${updates.info.version}`}
+              </button>
+            {:else if isTauri() && desktop}
+              · <button class="link" onclick={checkNow} disabled={updates.phase === 'checking'}>
+                {updates.phase === 'checking' ? 'Procurando…' : 'Procurar atualizações'}
+              </button>
+            {/if}
+          </p>
         </div>
       {/if}
     </Dialog.Content>

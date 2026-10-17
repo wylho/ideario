@@ -48,5 +48,16 @@
         "bundleMediaFramework": true
       }
     }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDYzNDYzNEVBNTE5NTI2RkIKUldUN0pwVlI2alJHWTZGUE5kMVF1cThnajllMHY4WUZ5NnNBSkdZd09ReFRaTzZCTFBlbzI4cFoK",
+      "endpoints": [
+        "https://github.com/wylho/ideario/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
   }
 }

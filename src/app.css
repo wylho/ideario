@@ -692,6 +692,7 @@ button { cursor: pointer; }
 .import > span:last-child { display: flex; flex-direction: column; gap: 2px; }
 .import-ico { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: #fbbc04; color: #3b2e00; flex: none; }
 .footnote { text-align: center; font-size: 12px; color: var(--muted); }
+.footnote .link { font-size: inherit; }
 
 /* toast */
 .toast {
@@ -899,7 +900,11 @@ button { cursor: pointer; }
 .alert-text { flex: 1; min-width: 0; display: grid; text-align: left; }
 .alert-text b { font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .alert-text small { font-size: 12px; color: var(--muted); }
-.alert-actions { display: flex; }
+.alert-actions { display: flex; align-items: center; gap: 2px; }
+.alert-actions .btn { flex: none; }
+/* versão nova do app: no canto oposto aos lembretes (no celular, no alto), para os dois nunca se cobrirem */
+.update-alerts { left: 16px; right: auto; bottom: 32px; }
+@media (max-width: 639px) { .update-alerts { top: 72px; bottom: auto; left: 16px; } }
 
 /* modo documento: a nota em página inteira, coluna de leitura no meio e letra maior */
 .editor[data-doc] {

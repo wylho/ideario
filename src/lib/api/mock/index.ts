@@ -817,6 +817,23 @@ export const mockApi: Api = {
     return a
   },
 
+  // Prévia e testes: há versão nova só quando `ideario.mock.update` (no localStorage) diz qual.
+  checkUpdate() {
+    let version: string | null = null
+    try {
+      version = localStorage.getItem('ideario.mock.update')
+    } catch {
+      // sem armazenamento: sem novidade
+    }
+    return done(version ? { version, notes: null } : null)
+  },
+  async installUpdate(onProgress) {
+    for (let i = 1; i <= 4; i++) {
+      await new Promise((r) => setTimeout(r, 150))
+      onProgress(i * 25, 100)
+    }
+  },
+
   async downloadAttachment(a) {
     // Prévia: imagens baixam a própria figura; os demais anexos de exemplo não têm conteúdo, então vai um arquivo de texto.
     const real = blobSrc.get(a.hash)

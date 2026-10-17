@@ -1,7 +1,7 @@
 // Camada de dados da UI. No app, os comandos Tauri (`invoke`) do núcleo Rust (SQLite local, Fase 1);
 // no navegador (`npm run dev`, prévia) e nos testes e2e, um mock em memória com dados de exemplo.
 import type {
-  Attachment, AttachmentKind, AttachmentRow, KeepReport, ExportReport, LinkPreview, BackupManifest, BackupReport, BackupStatus, RestoreReport, Box, McpInfo, OrphanCounts, Millis, Category, Filter, NoteDetail, NoteInput, NotePatch, NoteSort, NoteSummary, Settings, SyncState, SyncStatus, TagCount, Tone, ViewCounts,
+  Attachment, AttachmentKind, AttachmentRow, KeepReport, ExportReport, LinkPreview, BackupManifest, BackupReport, BackupStatus, RestoreReport, Box, McpInfo, OrphanCounts, Millis, Category, Filter, NoteDetail, NoteInput, NotePatch, NoteSort, NoteSummary, Settings, SyncState, SyncStatus, TagCount, Tone, UpdateInfo, ViewCounts,
 } from '../types'
 import { invoke, isTauri } from '@tauri-apps/api/core'
 import { mockApi } from './mock'
@@ -122,6 +122,12 @@ export interface Api {
   importPath(path: string): Promise<Attachment>
   /** Salva uma cópia do anexo (no app: na pasta Downloads, e devolve o caminho; no navegador: download, e devolve null). */
   downloadAttachment(a: Pick<AttachmentRow, 'hash' | 'name' | 'mime'>): Promise<string | null>
+
+  /** Há versão nova do app? `null` sem novidade, no navegador, no Android e no Linux instalado por `.deb`/`.rpm`
+   *  (esses atualizam pelo gerenciador de pacotes). */
+  checkUpdate(): Promise<UpdateInfo | null>
+  /** Baixa e instala a versão encontrada pelo `checkUpdate` e reinicia o app. */
+  installUpdate(onProgress: (done: number, total: number) => void): Promise<void>
 
   /** Avisos de mudança que estavam esperando (a escrita no editor parou ou a nota fechou) saem agora. */
   settle(): void

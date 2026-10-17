@@ -116,7 +116,12 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
   tauri-driver), desempenho (`tests/native/perf.mjs`, build de release) e `npm run tauri build`.
 - Site (`site/`, Cloudflare Pages em ideario.pages.dev) e `README.md` têm o mesmo conteúdo: ao mudar um, mudar o outro
   (skill `sync-site`; prints por `scripts/site-shots.mjs`).
-- Release: `.github/workflows/release.yml` (Actions → Release → Run workflow; precisa estar no branch padrão).
+- Release: `.github/workflows/release.yml` (subir a versão no `tauri.conf.json`; Actions → Release → Run workflow, no
+  branch padrão). Nasce rascunho; o job "Publicar" monta os repositórios apt/dnf e só então publica. Guia e segredos:
+  `docs/RELEASE.md`. Atualização: Windows, macOS e AppImage pelo próprio app (`updates.rs` + `tauri-plugin-updater`,
+  `latest.json` do último Release, assinatura com a chave de `plugins.updater.pubkey`; procura só ao abrir, pedido do
+  usuário; aviso `UpdateNotice.svelte`); `.deb`/`.rpm` pelo repositório (`scripts/linux-repos.sh`: índices assinados
+  com GPG sobem para o Release, `site/_redirects` aponta `/apt` e `/rpm` para lá; chave pública em `site/linux/`).
 - Graphify (mapa do código, local, sem chave; o usuário pediu para usar sempre que ajudar a achar código): `pip3 install --user graphifyy` e
   `graphify extract . --code-only --out <pasta fora do repo>`; consultas com `graphify explain "X" --graph <…>/graph.json`.
 - Ordem combinada com o usuário (plano em https://claude.ai/code/artifact/45aafe33-c71a-4b29-abb6-4caf94af6817):

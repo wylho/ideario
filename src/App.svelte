@@ -17,6 +17,7 @@
   import AppDialogs from './components/AppDialogs.svelte'
   import FileDrop from './components/FileDrop.svelte'
   import ReminderAlerts from './components/ReminderAlerts.svelte'
+  import UpdateNotice from './components/UpdateNotice.svelte'
   import SettingsSheet from './components/SettingsSheet.svelte'
 
   // O editor (TipTap) fica fora do pacote inicial: carrega em paralelo,
@@ -122,4 +123,5 @@
   <AppDialogs />
   <FileDrop />
   <ReminderAlerts />
+  <UpdateNotice />
 </div>

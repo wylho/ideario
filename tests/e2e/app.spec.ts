@@ -1979,6 +1979,25 @@ test('configurações: continuar aberto ao fechar a janela, com o nome do lugar 
   await expect(page.locator('.set-row', { has: page.locator('#segundo-plano') })).toContainText('barra de menus')
 })
 
+test('versão nova do app: aviso no canto, atualizar mostra o progresso; "Depois" esconde', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('ideario.mock.update', '0.9.0'))
+  await page.reload()
+  const notice = page.locator('.update-alerts')
+  await expect(notice).toContainText('Ideario 0.9.0 disponível', { timeout: 8000 })
+  await notice.getByRole('button', { name: 'Depois' }).click()
+  await expect(notice).toHaveCount(0)
+  await page.reload()
+  await expect(notice).toBeVisible({ timeout: 8000 })
+  await notice.getByRole('button', { name: 'Atualizar' }).click()
+  await expect(notice).toContainText('Baixando… 100%')
+  await expect(notice.getByRole('button')).toHaveCount(0)
+})
+
+test('sem versão nova, nenhum aviso de atualização', async ({ page }) => {
+  await page.waitForTimeout(5500)
+  await expect(page.locator('.update-alerts')).toHaveCount(0)
+})
+
 test('texto da interface não se seleciona; no editor, sim', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 })
   const selected = () => page.evaluate(() => window.getSelection()?.toString() ?? '')

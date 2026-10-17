@@ -22,6 +22,8 @@ mod sync;
 mod system_fonts;
 mod system_theme;
 mod text;
+#[cfg(desktop)]
+mod updates;
 #[cfg(test)]
 mod testdoc;
 mod ydoc;
@@ -68,6 +70,8 @@ pub fn run() {
         })
         .setup(|app| {
             // Banco local (SQLite) na pasta de dados do app; abre antes da janela, para a lista vir na hora.
+            #[cfg(desktop)]
+            updates::init(app.handle())?;
             let data = app.path().app_data_dir()?;
             app.manage(Core::open(data).map_err(|e| format!("não foi possível abrir o banco: {e}"))?);
             // Fotos antigas (sem miniatura e paleta): em segundo plano, sem atrasar a lista.
@@ -133,6 +137,10 @@ pub fn run() {
             commands::import_keep,
             commands::set_preview,
             app_version,
+            #[cfg(desktop)]
+            updates::update_check,
+            #[cfg(desktop)]
+            updates::update_install,
             background::set_background,
             commands::list_notes,
             commands::list_reminders,
@@ -213,10 +221,10 @@ pub fn mcp_serve() -> i32 {
     mcp::serve()
 }
 
-/// Versão do núcleo, para a UI confirmar que o IPC está de pé.
+/// Versão do app (a do `tauri.conf.json`, a mesma que o atualizador compara), para a UI confirmar que o IPC está de pé.
 #[tauri::command]
-fn app_version() -> &'static str {
-    env!("CARGO_PKG_VERSION")
+fn app_version(app: tauri::AppHandle) -> String {
+    app.package_info().version.to_string()
 }
 
 /// Linux: a WebKitGTK vem com a captura de mídia desligada e nega o pedido de microfone/câmera se ninguém responder.

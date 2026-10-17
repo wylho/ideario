@@ -1,0 +1,9 @@
+# Repositório do Ideario para o dnf (Fedora). Instruções em https://ideario.pages.dev/#linux
+[ideario]
+name=Ideario
+baseurl=https://ideario.pages.dev/rpm
+enabled=1
+# Os índices são assinados (repo_gpgcheck) e trazem o hash de cada pacote.
+repo_gpgcheck=1
+gpgcheck=0
+gpgkey=https://ideario.pages.dev/linux/ideario.asc

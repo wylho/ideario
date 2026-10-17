@@ -1,5 +1,11 @@
 # Publica uma versão do Ideario na página Releases do GitHub, com os instaladores de macOS, Windows e Linux.
-# Para lançar: Actions → Release → Run workflow (a versão vem de src-tauri/tauri.conf.json).
+# Para lançar: suba a versão em src-tauri/tauri.conf.json e rode Actions → Release → Run workflow.
+#
+# O Release nasce como rascunho; quando os três sistemas terminam, o job "Publicar" monta os repositórios apt/dnf
+# (scripts/linux-repos.sh) e só então publica. Assim o "último Release" (de onde o app atualiza, o latest.json, e de
+# onde o site serve os repositórios Linux) nunca aponta para uma versão pela metade.
+# Segredos: TAURI_SIGNING_PRIVATE_KEY(_PASSWORD) assinam as atualizações; IDEARIO_GPG_PRIVATE_KEY assina os
+# repositórios; IDEARIO_GOOGLE_CLIENT_ID/_SECRET ligam o sync.
 name: Release
 
 on:
@@ -17,15 +23,15 @@ jobs:
         include:
           - name: macOS
             os: macos-latest
-            args: --target universal-apple-darwin
+            args: --target universal-apple-darwin --config src-tauri/tauri.release.conf.json
             rust-targets: aarch64-apple-darwin,x86_64-apple-darwin
           - name: Windows
             os: windows-latest
-            args: ''
+            args: --config src-tauri/tauri.release.conf.json
             rust-targets: ''
           - name: Linux
             os: ubuntu-22.04
-            args: ''
+            args: --config src-tauri/tauri.release.conf.json
             rust-targets: ''
     runs-on: ${{ matrix.os }}
     steps:
@@ -51,17 +57,46 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           IDEARIO_GOOGLE_CLIENT_ID: ${{ secrets.IDEARIO_GOOGLE_CLIENT_ID }}
           IDEARIO_GOOGLE_CLIENT_SECRET: ${{ secrets.IDEARIO_GOOGLE_CLIENT_SECRET }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tagName: v__VERSION__
           releaseName: Ideario v__VERSION__
           releaseBody: |
-            Instaladores do Ideario v__VERSION__.
+            Instaladores do Ideario v__VERSION__. Quem já usa recebe esta versão sozinho: o app avisa ao abrir.
 
             - **macOS** (Apple Silicon e Intel): baixe o `.dmg`. Na primeira vez, clique com o botão direito no app → **Abrir** (o app ainda não é assinado pela Apple).
-            - **Windows**: baixe o `.msi` ou o `-setup.exe`.
-            - **Linux**: `.deb` (Ubuntu, Debian), `.rpm` (Fedora) ou `.AppImage`.
+            - **Windows**: baixe o `-setup.exe` (ou o `.msi`).
+            - **Linux**: pelo repositório (atualiza junto com o sistema), veja https://ideario.pages.dev/#linux. Ou baixe o `.AppImage` (atualiza sozinho), o `.deb` ou o `.rpm`.
 
-            Suas notas ficam só neste computador; a sincronização com o Google Drive chega numa próxima versão.
-          releaseDraft: false
-          prerelease: true
+            Os arquivos `apt-*`, `rpm-*` e `latest.json` são dos repositórios Linux e do atualizador; não precisa baixar.
+          releaseDraft: true
+          prerelease: false
           args: ${{ matrix.args }}
+
+  publish:
+    name: Publicar (repositórios Linux)
+    needs: release
+    runs-on: ubuntu-22.04
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: Ferramentas
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y apt-utils createrepo-c
+      - name: Chave do repositório
+        env:
+          KEY: ${{ secrets.IDEARIO_GPG_PRIVATE_KEY }}
+        run: printf '%s\n' "$KEY" | gpg --batch --import
+      - name: Montar os repositórios apt e dnf
+        run: |
+          tag="v$(node -p "require('./src-tauri/tauri.conf.json').version")"
+          echo "TAG=$tag" >> "$GITHUB_ENV"
+          gh release download "$tag" -p '*.deb' -p '*.rpm' -D pkgs
+          scripts/linux-repos.sh pkgs repos
+          gh release upload "$tag" repos/* --clobber
+      - name: Publicar
+        run: gh release edit "$TAG" --draft=false --latest

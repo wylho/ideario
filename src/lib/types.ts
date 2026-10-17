@@ -306,3 +306,10 @@ export interface KeepReport {
   archived: number
   trashed: number
 }
+
+/** Versão nova do app encontrada pelo atualizador (desktop). */
+export interface UpdateInfo {
+  version: string
+  /** Texto do Release (o que mudou), se houver. */
+  notes: string | null
+}
