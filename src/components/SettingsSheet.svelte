@@ -20,7 +20,8 @@
   let version = $state<string | null>(null)
   coreVersion().then((v) => (version = v))
   // No celular quem atualiza é a loja (ou o APK novo): sem "Procurar atualizações".
-  const desktop = !/Android|iPhone|iPad/i.test(navigator.userAgent)
+  const android = document.documentElement.dataset.platform === 'android'
+  const desktop = !android && !/Android|iPhone|iPad/i.test(navigator.userAgent)
   async function checkNow() {
     if (!(await updates.check())) app.say('Você já tem a versão mais recente.')
   }
@@ -224,6 +225,7 @@
             </div>
           </section>
 
+          {#if !android}
           <section class="set-group">
             <h3>Ao fechar a janela</h3>
             <label class="set-row" for="segundo-plano">
@@ -231,6 +233,7 @@
               <Switch.Root id="segundo-plano" class="switch" checked={background.enabled} onCheckedChange={(v) => background.set(v)}><Switch.Thumb class="thumb" /></Switch.Root>
             </label>
           </section>
+          {/if}
 
           <section class="set-group">
             <h3>Google Drive</h3>
@@ -285,7 +288,7 @@
             {/if}
           </section>
 
-          {#if mcp}
+          {#if mcp && !android}
             <section class="set-group">
               <h3>Claude</h3>
               <div class="set-row">
@@ -310,7 +313,8 @@
             </section>
           {/if}
 
-          {#if isTauri()}
+          <!-- No Android: escolher pasta e abrir arquivo pelo caminho ainda não funcionam (o sync já guarda tudo). -->
+          {#if isTauri() && !android}
             <section class="set-group">
               <h3>Backup local</h3>
               <div class="set-row">

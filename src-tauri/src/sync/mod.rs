@@ -9,6 +9,8 @@
 //! as exclusões. Mesmo que dois aparelhos sobrescrevam o mesmo arquivo ao mesmo tempo, o próximo ciclo converge:
 //! quem tinha algo que o Drive não tem continua `dirty` depois de juntar e sobe de novo.
 
+#[cfg(target_os = "android")]
+pub(crate) mod android;
 mod auth;
 mod drive;
 #[cfg(test)]

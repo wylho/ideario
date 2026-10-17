@@ -1,5 +1,7 @@
-//! Notificações do sistema para os lembretes (macOS, Windows, Linux), com os botões Abrir, Adiar 10 min e Concluir.
-//! Cada notificação espera a resposta numa thread própria; a resposta volta para o núcleo e para a janela.
+//! Notificações do sistema para os lembretes. No desktop (macOS, Windows, Linux) o núcleo confere a cada 10 s e
+//! mostra a notificação com os botões Abrir, Adiar 10 min e Concluir; cada uma espera a resposta numa thread
+//! própria. No Android o app fechado não confere nada: os próximos lembretes ficam agendados no sistema
+//! (`reminders::plan`, plugin de notificação), e o app aberto refaz a agenda quando ela muda.
 
 use tauri::{AppHandle, Emitter, Manager};
 
@@ -14,6 +16,11 @@ pub struct SystemNotifier {
 }
 
 impl Notifier for SystemNotifier {
+    /// Android: quem mostra é o alarme agendado; aqui fica só o aviso dentro do app.
+    #[cfg(mobile)]
+    fn show(&self, _n: &Notice) {}
+
+    #[cfg(desktop)]
     fn show(&self, n: &Notice) {
         let (app, n) = (self.app.clone(), n.clone());
         std::thread::spawn(move || {
@@ -35,6 +42,7 @@ impl Notifier for SystemNotifier {
 }
 
 /// Resposta da notificação. No macOS vem o texto do botão; nos outros, o identificador; clicar no corpo = abrir.
+#[cfg(desktop)]
 fn act(app: &AppHandle, n: &Notice, action: &str) {
     match action {
         "open" | "Abrir" | "default" => {
@@ -51,6 +59,7 @@ fn act(app: &AppHandle, n: &Notice, action: &str) {
     }
 }
 
+#[cfg(desktop)]
 fn change(app: &AppHandle, n: &Notice, f: impl FnOnce(&crate::store::Store, &str) -> crate::store::Result<()>) {
     let Some(id) = &n.note else { return };
     if app.state::<Core>().with(|s| f(s, id)).is_ok() {
@@ -58,6 +67,7 @@ fn change(app: &AppHandle, n: &Notice, f: impl FnOnce(&crate::store::Store, &str
     }
 }
 
+#[cfg(desktop)]
 fn show_window(app: &AppHandle) {
     if let Some(w) = app.get_webview_window("main") {
         let _ = w.unminimize();
@@ -70,7 +80,11 @@ fn show_window(app: &AppHandle) {
 pub fn start(app: AppHandle) {
     #[cfg(target_os = "macos")]
     let _ = notify_rust::set_application(&app.config().identifier);
+    #[cfg(target_os = "android")]
+    let mut scheduled = Vec::new();
     std::thread::spawn(move || loop {
+        #[cfg(target_os = "android")]
+        schedule(&app, &mut scheduled);
         let notifier = SystemNotifier { app: app.clone() };
         if let Ok(alerts) = app.state::<Core>().with(|s| crate::reminders::tick(s, now(), &notifier)) {
             if !alerts.is_empty() {
@@ -80,4 +94,33 @@ pub fn start(app: AppHandle) {
         }
         std::thread::sleep(std::time::Duration::from_secs(10));
     });
+}
+
+/// Android: deixa agendado no sistema o que está por vir (só mexe quando a lista muda). Na primeira vez que há
+/// lembrete, pede a permissão de notificação (Android 13+).
+#[cfg(target_os = "android")]
+fn schedule(app: &AppHandle, scheduled: &mut Vec<crate::reminders::Planned>) {
+    use tauri_plugin_notification::{NotificationExt, PermissionState, Schedule};
+    let Ok(plan) = app.state::<Core>().with(|s| crate::reminders::plan(s, now(), &chrono::Local)) else { return };
+    if plan == *scheduled {
+        return;
+    }
+    let n = app.notification();
+    if !plan.is_empty() && !matches!(n.permission_state(), Ok(PermissionState::Granted)) {
+        let _ = n.request_permission();
+    }
+    let _ = n.cancel(scheduled.iter().map(|p| p.key).collect());
+    for p in &plan {
+        let Ok(date) = time::OffsetDateTime::from_unix_timestamp_nanos(i128::from(p.at) * 1_000_000) else { continue };
+        let _ = n
+            .builder()
+            .id(p.key)
+            .title(&p.title)
+            .body("Lembrete do Ideario")
+            .extra("note", &p.note)
+            .auto_cancel()
+            .schedule(Schedule::At { date, repeating: false, allow_while_idle: true })
+            .show();
+    }
+    *scheduled = plan;
 }

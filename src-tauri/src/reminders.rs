@@ -163,6 +163,48 @@ fn when(at: Millis) -> String {
     format!("{prefix}, {}", t.format("%H:%M"))
 }
 
+#[cfg(any(target_os = "android", test))]
+/// Uma notificação agendada no sistema (Android: o app fechado não confere lembretes, quem dispara é o sistema).
+#[derive(Debug, Clone, PartialEq)]
+pub struct Planned {
+    /// Número da notificação: o mesmo para a mesma nota no mesmo horário (reagendar não duplica).
+    pub key: i32,
+    pub note: String,
+    pub title: String,
+    pub at: Millis,
+}
+
+#[cfg(any(target_os = "android", test))]
+/// Quanto à frente os lembretes que se repetem são expandidos, e o máximo de alarmes (o Android limita por app).
+pub const PLAN_HORIZON: Millis = 14 * 86_400_000;
+#[cfg(any(target_os = "android", test))]
+pub const PLAN_MAX: usize = 200;
+
+#[cfg(any(target_os = "android", test))]
+/// O que agendar no sistema a partir de `now`: cada lembrete por vir e, nos que se repetem, as próximas vezes até
+/// `PLAN_HORIZON` (o app aberto reagenda o resto). Em ordem de horário, no máximo `PLAN_MAX`.
+pub fn plan<Tz: TimeZone>(store: &Store, now: Millis, tz: &Tz) -> Result<Vec<Planned>> {
+    let mut out = Vec::new();
+    for DueReminder { id, title, at, repeat, snoozed } in store.upcoming_reminders(now)? {
+        let mut when = Some(at);
+        while let Some(t) = when.filter(|t| *t <= now + PLAN_HORIZON) {
+            out.push(Planned { key: plan_key(&id, t), note: id.clone(), title: title.clone(), at: t });
+            // A volta de um adiamento é uma vez só; a série segue pela própria linha.
+            when = if snoozed { None } else { repeat.as_deref().and_then(|r| next_occurrence(at, r, t, tz)) };
+        }
+    }
+    out.sort_by_key(|p| p.at);
+    out.truncate(PLAN_MAX);
+    Ok(out)
+}
+
+#[cfg(any(target_os = "android", test))]
+fn plan_key(note: &str, at: Millis) -> i32 {
+    use sha2::{Digest, Sha256};
+    let h = Sha256::digest(format!("{note}@{at}").as_bytes());
+    i32::from_be_bytes([h[0] & 0x7f, h[1], h[2], h[3]])
+}
+
 /// Mostra as notificações e devolve os avisos (para a janela, se estiver aberta, mostrar o aviso dentro do app).
 pub fn tick(store: &Store, now: Millis, notifier: &dyn Notifier) -> Result<Vec<Alert>> {
     let alerts = take_due(store, now, &Local)?;
@@ -309,6 +351,56 @@ mod tests {
         s.update_note("a", &patch).unwrap();
         assert!(tick(&s, now + 5 * 60 * 1000, &r).unwrap().is_empty());
         assert_eq!(tick(&s, now + 11 * 60 * 1000, &r).unwrap().len(), 1);
+    }
+
+    #[test]
+    fn plan_lists_what_the_system_must_fire_while_the_app_is_closed() {
+        let s = Store::memory();
+        let tz = sp();
+        let now = at(&tz, 2026, 10, 9, 12);
+        s.save_note(&note("a", "Dentista", Some(at(&tz, 2026, 10, 10, 9)), None)).unwrap();
+        s.save_note(&note("b", "Plantas", Some(at(&tz, 2026, 10, 9, 18)), Some("day"))).unwrap();
+        s.save_note(&note("c", "Passou", Some(now - HOUR), None)).unwrap();
+        let mut done = note("d", "Feito", Some(now + HOUR), None);
+        done.reminder_done = true;
+        s.save_note(&done).unwrap();
+        let mut trashed = note("e", "Lixo", Some(now + HOUR), None);
+        trashed.trashed_at = Some(now);
+        s.save_note(&trashed).unwrap();
+
+        let p = plan(&s, now, &tz).unwrap();
+        // só o que está por vir, ativo e não concluído; o diário, expandido pelos 14 dias à frente
+        assert!(p.iter().all(|x| x.note == "a" || x.note == "b"));
+        assert_eq!(p.iter().filter(|x| x.note == "a").count(), 1);
+        let plants: Vec<Millis> = p.iter().filter(|x| x.note == "b").map(|x| x.at).collect();
+        assert_eq!(plants.len(), 14);
+        assert_eq!(plants[0], at(&tz, 2026, 10, 9, 18));
+        assert_eq!(plants[1], at(&tz, 2026, 10, 10, 18));
+        assert!(plants.iter().all(|t| *t <= now + PLAN_HORIZON));
+        // em ordem de horário; o mesmo horário da mesma nota tem sempre o mesmo número (reagendar não duplica)
+        assert!(p.windows(2).all(|w| w[0].at <= w[1].at));
+        assert_eq!(plan(&s, now, &tz).unwrap(), p);
+        let keys: std::collections::HashSet<i32> = p.iter().map(|x| x.key).collect();
+        assert_eq!(keys.len(), p.len());
+        assert!(p.iter().all(|x| x.key >= 0));
+    }
+
+    #[test]
+    fn plan_has_a_ceiling_and_a_snooze_fires_once() {
+        let s = Store::memory();
+        let tz = sp();
+        let now = at(&tz, 2026, 10, 9, 12);
+        for i in 0..20 {
+            s.save_note(&note(&format!("n{i}"), "Toda hora", Some(now + HOUR + i), Some("day"))).unwrap();
+        }
+        assert_eq!(plan(&s, now, &tz).unwrap().len(), PLAN_MAX);
+        let s = Store::memory();
+        s.save_note(&note("r", "Remédio", Some(now + 5 * HOUR), Some("day"))).unwrap();
+        s.set_snooze("r", Some(now + 10 * 60 * 1000)).unwrap();
+        let p = plan(&s, now, &tz).unwrap();
+        assert_eq!(p[0].at, now + 10 * 60 * 1000, "a volta do adiamento vem primeiro");
+        assert_eq!(p.iter().filter(|x| x.at == now + 10 * 60 * 1000).count(), 1, "e não vira série");
+        assert_eq!(p.len(), 1 + 14);
     }
 
     #[test]

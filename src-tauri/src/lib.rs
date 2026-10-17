@@ -6,6 +6,7 @@
 
 mod attachments;
 mod backup;
+#[cfg(desktop)]
 mod background;
 mod commands;
 mod export;
@@ -34,10 +35,12 @@ use commands::Core;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 /// Avisa a página que a barra de título é transparente (macOS): ela abre espaço para os botões da janela no canto e
-/// deixa arrastar a janela pela barra do app.
+/// deixa arrastar a janela pela barra do app. No Android, avisa que é o celular (some o que só existe no desktop).
 #[cfg(target_os = "macos")]
 const TITLEBAR_SCRIPT: &str = "document.documentElement.dataset.titlebar = 'overlay';";
-#[cfg(not(target_os = "macos"))]
+#[cfg(target_os = "android")]
+const TITLEBAR_SCRIPT: &str = "document.documentElement.dataset.platform = 'android';";
+#[cfg(not(any(target_os = "macos", target_os = "android")))]
 const TITLEBAR_SCRIPT: &str = "";
 
 pub fn run() {
@@ -46,9 +49,14 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         // Abre o navegador no login do Google (sync com o Drive).
         .plugin(tauri_plugin_opener::init())
-        .manage(sync::Sync::default())
-        .manage(background::Background::default())
-        .on_window_event(background::on_window_event)
+        .manage(sync::Sync::default());
+    // Desktop: ao fechar a janela, pode ficar na bandeja (segundo plano).
+    #[cfg(desktop)]
+    let app = app.manage(background::Background::default()).on_window_event(background::on_window_event);
+    // Android: lembretes agendados no sistema e login com a conta do aparelho.
+    #[cfg(target_os = "android")]
+    let app = app.plugin(tauri_plugin_notification::init()).plugin(sync::android::plugin());
+    let app = app
         // Fotos, vídeos, áudios e documentos das notas: `att://localhost/<hash>` (convertFileSrc(hash, 'att')).
         .register_asynchronous_uri_scheme_protocol("att", |ctx, req, responder| {
             let app = ctx.app_handle().clone();
@@ -141,6 +149,7 @@ pub fn run() {
             updates::update_check,
             #[cfg(desktop)]
             updates::update_install,
+            #[cfg(desktop)]
             background::set_background,
             commands::list_notes,
             commands::list_reminders,

@@ -1153,6 +1153,30 @@ impl Store {
         rows.collect::<std::result::Result<_, _>>().map_err(err)
     }
 
+    #[cfg(any(target_os = "android", test))]
+    /// Lembretes ainda por vir (depois de `now`): para agendar no sistema (Android). Mesmo rótulo que o aviso.
+    pub fn upcoming_reminders(&self, now: Millis) -> Result<Vec<DueReminder>> {
+        const LABEL: &str = "CASE WHEN EXISTS (SELECT 1 FROM categories c WHERE c.id = n.category_id AND c.deleted = 0 AND c.pin_hash IS NOT NULL) \
+                             THEN 'Nota protegida' ELSE n.label END";
+        let mut st = self
+            .conn
+            .prepare_cached(&format!(
+                "SELECT id, {LABEL}, reminder_at, reminder_repeat, 0 FROM notes n \
+                 WHERE reminder_at IS NOT NULL AND reminder_at > ?1 AND reminder_done = 0 AND trashed_at IS NULL \
+                 UNION ALL \
+                 SELECT id, {LABEL}, snoozed_until, reminder_repeat, 1 FROM notes n \
+                 WHERE snoozed_until IS NOT NULL AND snoozed_until > ?1 AND trashed_at IS NULL \
+                 ORDER BY 3"
+            ))
+            .map_err(err)?;
+        let rows = st
+            .query_map([now], |r| {
+                Ok(DueReminder { id: r.get(0)?, title: r.get(1)?, at: r.get(2)?, repeat: r.get(3)?, snoozed: r.get(4)? })
+            })
+            .map_err(err)?;
+        rows.collect::<std::result::Result<_, _>>().map_err(err)
+    }
+
     /// Lembrete da nota: (quando, repetição).
     pub fn reminder_of(&self, id: &str) -> Result<Option<(Millis, Option<String>)>> {
         self.conn

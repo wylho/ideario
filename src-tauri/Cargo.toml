@@ -29,8 +29,6 @@ fast_image_resize = { version = "5", features = ["image"] }
 webp = "0.3"
 zip = { version = "2", default-features = false, features = ["deflate"] }
 tauri-plugin-dialog = "2.8"
-# Notificações dos lembretes (com botões Abrir, Adiar, Concluir nos três sistemas).
-notify-rust = "4.18"
 # Hora local dos lembretes (repetir todo mês/ano no mesmo horário, com horário de verão).
 chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
 # Sync com o Google Drive (Fase 5): HTTP da API, navegador para o login, PKCE.
@@ -54,9 +52,16 @@ strip = true
 [target.'cfg(any(target_os = "macos", windows))'.dependencies]
 keyring = { version = "3", features = ["apple-native", "windows-native"] }
 
-# Atualização automática (Windows, macOS e AppImage no Linux): baixa do Release do GitHub e confere a assinatura.
+# Desktop: atualização automática (Windows, macOS e AppImage no Linux), baixada do Release do GitHub e conferida
+# pela assinatura; notificações dos lembretes (com botões Abrir, Adiar, Concluir nos três sistemas).
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-updater = "2"
+notify-rust = "4.18"
+
+# Android: lembretes agendados no sistema (dispara com o app fechado).
+[target.'cfg(target_os = "android")'.dependencies]
+tauri-plugin-notification = "2"
+time = "0.3"
 
 # Linux: lê a fonte e o destaque da área de trabalho (GNOME, KDE…) para a UI parecer nativa.
 [target.'cfg(target_os = "linux")'.dependencies]

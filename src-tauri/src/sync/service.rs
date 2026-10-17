@@ -44,7 +44,22 @@ pub struct Phase {
     pub error: Option<String>,
 }
 
-type SharedSession = Arc<Mutex<Option<Session>>>;
+/// Um login ativo: entrega tokens ao Drive e sabe se desfazer ao sair. No desktop é o token de renovação
+/// (`auth::Session`); no Android, a conta do aparelho pelo Google Play Services (`android::AndroidSession`).
+pub(crate) trait Login: Tokens + Send {
+    fn revoke(&self) {}
+}
+
+impl Login for Session {
+    fn revoke(&self) {
+        Session::revoke(self)
+    }
+}
+
+#[cfg(target_os = "android")]
+impl Login for super::android::AndroidSession {}
+
+type SharedSession = Arc<Mutex<Option<Box<dyn Login>>>>;
 
 /// Estado do sync no app (gerenciado pelo Tauri).
 #[derive(Default)]
@@ -83,7 +98,7 @@ impl Sync {
         self.connected.load(Ordering::Relaxed)
     }
 
-    fn set_session(&self, session: Option<Session>) {
+    fn set_session(&self, session: Option<Box<dyn Login>>) {
         self.connected.store(session.is_some(), Ordering::Relaxed);
         *lock(&self.session) = session;
     }
@@ -113,8 +128,14 @@ pub fn start(app: &AppHandle) {
     let core = app.state::<Core>();
     let sync = app.state::<Sync>();
     let account = core.with(|s| s.sync_value("account")).ok().flatten();
+    #[cfg(not(target_os = "android"))]
     if let (Some(client), Some(_), Some(refresh)) = (auth::client(), account, auth::load_refresh(&core.data)) {
-        sync.set_session(Some(Session::new(client, refresh)));
+        sync.set_session(Some(Box::new(Session::new(client, refresh))));
+    }
+    // Android: a permissão fica com o sistema; basta ter entrado uma vez.
+    #[cfg(target_os = "android")]
+    if account.is_some() {
+        sync.set_session(Some(Box::new(super::android::AndroidSession::new(app.clone(), None))));
     }
     let (tx, rx) = mpsc::channel();
     *lock(&sync.wake) = Some(tx);
@@ -224,7 +245,7 @@ pub fn ensure_local(app: &AppHandle, hash: &str) {
 #[tauri::command]
 pub fn sync_status(core: tauri::State<Core>, sync: tauri::State<Sync>) -> Result<SyncStatus, String> {
     let mut status = core.with(|s| s.sync_status())?;
-    status.configured = auth::client().is_some();
+    status.configured = cfg!(target_os = "android") || auth::client().is_some();
     status.connected = status.connected && sync.signed_in();
     let phase = lock(&sync.phase).clone();
     status.state = phase.state;
@@ -243,9 +264,29 @@ pub fn sync_focus(sync: tauri::State<Sync>) {
     sync.poke(Wake::Focus);
 }
 
-/// Entrar com o Google: abre o navegador e espera a volta (até 5 minutos, ou "Cancelar").
+/// Entrar com o Google. No desktop abre o navegador e espera a volta (até 5 minutos, ou "Cancelar"); no Android
+/// mostra a conta do aparelho e a permissão.
 #[tauri::command]
 pub async fn sync_sign_in(app: AppHandle) -> Result<SyncStatus, String> {
+    let (session, email) = login(&app).await?;
+    let (core, sync) = (app.state::<Core>(), app.state::<Sync>());
+    // Outra conta que não a de antes: nada daqui aponta para os arquivos da conta antiga.
+    let previous = core.with(|s| s.sync_value("account"))?;
+    if previous.as_deref().is_some_and(|p| !email.is_empty() && p != email) {
+        let _cycle = lock(&sync.cycle);
+        core.with(|s| s.reset_sync())?;
+    }
+    let account = if email.is_empty() { "Conta Google".to_string() } else { email };
+    core.with(|s| s.set_sync_value("account", Some(&account)))?;
+    sync.set_session(Some(session));
+    sync.set_phase(&app, "ok", None);
+    sync.poke(Wake::Now);
+    sync_status(app.state::<Core>(), app.state::<Sync>())
+}
+
+/// Login no desktop: OAuth loopback com PKCE; o token de renovação fica guardado (chaveiro ou arquivo).
+#[cfg(not(target_os = "android"))]
+async fn login(app: &AppHandle) -> Result<(Box<dyn Login>, String), String> {
     let client = auth::client().ok_or("O sync com o Google Drive não está configurado nesta versão do app.")?;
     let pending = auth::begin(client).map_err(|e| e.to_string())?;
     let sync = app.state::<Sync>();
@@ -259,20 +300,20 @@ pub async fn sync_sign_in(app: AppHandle) -> Result<SyncStatus, String> {
     .await
     .map_err(|e| e.to_string())?
     .map_err(|e| e.to_string())?;
-    let core = app.state::<Core>();
-    // Outra conta que não a de antes: nada daqui aponta para os arquivos da conta antiga.
-    let previous = core.with(|s| s.sync_value("account"))?;
-    if previous.as_deref().is_some_and(|p| !grant.email.is_empty() && p != grant.email) {
-        let _cycle = lock(&sync.cycle);
-        core.with(|s| s.reset_sync())?;
-    }
-    auth::save_refresh(&core.data, &grant.refresh)?;
-    let account = if grant.email.is_empty() { "Conta Google".to_string() } else { grant.email.clone() };
-    core.with(|s| s.set_sync_value("account", Some(&account)))?;
-    sync.set_session(Some(Session::new(client, grant.refresh).with_access(grant.access, grant.expires_in)));
-    sync.set_phase(&app, "ok", None);
-    sync.poke(Wake::Now);
-    sync_status(app.state::<Core>(), app.state::<Sync>())
+    auth::save_refresh(&app.state::<Core>().data, &grant.refresh)?;
+    let session = Session::new(client, grant.refresh).with_access(grant.access, grant.expires_in);
+    Ok((Box::new(session), grant.email))
+}
+
+/// Login no Android: a conta do aparelho (o plugin espera a pessoa escolher, fora da linha principal).
+#[cfg(target_os = "android")]
+async fn login(app: &AppHandle) -> Result<(Box<dyn Login>, String), String> {
+    let handle = app.clone();
+    let (token, email) = tauri::async_runtime::spawn_blocking(move || super::android::sign_in(&handle))
+        .await
+        .map_err(|e| e.to_string())?
+        .map_err(|e| e.to_string())?;
+    Ok((Box::new(super::android::AndroidSession::new(app.clone(), Some(token))), email))
 }
 
 #[tauri::command]
