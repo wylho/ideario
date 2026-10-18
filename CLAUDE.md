@@ -24,10 +24,13 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
 - **D4:** nome **Ideario** (sem acento).
 - **Ícone oficial:** quadrado arredondado com degradê amarelo→laranja (`src-tauri/icons/source/ideario.svg`; também
   `BrandMark.svelte` e `public/favicon.svg`). Android: adaptativo (frente/fundo) e o quadrado sem arredondamento
-  (`ideario-full-bleed.svg`), que o sistema corta no formato dele (o redondo é esse quadrado cortado em círculo, sem margem); macOS: versão com margem da grade da Apple (`macos.svg`).
+  (`ideario-full-bleed.svg`), que o sistema corta no formato dele; macOS: versão com margem da grade da Apple (`macos.svg`).
   Bandeja/barra de menus: só o desenho de dentro, monocromático (`source/tray.svg` → `tray-dark.png`/`tray-light.png` por
   `source/tray-png.py`): template no macOS, branco ou preto no Linux conforme o painel, colorido no Windows.
-  Para regenerar: `npx tauri icon src-tauri/icons/source/icon-manifest.json` (e o `.icns` a partir de `macos.svg`).
+  Para regenerar: `npx tauri icon src-tauri/icons/source/icon-manifest.json` (e o `.icns` a partir de `macos.svg`),
+  depois `python3 src-tauri/icons/source/android-legacy.py` (os ícones antigos do Android; o do Tauri sai cortado).
+  Android adaptativo: o desenho da frente (`android-foreground.svg`) fica reduzido a 74% para caber no círculo seguro
+  (66 dp de 108): pedido do usuário, o launcher redondo cortava as quinas.
 - **Tipografia:** fonte do sistema em toda a UI, para parecer nativo (substitui Bricolage/Figtree/JetBrains Mono do protótipo).
   No Linux o núcleo lê a fonte do GNOME/KDE (`src-tauri/src/system_fonts.rs`); nos demais, `system-ui`.
 - **D5:** categorias só com cor (sem ícone).
