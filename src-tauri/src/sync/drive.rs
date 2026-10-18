@@ -16,6 +16,8 @@ const FIELDS: &str = "id,version,modifiedTime,appProperties,description";
 /// Acima disso o envio é "resumable" (o multipart do Drive aceita até 5 MB).
 pub(crate) const MULTIPART_LIMIT: usize = 5 * 1024 * 1024;
 const RETRIES: u32 = 4;
+/// Downloads ao mesmo tempo num lote (`download_many`).
+const PARALLEL: usize = 8;
 
 /// Quem fornece o token de acesso (o login Google; nos testes, um falso).
 pub(crate) trait Tokens {
@@ -33,7 +35,12 @@ pub(crate) struct DriveApi<T: Tokens> {
 }
 
 pub(crate) fn agent() -> ureq::Agent {
-    ureq::AgentBuilder::new().timeout_connect(Duration::from_secs(15)).timeout_read(Duration::from_secs(60)).build()
+    ureq::AgentBuilder::new()
+        .timeout_connect(Duration::from_secs(15))
+        .timeout_read(Duration::from_secs(60))
+        // As conexões dos downloads em paralelo ficam abertas para o próximo lote (sem refazer o TLS).
+        .max_idle_connections_per_host(PARALLEL)
+        .build()
 }
 
 #[derive(Deserialize)]
@@ -164,6 +171,10 @@ impl<T: Tokens> DriveApi<T> {
         }
     }
 
+    fn media_url(&self, id: &str) -> String {
+        format!("{}/drive/v3/files/{}?alt=media", self.base, encode(id))
+    }
+
     fn get(&mut self, url: &str) -> SResult<ureq::Response> {
         self.send("GET", url, &[], &Body::Empty)
     }
@@ -247,8 +258,39 @@ impl<T: Tokens> Remote for DriveApi<T> {
     }
 
     fn download(&mut self, id: &str) -> SResult<Vec<u8>> {
-        let url = format!("{}/drive/v3/files/{}?alt=media", self.base, encode(id));
-        read_all(self.get(&url)?)
+        read_all(self.get(&self.media_url(id))?)
+    }
+
+    /// Em paralelo, com o mesmo token. O que não descer de primeira (token vencido, limite de uso, rede) tenta de novo
+    /// pelo caminho normal, um por um; sem rede ou sem login, o resto do lote nem tenta.
+    fn download_many(&mut self, ids: &[String]) -> Vec<SResult<Vec<u8>>> {
+        let fast = match self.tokens.access(false) {
+            Ok(token) => {
+                let (agent, auth) = (&self.agent, format!("Bearer {token}"));
+                let urls: Vec<String> = ids.iter().map(|id| self.media_url(id)).collect();
+                super::par_map(&urls, PARALLEL, |url| match agent.get(url).set("Authorization", &auth).call() {
+                    Ok(r) => read_all(r).ok().map(Ok),
+                    Err(ureq::Error::Status(404, _)) => Some(Err(SyncError::NotFound)),
+                    Err(_) => None,
+                })
+            }
+            Err(_) => vec![None; ids.len()],
+        };
+        let mut give_up: Option<SyncError> = None;
+        ids.iter()
+            .zip(fast)
+            .map(|(id, got)| match (got, &give_up) {
+                (Some(res), _) => res,
+                (None, Some(e)) => Err(e.clone()),
+                (None, None) => {
+                    let res = self.download(id);
+                    if let Err(e @ (SyncError::Offline(_) | SyncError::Unauthorized)) = &res {
+                        give_up = Some(e.clone());
+                    }
+                    res
+                }
+            })
+            .collect()
     }
 
     fn create(&mut self, file: &NewFile) -> SResult<RemoteFile> {
@@ -466,6 +508,37 @@ pub(crate) mod tests {
         // sem servidor nenhum: sem conexão
         let mut nowhere = DriveApi::local("http://127.0.0.1:9", Fake::default(), MULTIPART_LIMIT);
         assert!(matches!(nowhere.download("x").unwrap_err(), SyncError::Offline(_)));
+    }
+
+    #[test]
+    fn downloads_a_batch_in_order_renewing_the_token_and_mapping_errors() {
+        let (base, log) = serve(Box::new(|r: &Req| match (r.header("authorization"), r.path.as_str()) {
+            (Some("Bearer t0"), _) => (401, vec![], vec![]),
+            (_, p) if p.contains("missing") => (404, vec![], vec![]),
+            (_, p) => (200, vec![], p.split('/').nth(4).unwrap_or("").split('?').next().unwrap_or("").as_bytes().to_vec()),
+        }));
+        let mut d = DriveApi::local(&base, Fake::default(), MULTIPART_LIMIT);
+        let ids: Vec<String> = ["a", "b", "missing", "c", "d", "e", "f", "g", "h", "i"].map(String::from).to_vec();
+        let got = d.download_many(&ids);
+        assert_eq!(got.len(), ids.len());
+        for (id, res) in ids.iter().zip(&got) {
+            match id.as_str() {
+                "missing" => assert_eq!(res, &Err(SyncError::NotFound)),
+                id => assert_eq!(res.as_deref(), Ok(id.as_bytes()), "na ordem dos ids"),
+            }
+        }
+        // O token velho foi recusado no lote; daí em diante, um por um com o novo (que o próximo lote já usa).
+        let before = log.lock().unwrap().len();
+        assert_eq!(d.download_many(&ids[..3]).iter().filter(|r| r.is_ok()).count(), 2);
+        assert_eq!(log.lock().unwrap().len() - before, 3, "o segundo lote vai direto com o token novo");
+    }
+
+    #[test]
+    fn a_batch_without_network_gives_up_after_the_first_failure() {
+        let mut d = DriveApi::local("http://127.0.0.1:9", Fake::default(), MULTIPART_LIMIT);
+        let ids: Vec<String> = (0..20).map(|i| i.to_string()).collect();
+        let got = d.download_many(&ids);
+        assert!(got.iter().all(|r| matches!(r, Err(SyncError::Offline(_)))));
     }
 
     #[test]

@@ -44,6 +44,10 @@ const ATTACHMENT: &str = "attachment";
 /// Moodboard).
 const EAGER_LIMIT: i64 = 8 * 1024 * 1024;
 
+/// Quantos arquivos descem por vez (o Drive de verdade baixa o lote em paralelo). A cada lote de notas a interface já
+/// mostra o que chegou, sem esperar o ciclo inteiro (a primeira vez num aparelho novo são centenas de notas).
+const BATCH: usize = 24;
+
 /// Um arquivo no Drive, como o sync precisa.
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct RemoteFile {
@@ -121,6 +125,10 @@ pub(crate) trait Remote {
     /// O que mudou desde `token` e a marca para a próxima vez.
     fn changes(&mut self, token: &str) -> SResult<(Vec<Change>, String)>;
     fn download(&mut self, id: &str) -> SResult<Vec<u8>>;
+    /// Vários downloads, um resultado por id, na mesma ordem. O Drive de verdade faz em paralelo.
+    fn download_many(&mut self, ids: &[String]) -> Vec<SResult<Vec<u8>>> {
+        ids.iter().map(|id| self.download(id)).collect()
+    }
     fn create(&mut self, file: &NewFile) -> SResult<RemoteFile>;
     fn update(&mut self, id: &str, props: &Props, bytes: &[u8]) -> SResult<RemoteFile>;
     fn delete(&mut self, id: &str) -> SResult<()>;
@@ -133,6 +141,31 @@ pub(crate) struct Device<'a> {
     pub store: &'a Mutex<Store>,
     pub data: &'a Path,
     pub stop: &'a AtomicBool,
+    /// Notas que acabaram de chegar ou mudar (a cada lote): a interface recarrega sem esperar o fim do ciclo.
+    pub arrived: &'a dyn Fn(&[String]),
+}
+
+/// `f` em cada item, com até `workers` linhas ao mesmo tempo; os resultados na ordem dos itens.
+pub(crate) fn par_map<T: std::marker::Sync, R: Send>(items: &[T], workers: usize, f: impl Fn(&T) -> R + std::marker::Sync) -> Vec<R> {
+    let next = std::sync::atomic::AtomicUsize::new(0);
+    let mut out: Vec<(usize, R)> = std::thread::scope(|scope| {
+        let handles: Vec<_> = (0..workers.clamp(1, items.len().max(1)))
+            .map(|_| {
+                scope.spawn(|| {
+                    let mut mine = Vec::new();
+                    loop {
+                        let i = next.fetch_add(1, Ordering::Relaxed);
+                        let Some(item) = items.get(i) else { break };
+                        mine.push((i, f(item)));
+                    }
+                    mine
+                })
+            })
+            .collect();
+        handles.into_iter().flat_map(|h| h.join().unwrap_or_default()).collect()
+    });
+    out.sort_by_key(|(i, _)| *i);
+    out.into_iter().map(|(_, r)| r).collect()
 }
 
 impl Device<'_> {
@@ -215,8 +248,8 @@ pub(crate) fn pull(dev: &Device, remote: &mut dyn Remote, report: &mut Report) -
     for f in &categories {
         pull_categories(dev, remote, f, report)?;
     }
-    for f in &notes {
-        pull_note(dev, remote, f, report)?;
+    for batch in notes.chunks(BATCH) {
+        pull_notes(dev, remote, batch, report)?;
     }
     for file in &removed {
         let note = dev.with(|s| s.note_by_file(file))?;
@@ -228,26 +261,47 @@ pub(crate) fn pull(dev: &Device, remote: &mut dyn Remote, report: &mut Report) -
     dev.with(|s| s.set_sync_value("drive_token", Some(&next)))
 }
 
-fn pull_note(dev: &Device, remote: &mut dyn Remote, f: &RemoteFile, report: &mut Report) -> SResult<()> {
-    let Some(id) = f.props.get("noteId") else { return Ok(()) };
+/// Um lote de notas: vê quais precisam descer, baixa todas de uma vez e junta uma a uma.
+fn pull_notes(dev: &Device, remote: &mut dyn Remote, batch: &[RemoteFile], report: &mut Report) -> SResult<()> {
+    let mut wanted = Vec::new();
+    for f in batch {
+        if needs_pull(dev, f)? {
+            wanted.push(f);
+        }
+    }
+    let ids: Vec<String> = wanted.iter().map(|f| f.id.clone()).collect();
+    let before = report.notes.len();
+    for (f, bytes) in wanted.into_iter().zip(remote.download_many(&ids)) {
+        match bytes {
+            Err(SyncError::NotFound) => {}
+            other => merge_note(dev, f, &other?, report)?,
+        }
+    }
+    if report.notes.len() > before {
+        (dev.arrived)(&report.notes[before..]);
+    }
+    Ok(())
+}
+
+/// A nota precisa descer? Não se já foi juntada nesta versão (inclusive a que este aparelho mesmo enviou) nem se
+/// foi excluída de vez aqui (o arquivo sai no próximo envio: não pode voltar).
+fn needs_pull(dev: &Device, f: &RemoteFile) -> SResult<bool> {
+    let Some(id) = f.props.get("noteId") else { return Ok(false) };
     let (known, deleting) = dev.with(|s| Ok((s.note_file(id)?, s.is_pending_delete(&f.id)?)))?;
     if deleting && known.is_none() {
-        // Excluída de vez aqui, o arquivo sai no próximo envio: não pode voltar.
-        return Ok(());
+        return Ok(false);
     }
     let (mine, my_rev) = known.unwrap_or_default();
-    if mine.as_deref() == Some(f.id.as_str()) && my_rev.as_deref() == Some(f.rev.as_str()) {
-        // Já juntada (inclusive a versão que este aparelho mesmo enviou).
-        return Ok(());
-    }
-    let bytes = match remote.download(&f.id) {
-        Err(SyncError::NotFound) => return Ok(()),
-        other => other?,
-    };
-    if ydoc::to_note(id, &bytes).is_err() {
+    Ok(!(mine.as_deref() == Some(f.id.as_str()) && my_rev.as_deref() == Some(f.rev.as_str())))
+}
+
+fn merge_note(dev: &Device, f: &RemoteFile, bytes: &[u8], report: &mut Report) -> SResult<()> {
+    let Some(id) = f.props.get("noteId") else { return Ok(()) };
+    if ydoc::to_note(id, bytes).is_err() {
         report.skipped += 1;
         return Ok(());
     }
+    let (mine, my_rev) = dev.with(|s| s.note_file(id))?.unwrap_or_default();
     // Dois arquivos para a mesma nota (dois aparelhos criaram ao mesmo tempo): fica o de menor id, o outro é juntado
     // e apagado. Os dois aparelhos escolhem o mesmo. O que perdeu continua sendo juntado enquanto não sai do Drive
     // (o outro aparelho pode ter escrito nele de novo).
@@ -262,7 +316,7 @@ fn pull_note(dev: &Device, remote: &mut dyn Remote, f: &RemoteFile, report: &mut
     let edited = f.millis("updated").unwrap_or(f.modified);
     let created = f.millis("created").unwrap_or(edited);
     let changed = dev.with(|s| {
-        let changed = s.merge_remote_note(id, &bytes, (&file, &rev), created, edited)?;
+        let changed = s.merge_remote_note(id, bytes, (&file, &rev), created, edited)?;
         if keep_mine {
             // O arquivo que fica ainda não tem o que veio do outro: sobe junto (antes de o outro ser apagado).
             s.add_pending_delete(&f.id)?;
@@ -418,10 +472,23 @@ fn push_categories(dev: &Device, remote: &mut dyn Remote) -> SResult<()> {
 
 /// Fotos (e anexos pequenos) que outro aparelho subiu descem logo; os grandes, só quando alguém abre.
 fn fetch_files(dev: &Device, remote: &mut dyn Remote, report: &mut Report) -> SResult<()> {
-    for (hash, file, kind, bytes) in dev.with(|s| s.missing_attachments())? {
-        if kind == "image" || bytes <= EAGER_LIMIT {
-            match fetch_attachment(dev, remote, &hash, &file) {
-                Ok(()) => report.files += 1,
+    let wanted: Vec<_> = dev.with(|s| s.missing_attachments())?.into_iter().filter(|(_, _, kind, bytes)| kind == "image" || *bytes <= EAGER_LIMIT).collect();
+    // Miniaturas em paralelo, mas poucas (cada foto aberta ocupa dezenas de MB no celular).
+    let cpus = std::thread::available_parallelism().map_or(2, |n| n.get().min(4));
+    for batch in wanted.chunks(BATCH) {
+        let ids: Vec<String> = batch.iter().map(|(_, file, _, _)| file.clone()).collect();
+        let got: Vec<_> = batch.iter().zip(remote.download_many(&ids)).collect();
+        let data = dev.data;
+        let saved = par_map(&got, cpus, |((hash, _, kind, _), bytes)| match bytes {
+            Ok(bytes) => save_fetched(data, hash, kind == "image", bytes),
+            Err(e) => Err(e.clone()),
+        });
+        for ((hash, ..), res) in batch.iter().zip(saved) {
+            match res {
+                Ok(()) => {
+                    dev.with(|s| s.set_attachment_local(hash))?;
+                    report.files += 1;
+                }
                 // Sumiu do Drive ou veio corrompido: fica para depois, sem travar o resto.
                 Err(SyncError::NotFound | SyncError::Other(_)) => {}
                 Err(e) => return Err(e),
@@ -434,14 +501,21 @@ fn fetch_files(dev: &Device, remote: &mut dyn Remote, report: &mut Report) -> SR
 /// Baixa um anexo e confere o hash. Fotos ganham a miniatura aqui (a paleta e o tom já vieram junto).
 pub(crate) fn fetch_attachment(dev: &Device, remote: &mut dyn Remote, hash: &str, file: &str) -> SResult<()> {
     let bytes = remote.download(file)?;
-    if format!("{:x}", Sha256::digest(&bytes)) != hash {
+    let image = dev.with(|s| s.attachment_kind(hash))?.as_deref() == Some("image");
+    save_fetched(dev.data, hash, image, &bytes)?;
+    dev.with(|s| s.set_attachment_local(hash))
+}
+
+/// Grava o anexo que desceu (se o hash confere) e, se for foto, a miniatura.
+fn save_fetched(data: &Path, hash: &str, image: bool, bytes: &[u8]) -> SResult<()> {
+    if format!("{:x}", Sha256::digest(bytes)) != hash {
         return Err(SyncError::Other(format!("anexo {hash} veio diferente do esperado")));
     }
-    attachments::store_file(dev.data, hash, &bytes)?;
-    if dev.with(|s| s.attachment_kind(hash))?.as_deref() == Some("image") {
-        if let Ok(thumb) = media::thumbnail(&bytes) {
-            attachments::store_thumb(dev.data, hash, &thumb)?;
+    attachments::store_file(data, hash, bytes)?;
+    if image {
+        if let Ok(thumb) = media::thumbnail(bytes) {
+            attachments::store_thumb(data, hash, &thumb)?;
         }
     }
-    dev.with(|s| s.set_attachment_local(hash))
+    Ok(())
 }

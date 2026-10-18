@@ -30,7 +30,7 @@ impl Dev {
     }
 
     fn device(&self) -> Device<'_> {
-        Device { store: &self.store, data: &self.data, stop: &self.stop }
+        Device { store: &self.store, data: &self.data, stop: &self.stop, arrived: &|_| {} }
     }
 
     fn sync(&self, drive: &MemoryDrive) -> SResult<Report> {
@@ -682,4 +682,55 @@ fn stopping_in_the_middle_writes_nothing_more() {
     let s = a.s();
     assert_eq!(s.dirty_notes().unwrap().len(), 2, "nenhuma nota marcada como enviada");
     assert!(s.sync_value("drive_token").unwrap().is_some(), "o que veio antes de parar fica");
+}
+
+#[test]
+fn a_new_device_keeps_the_dates_and_the_order_of_the_notes() {
+    let drive = MemoryDrive::default();
+    let a = Dev::new();
+    // Notas antigas (importadas do Keep), cada uma editada num dia diferente.
+    for (i, id) in ["velha", "media", "nova"].iter().enumerate() {
+        a.create(id, id, "texto");
+        let day = 86_400_000 * (i as i64 + 1);
+        a.s().set_times(id, 1_600_000_000_000 + day, 1_700_000_000_000 + day).unwrap();
+    }
+    a.sync(&drive).unwrap();
+    let b = Dev::new();
+    b.sync(&drive).unwrap();
+    for id in ["velha", "media", "nova"] {
+        assert_eq!(b.s().note_times(id).unwrap(), a.s().note_times(id).unwrap(), "datas de {id}");
+    }
+    let order = |d: &Dev| -> Vec<String> {
+        d.s().list_notes(&Default::default(), "active", "", "updated").unwrap().into_iter().map(|n| n.id).filter(|i| ["velha", "media", "nova"].contains(&i.as_str())).collect()
+    };
+    assert_eq!(order(&b), vec!["nova", "media", "velha"]);
+    // E sincronizar de novo nos dois não mexe nas datas.
+    a.sync(&drive).unwrap();
+    b.sync(&drive).unwrap();
+    a.sync(&drive).unwrap();
+    assert_eq!(order(&a), vec!["nova", "media", "velha"]);
+    assert_eq!(order(&b), vec!["nova", "media", "velha"]);
+}
+
+#[test]
+fn a_new_device_shows_the_notes_batch_by_batch() {
+    let drive = MemoryDrive::default();
+    let a = Dev::new();
+    let n = BATCH + 6;
+    for i in 0..n {
+        a.create(&format!("n{i:02}"), "nota", "texto");
+    }
+    a.sync(&drive).unwrap();
+    let b = Dev::new();
+    let batches = std::cell::RefCell::new(Vec::new());
+    let arrived = |ids: &[String]| batches.borrow_mut().push(ids.len());
+    let dev = Device { store: &b.store, data: &b.data, stop: &b.stop, arrived: &arrived };
+    let report = sync_once(&dev, &mut drive.clone()).unwrap();
+    assert_eq!(*batches.borrow(), vec![BATCH, 6], "a interface vê cada lote assim que ele chega");
+    assert_eq!(report.notes.len(), n);
+    assert_eq!(b.ids().iter().filter(|id| id.starts_with('n')).count(), n);
+    // Nada mudou: o próximo ciclo não avisa nada.
+    batches.borrow_mut().clear();
+    sync_once(&dev, &mut drive.clone()).unwrap();
+    assert!(batches.borrow().is_empty());
 }

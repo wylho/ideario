@@ -28,6 +28,8 @@ const POLL: Duration = Duration::from_secs(60);
 const RETRY: Duration = Duration::from_secs(30);
 /// "Voltar à janela" não sincroniza de novo se acabou de sincronizar.
 const FOCUS_GAP: Duration = Duration::from_secs(15);
+/// Durante um ciclo longo (a primeira vez num aparelho novo), a lista recarrega no máximo uma vez nesse intervalo.
+const RELOAD_GAP: Duration = Duration::from_millis(1500);
 const LOGIN_TIMEOUT: Duration = Duration::from_secs(300);
 
 enum Wake {
@@ -200,13 +202,23 @@ fn run_once(app: &AppHandle, visible: bool) -> SResult<Report> {
     if visible {
         sync.set_phase(app, "syncing", None);
     }
-    let res = sync_once(&Device { store: &core.store, data: &core.data, stop: &sync.stop }, &mut sync.drive());
+    // Notas que chegam aparecem lote a lote (a lista recarrega no máximo a cada RELOAD_GAP; o editor aberto junta na hora).
+    let last_reload = std::cell::Cell::new(Instant::now());
+    let any = std::cell::Cell::new(false);
+    let arrived = |ids: &[String]| {
+        any.set(true);
+        let _ = app.emit("notes-synced", ids);
+        if last_reload.get().elapsed() >= RELOAD_GAP {
+            last_reload.set(Instant::now());
+            let _ = app.emit("core-changed", ());
+        }
+    };
+    let res = sync_once(&Device { store: &core.store, data: &core.data, stop: &sync.stop, arrived: &arrived }, &mut sync.drive());
     match &res {
         Ok(report) => {
             sync.set_phase(app, "ok", None);
             if report.changed_here() {
                 let _ = app.emit("core-changed", ());
-                let _ = app.emit("notes-synced", &report.notes);
                 if !report.removed_notes.is_empty() {
                     let _ = app.emit("notes-removed", &report.removed_notes);
                 }
@@ -223,6 +235,10 @@ fn run_once(app: &AppHandle, visible: bool) -> SResult<Report> {
         }
         Err(e) => sync.set_phase(app, "error", Some(e.to_string())),
     }
+    // Parou no meio (sem rede, erro): o que já tinha chegado aparece.
+    if res.is_err() && any.get() {
+        let _ = app.emit("core-changed", ());
+    }
     res
 }
 
@@ -237,7 +253,7 @@ pub fn ensure_local(app: &AppHandle, hash: &str) {
         return;
     }
     let Ok(Some(file)) = core.with(|s| s.attachment_file(hash)) else { return };
-    let _ = fetch_attachment(&Device { store: &core.store, data: &core.data, stop: &sync.stop }, &mut sync.drive(), hash, &file);
+    let _ = fetch_attachment(&Device { store: &core.store, data: &core.data, stop: &sync.stop, arrived: &|_| {} }, &mut sync.drive(), hash, &file);
 }
 
 // ---------- comandos ----------
