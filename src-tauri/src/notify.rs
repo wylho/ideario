@@ -122,9 +122,24 @@ fn schedule(app: &AppHandle, scheduled: &mut Vec<crate::reminders::Planned>) {
             .title(&p.title)
             .body("Lembrete do Ideario")
             .extra("note", &p.note)
+            // Ícone pequeno da barra de status (res/drawable/ic_stat_ideario.xml). Vai em cada aviso: o plugin não
+            // aceita configuração em tauri.conf (com `plugins.notification` lá, o app nem abre).
+            .icon("ic_stat_ideario")
+            .icon_color("#F08A24")
             .auto_cancel()
             .schedule(Schedule::At { date, repeating: false, allow_while_idle: true })
             .show();
     }
     *scheduled = plan;
+}
+
+#[cfg(test)]
+mod tests {
+    /// Plugin que não declara configuração no Rust recusa qualquer `plugins.<nome>` no tauri.conf, e o app não abre
+    /// (foi o que aconteceu no Android 0.2.0 com `plugins.notification`).
+    #[test]
+    fn android_config_has_no_plugin_settings() {
+        let conf: serde_json::Value = serde_json::from_str(include_str!("../tauri.android.conf.json")).expect("json");
+        assert!(conf.get("plugins").is_none(), "plugins.* em tauri.android.conf.json derruba a abertura do app");
+    }
 }

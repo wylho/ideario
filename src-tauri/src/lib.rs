@@ -55,7 +55,17 @@ pub fn run() {
         .manage(sync::Sync::default());
     // Desktop: ao fechar a janela, pode ficar na bandeja (segundo plano).
     #[cfg(desktop)]
-    let app = app.manage(background::Background::default()).on_window_event(background::on_window_event);
+    let app = app.manage(background::Background::default()).on_window_event(background::on_window_event).plugin(
+        // A janela reabre do tamanho e no lugar em que estava (só isso: a aparência é do próprio app).
+        tauri_plugin_window_state::Builder::default()
+            .with_state_flags(
+                tauri_plugin_window_state::StateFlags::SIZE
+                    | tauri_plugin_window_state::StateFlags::POSITION
+                    | tauri_plugin_window_state::StateFlags::MAXIMIZED
+                    | tauri_plugin_window_state::StateFlags::FULLSCREEN,
+            )
+            .build(),
+    );
     // Android: lembretes agendados no sistema, login com a conta do aparelho e "compartilhar com o Ideario".
     #[cfg(target_os = "android")]
     let app = app.plugin(tauri_plugin_notification::init()).plugin(sync::android::plugin()).plugin(share::plugin()).plugin(system_bars::plugin()).plugin(device::plugin());

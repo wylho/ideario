@@ -56,6 +56,8 @@ keyring = { version = "3", features = ["apple-native", "windows-native"] }
 # pela assinatura; notificações dos lembretes (com botões Abrir, Adiar, Concluir nos três sistemas).
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-updater = "2"
+# Tamanho, posição e tela cheia da janela voltam como estavam ao reabrir.
+tauri-plugin-window-state = "2"
 notify-rust = "4.18"
 
 # Android: lembretes agendados no sistema (dispara com o app fechado).
