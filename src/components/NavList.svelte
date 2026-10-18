@@ -4,6 +4,8 @@
   import { categoryMenu, newCategory, tagMenu } from '../lib/menus'
   import { NO_CATEGORY, NO_TAGS } from '../lib/types'
   import ContextMenu from './ContextMenu.svelte'
+  import SortMenu from './SortMenu.svelte'
+  import type { CategorySort } from '../lib/app.svelte'
 
   // Só filtra (o que ver). A visão (como ver) fica na barra de baixo.
   // Na gaveta, escolher categoria fecha; tags podem ser várias, então a gaveta fica aberta.
@@ -33,11 +35,60 @@
     app.box = 'active'
     app.drawerOpen = false
   }
+
+  const CAT_SORTS: { id: CategorySort; label: string }[] = [
+    { id: 'manual', label: 'Manual (arrastar)' },
+    { id: 'name', label: 'Nome (A–Z)' },
+    { id: 'count', label: 'Mais notas primeiro' },
+  ]
+
+  /** Arrastar uma categoria com o mouse para outra posição (no toque, pelo menu: Mover para cima/baixo).
+   *  Pelo ponteiro, não pelo arrastar do HTML (no macOS e no Windows o Tauri fica com ele). */
+  let catDrag = $state<{ id: string; line: number } | null>(null)
+  let dragged = false
+  function catDown(e: PointerEvent, id: string) {
+    if (e.pointerType !== 'mouse' || e.button !== 0) return
+    const list = (e.currentTarget as HTMLElement).closest('.drawer-scroll')
+    const rows = () => [...(list?.querySelectorAll<HTMLElement>('[data-cat-row]') ?? [])]
+    const y0 = e.clientY
+    let target = -1
+    const move = (ev: PointerEvent) => {
+      if (!catDrag && Math.abs(ev.clientY - y0) < 6) return
+      ev.preventDefault()
+      const rs = rows()
+      target = rs.findIndex((r) => ev.clientY < r.getBoundingClientRect().top + r.offsetHeight / 2)
+      if (target < 0) target = rs.length
+      const base = list!.getBoundingClientRect().top - list!.scrollTop
+      const edge = target < rs.length ? rs[target].getBoundingClientRect().top : rs[rs.length - 1].getBoundingClientRect().bottom
+      catDrag = { id, line: edge - base }
+    }
+    const up = () => {
+      window.removeEventListener('pointermove', move)
+      window.removeEventListener('pointerup', up)
+      if (catDrag) {
+        dragged = true
+        setTimeout(() => (dragged = false), 0)
+        const ids = app.categories.map((c) => c.id)
+        const from = ids.indexOf(id)
+        if (target >= 0 && target !== from && target !== from + 1) {
+          ids.splice(from, 1)
+          ids.splice(target > from ? target - 1 : target, 0, id)
+          app.reorderCategories(ids)
+        }
+      }
+      catDrag = null
+    }
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', up)
+  }
 </script>
 
 <div class="drawer-scroll">
   <div class="d-label">
     <span>Categorias</span>
+    {#if app.categories.length > 1}
+      <SortMenu small label="Ordem das categorias" heading="Ordem das categorias" options={CAT_SORTS} value={app.categorySort} onchange={(v) => app.setCategorySort(v)} />
+    {/if}
     <button class="icon-btn sm d-add" aria-label="Nova categoria" title="Nova categoria" onclick={() => newCategory((id) => pickCategory(id))}><Plus size={16} /></button>
   </div>
   <button class="d-item" class:on={!app.filter.categoryId && app.box === 'active'} title="Tudo" onclick={() => pickCategory(null)}>
@@ -52,9 +103,12 @@
       class:is-hidden={c.hidden || (c.locked && !c.unlocked)}
       class:on={app.filter.categoryId === c.id && app.box === 'active'}
       class:drop-target={app.dropCategory === c.id}
+      class:dragging={catDrag?.id === c.id}
       data-drop-category={c.id}
+      data-cat-row
       aria-pressed={app.filter.categoryId === c.id}
-      onclick={() => pickCategory(c.id)}
+      onpointerdown={(e) => catDown(e, c.id)}
+      onclick={() => !dragged && pickCategory(c.id)}
       title={c.name}
     >
       <i class="dot lg" style:background={c.color}></i>
@@ -69,6 +123,7 @@
       {/snippet}
     </ContextMenu>
   {/each}
+  {#if catDrag}<div class="cat-drop" style:top="{catDrag.line - 1}px"></div>{/if}
   {#if showNoCategory}
     <button
       class="d-item cat"

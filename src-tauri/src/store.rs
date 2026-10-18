@@ -784,6 +784,16 @@ impl Store {
         Ok(())
     }
 
+    /// Ordem manual das categorias (arrastar na lateral): a lista inteira, na ordem nova. Vai para os outros aparelhos.
+    pub fn reorder_categories(&self, ids: &[String]) -> Result<()> {
+        let tx = self.conn.unchecked_transaction().map_err(err)?;
+        let t = now();
+        for (i, id) in ids.iter().enumerate() {
+            tx.execute("UPDATE categories SET sort = ?2, updated_at = ?3 WHERE id = ?1 AND sort != ?2", params![id, i as i64, t]).map_err(err)?;
+        }
+        tx.commit().map_err(err)
+    }
+
     /// Oculta (ou mostra) a categoria nas listas.
     pub fn set_category_hidden(&self, id: &str, hidden: bool) -> Result<()> {
         self.conn.execute("UPDATE categories SET hidden = ?2, updated_at = ?3 WHERE id = ?1", params![id, hidden, now()]).map_err(err)?;
@@ -2183,6 +2193,19 @@ mod tests {
         s.move_note("b", None, Some("a")).unwrap();
         s.order_by_date_once().unwrap();
         assert_eq!(titles(&s.list_notes(&Filter::default(), "active", "", "custom").unwrap()), vec!["B", "A", "C"]);
+    }
+
+    #[test]
+    fn manual_category_order_is_kept_and_counts_as_a_change() {
+        let s = Store::memory();
+        let ids: Vec<String> = ["Casa", "Arte", "Bairro"].iter().map(|n| s.create_category(n, "#3d63d6").unwrap().id).collect();
+        let names = |s: &Store| s.list_categories().unwrap().into_iter().map(|c| c.name).collect::<Vec<_>>();
+        assert_eq!(names(&s), ["Casa", "Arte", "Bairro"]);
+        let before = s.local_changes().unwrap().categories_changed_at;
+        std::thread::sleep(std::time::Duration::from_millis(2));
+        s.reorder_categories(&[ids[2].clone(), ids[0].clone(), ids[1].clone()]).unwrap();
+        assert_eq!(names(&s), ["Bairro", "Casa", "Arte"]);
+        assert!(s.local_changes().unwrap().categories_changed_at > before, "a ordem nova sobe no sync");
     }
 
     #[test]

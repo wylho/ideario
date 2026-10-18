@@ -477,6 +477,13 @@ export const mockApi: Api = {
     return done({ id: c.id, name: c.name, color, icon: null, noteCount: 0, hidden: false, locked: false, unlocked: false })
   },
 
+  reorderCategories(ids) {
+    const rank = (id: string) => (ids.includes(id) ? ids.indexOf(id) : ids.length)
+    categories.sort((a, b) => rank(a.id) - rank(b.id))
+    changed()
+    return done(undefined)
+  },
+
   updateCategory(id, p) {
     const c = categories.find((x) => x.id === id)
     if (c) {

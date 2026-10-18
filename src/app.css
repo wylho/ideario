@@ -1040,3 +1040,8 @@ body.photo-dragging, body.photo-dragging * { cursor: grabbing !important; user-s
 :root[data-platform='android'] * { scrollbar-width: none; }
 :root[data-platform='android'] *::-webkit-scrollbar { display: none; }
 .menu-back .grow { font-weight: 600; }
+/* lateral: arrastar categoria (linha onde vai cair) */
+.drawer-scroll { position: relative; }
+.d-item.cat.dragging { opacity: .5; }
+.cat-drop { position: absolute; left: 14px; right: 14px; height: 2px; border-radius: 2px; background: var(--accent); pointer-events: none; }
+body:has(.cat-drop) { cursor: grabbing; }

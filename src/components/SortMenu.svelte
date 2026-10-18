@@ -3,8 +3,12 @@
   import { ArrowDownUp, Check } from '@lucide/svelte'
 
   // Mesmo botão de ordenar em todas as visões que ordenam; muda só a lista de opções.
-  let { heading, options, value, onchange }: {
+  let { heading, options, value, onchange, small = false, label = 'Ordenar' }: {
     heading: string
+    /** Nome do botão (antes da opção escolhida). */
+    label?: string
+    /** Botão pequeno (cabeçalho da lateral). */
+    small?: boolean
     options: { id: T; label: string; hint?: string }[]
     value: T
     onchange: (v: T) => void
@@ -13,8 +17,8 @@
 </script>
 
 <DropdownMenu.Root>
-  <DropdownMenu.Trigger class="icon-btn" aria-label="Ordenar: {current.label}" title="Ordenar: {current.label}">
-    <ArrowDownUp size={18} />
+  <DropdownMenu.Trigger class="icon-btn{small ? ' sm' : ''}" aria-label="{label}: {current.label}" title="{label}: {current.label}">
+    <ArrowDownUp size={small ? 15 : 18} />
   </DropdownMenu.Trigger>
   <DropdownMenu.Portal>
     <DropdownMenu.Content class="menu" align="end" sideOffset={6}>

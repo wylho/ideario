@@ -173,6 +173,11 @@ pub fn create_category(core: Core_, name: String, color: String) -> Result<Categ
 }
 
 #[tauri::command]
+pub fn reorder_categories(core: Core_, ids: Vec<String>) -> Result<()> {
+    core.with(|s| s.reorder_categories(&ids))
+}
+
+#[tauri::command]
 pub fn update_category(core: Core_, id: String, name: Option<String>, color: Option<String>) -> Result<()> {
     core.with(|s| s.update_category(&id, name.as_deref(), color.as_deref()))
 }

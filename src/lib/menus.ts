@@ -1,6 +1,6 @@
 // Menus de contexto de cada tipo de elemento. Um lugar só, para o mesmo item se comportar igual em todo o app.
 import {
-  Archive, ArchiveRestore, Bell, BellOff, Check, CircleCheck, Copy, Pencil, Download, ExternalLink, Files, Filter, FilterX, Image, Palette, Pin, PinOff, FileText, Play, Plus, RotateCcw, Tag, Trash2, AlarmClock, Eye, EyeOff, Lock, LockOpen, KeyRound,
+  ArrowDown, ArrowUp, Archive, ArchiveRestore, Bell, BellOff, Check, CircleCheck, Copy, Pencil, Download, ExternalLink, Files, Filter, FilterX, Image, Palette, Pin, PinOff, FileText, Play, Plus, RotateCcw, Tag, Trash2, AlarmClock, Eye, EyeOff, Lock, LockOpen, KeyRound,
 } from '@lucide/svelte'
 import { api } from './api'
 import { exportEntries } from './exporting'
@@ -257,6 +257,21 @@ function privacyEntries(c: Category): MenuEntry[] {
   ]
 }
 
+/** Mover na ordem (o arrastar do toque e do teclado). A ordem da tela vira a manual. */
+function moveEntries(id: string): MenuEntry[] {
+  const ids = app.categories.map((c) => c.id)
+  const i = ids.indexOf(id)
+  const move = (to: number) => {
+    ids.splice(i, 1)
+    ids.splice(to, 0, id)
+    app.reorderCategories(ids)
+  }
+  return [
+    { label: 'Mover para cima', icon: ArrowUp, disabled: i <= 0, onSelect: () => move(i - 1) },
+    { label: 'Mover para baixo', icon: ArrowDown, disabled: i < 0 || i >= ids.length - 1, onSelect: () => move(i + 1) },
+  ]
+}
+
 export function categoryMenu(id: string): MenuEntry[] {
   const c = app.category(id)
   if (!c) return []
@@ -288,6 +303,7 @@ export function categoryMenu(id: string): MenuEntry[] {
       label: 'Cor', icon: Palette,
       sub: CATEGORY_COLORS.map((col) => ({ label: COLOR_NAMES[col] ?? col, swatch: col, checked: c.color.toLowerCase() === col.toLowerCase(), onSelect: () => void api.updateCategory(id, { color: col }) })),
     },
+    ...moveEntries(id),
     SEP,
     ...privacyEntries(c),
     SEP,

@@ -67,6 +67,7 @@ export const tauriApi: Api = {
 
   listCategories: () => invoke('list_categories'),
   createCategory: (name, color) => write('create_category', { name, color }),
+  reorderCategories: (ids) => write('reorder_categories', { ids }),
   updateCategory: (id, p) => write('update_category', { id, name: p.name ?? null, color: p.color ?? null }),
   deleteCategory: (id) => write('delete_category', { id }),
   restoreCategory: (id, noteIds) => write('restore_category', { id, noteIds }),

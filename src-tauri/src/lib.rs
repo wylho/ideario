@@ -163,6 +163,7 @@ pub fn run() {
             commands::list_categories,
             commands::create_category,
             commands::update_category,
+            commands::reorder_categories,
             commands::delete_category,
             commands::restore_category,
             commands::list_tags,

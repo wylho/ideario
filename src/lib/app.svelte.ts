@@ -77,6 +77,26 @@ function readSort(): NoteSort {
   }
 }
 
+/** Ordem das categorias (lateral, pílulas, seletores): manual (arrastar), A→Z ou mais notas primeiro. Escolha do aparelho. */
+export type CategorySort = 'manual' | 'name' | 'count'
+const CAT_SORT_KEY = 'ideario.categorySort'
+function readCatSort(): CategorySort {
+  try {
+    const v = localStorage.getItem(CAT_SORT_KEY)
+    return v === 'manual' || v === 'count' ? v : 'name'
+  } catch {
+    return 'name'
+  }
+}
+const byName = new Intl.Collator('pt-BR', { sensitivity: 'base', numeric: true })
+function sortCategories(list: Category[], mode: CategorySort): Category[] {
+  if (mode === 'manual') return list
+  const out = [...list]
+  if (mode === 'name') out.sort((a, b) => byName.compare(a.name, b.name))
+  else out.sort((a, b) => b.noteCount - a.noteCount || byName.compare(a.name, b.name))
+  return out
+}
+
 const SIDEBAR_KEY = 'ideario.sidebar'
 function readSidebar() {
   try {
@@ -135,6 +155,39 @@ class AppState {
   /** Sobe a cada mudança nos dados; as consultas da UI dependem dele. */
   revision = $state(0)
   categories = $state.raw<Category[]>([])
+  /** Na ordem do núcleo (a manual); `categories` é esta lista na ordem escolhida. */
+  private storedCategories: Category[] = []
+  categorySort = $state<CategorySort>(readCatSort())
+
+  setCategorySort(mode: CategorySort) {
+    // Passar para a manual pela primeira vez: começa na ordem que está na tela, não na de criação.
+    let first = false
+    try {
+      first = mode === 'manual' && !localStorage.getItem('ideario.categoryManual')
+      localStorage.setItem(CAT_SORT_KEY, mode)
+      if (mode === 'manual') localStorage.setItem('ideario.categoryManual', '1')
+    } catch {
+      // sem armazenamento: vale só nesta sessão
+    }
+    if (first) void api.reorderCategories(this.categories.map((c) => c.id))
+    this.categorySort = mode
+    this.categories = sortCategories(this.storedCategories, mode)
+  }
+
+  /** Arrastou para a nova ordem: ela vira a manual (em todos os aparelhos). */
+  reorderCategories(ids: string[]) {
+    const rank = new Map(ids.map((id, i) => [id, i]))
+    this.storedCategories = [...this.storedCategories].sort((a, b) => (rank.get(a.id) ?? 1e9) - (rank.get(b.id) ?? 1e9))
+    try {
+      localStorage.setItem('ideario.categoryManual', '1')
+      localStorage.setItem(CAT_SORT_KEY, 'manual')
+    } catch {
+      // idem
+    }
+    this.categorySort = 'manual'
+    this.categories = this.storedCategories
+    void api.reorderCategories(ids)
+  }
   tags = $state.raw<TagCount[]>([])
   /** Notas ativas sem categoria e sem tags ("Sem categoria" e "Sem tags" na lateral). */
   orphans = $state.raw<OrphanCounts>({ uncategorized: 0, untagged: 0 })
@@ -177,7 +230,8 @@ class AppState {
 
   async loadShared() {
     const [categories, tags, orphans] = await Promise.all([api.listCategories(), api.listTags(), api.orphanCounts()])
-    this.categories = categories
+    this.storedCategories = categories
+    this.categories = sortCategories(categories, this.categorySort)
     this.tags = tags
     this.orphans = orphans
   }

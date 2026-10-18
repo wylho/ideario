@@ -458,6 +458,46 @@ test('desktop: barra superior fixa; lateral fechada vira pílulas de categoria e
   await expect(page.locator('.filter-row')).toHaveCount(0)
 })
 
+test('ordem das categorias: nome, mais notas ou manual (arrastar e menu); as pílulas seguem a mesma ordem', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 })
+  const side = () => page.locator('.sidebar [data-cat-row] .grow').allInnerTexts()
+  const pills = () => page.locator('.filter-row .chip:has(.dot):not(:has(.dot.none))').allInnerTexts()
+  const sorted = [...(await side())].sort((a, b) => a.localeCompare(b, 'pt-BR'))
+  expect(await side()).toEqual(sorted)
+  const pick = async (label: string) => {
+    await page.getByRole('button', { name: /^Ordem das categorias/ }).click()
+    await page.getByRole('menuitemradio', { name: label }).click()
+  }
+  await pick('Mais notas primeiro')
+  const counts = (await page.locator('.sidebar [data-cat-row] .count').allInnerTexts()).map(Number)
+  expect(counts).toEqual([...counts].sort((a, b) => b - a))
+  await pick('Manual (arrastar)')
+  const start = await side()
+  // Arrastar a última para o topo.
+  const rows = page.locator('.sidebar [data-cat-row]')
+  const last = (await rows.last().boundingBox())!
+  const first = (await rows.first().boundingBox())!
+  await page.mouse.move(last.x + 40, last.y + last.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(last.x + 40, last.y - 10, { steps: 3 })
+  await page.mouse.move(first.x + 40, first.y + 4, { steps: 8 })
+  await page.mouse.up()
+  const dragged = [start.at(-1)!, ...start.slice(0, -1)]
+  await expect.poll(side).toEqual(dragged)
+  // Mover para baixo pelo menu.
+  await rows.first().click({ button: 'right' })
+  await page.getByRole('menuitem', { name: 'Mover para baixo' }).click()
+  const moved = [dragged[1], dragged[0], ...dragged.slice(2)]
+  await expect.poll(side).toEqual(moved)
+  // Lateral fechada: as pílulas seguem a mesma ordem; e a escolha fica depois de recarregar.
+  await page.getByLabel('Recolher barra lateral').click()
+  await expect.poll(pills).toEqual(moved)
+  // A escolha da ordem fica no aparelho (o mock recomeça os dados ao recarregar; no app a ordem fica no banco).
+  await page.reload()
+  await page.getByLabel('Expandir barra lateral').click()
+  await expect(page.getByRole('button', { name: 'Ordem das categorias: Manual (arrastar)' })).toBeVisible()
+})
+
 test('prévia do card mantém títulos, tópicos e a ordem do documento', async ({ page }) => {
   const card = cards(page).filter({ hasText: 'Pão de fermentação natural' })
   await expect(card.locator('.pv-h')).toHaveText('Ingredientes')

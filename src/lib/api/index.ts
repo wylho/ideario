@@ -19,6 +19,8 @@ export interface Api {
   listCategories(): Promise<Category[]>
   createCategory(name: string, color: string): Promise<Category>
   updateCategory(id: string, p: { name?: string; color?: string }): Promise<void>
+  /** Ordem manual: todas as categorias, na ordem nova. */
+  reorderCategories(ids: string[]): Promise<void>
   /** Apaga a categoria (as notas ficam sem categoria). Devolve as notas que estavam nela, para o Desfazer. */
   deleteCategory(id: string): Promise<string[]>
   restoreCategory(id: string, noteIds: string[]): Promise<void>
