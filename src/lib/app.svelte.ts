@@ -2,7 +2,7 @@
 // Visão (como ver) e filtro (o que ver) são independentes: trocar um nunca desfaz o outro.
 import { SvelteSet } from 'svelte/reactivity'
 import { api } from './api'
-import type { AttachmentRow, NoteSummary, Box, Category, FileGroup, FileSort, Filter, NoteSort, OrphanCounts, SyncState, TagCount, Tone, View, ViewCounts } from './types'
+import type { AttachmentRow, NoteSummary, Box, Category, FileGroup, FileSort, Filter, NoteSort, OrphanCounts, SharedIn, SyncState, TagCount, Tone, View, ViewCounts } from './types'
 import { NO_CATEGORY, NO_TAGS } from './types'
 import { uuidv7 } from './uuid'
 
@@ -58,7 +58,7 @@ export interface EditorTarget {
   /** Categoria e tags herdadas do filtro ativo ao criar pelo "+". */
   defaults?: { categoryId: string | null; tags: string[] }
   /** Atalho do "+": a nota nova já abre gravando, com a câmera ou com os arquivos escolhidos. */
-  start?: { record: true } | { camera: true } | { files: DroppedFile[] }
+  start?: { record: true } | { camera: true } | { files: DroppedFile[] } | { shared: SharedIn }
   /** Abrir já imprimindo (PDF pelo menu do card). */
   print?: boolean
 }

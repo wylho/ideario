@@ -1,7 +1,7 @@
 // Camada de dados da UI. No app, os comandos Tauri (`invoke`) do núcleo Rust (SQLite local, Fase 1);
 // no navegador (`npm run dev`, prévia) e nos testes e2e, um mock em memória com dados de exemplo.
 import type {
-  Attachment, AttachmentKind, AttachmentRow, KeepReport, ExportReport, LinkPreview, BackupManifest, BackupReport, BackupStatus, RestoreReport, Box, McpInfo, OrphanCounts, Millis, Category, Filter, NoteDetail, NoteInput, NotePatch, NoteSort, NoteSummary, Settings, SyncState, SyncStatus, TagCount, Tone, UpdateInfo, ViewCounts,
+  Attachment, AttachmentKind, AttachmentRow, KeepReport, ExportReport, LinkPreview, BackupManifest, BackupReport, BackupStatus, RestoreReport, Box, McpInfo, OrphanCounts, Millis, Category, Filter, NoteDetail, NoteInput, NotePatch, NoteSort, NoteSummary, Settings, SyncState, SyncStatus, TagCount, Tone, UpdateInfo, SharedIn, ViewCounts,
 } from '../types'
 import { invoke, isTauri } from '@tauri-apps/api/core'
 import { mockApi } from './mock'
@@ -128,6 +128,9 @@ export interface Api {
   checkUpdate(): Promise<UpdateInfo | null>
   /** Baixa e instala a versão encontrada pelo `checkUpdate` e reinicia o app. */
   installUpdate(onProgress: (done: number, total: number) => void): Promise<void>
+
+  /** Android: o que outro app compartilhou e ainda não virou nota (uma vez só). `null` no desktop e no navegador. */
+  takeShared(): Promise<SharedIn | null>
 
   /** Avisos de mudança que estavam esperando (a escrita no editor parou ou a nota fechou) saem agora. */
   settle(): void

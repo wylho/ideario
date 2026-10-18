@@ -313,3 +313,12 @@ export interface UpdateInfo {
   /** Texto do Release (o que mudou), se houver. */
   notes: string | null
 }
+
+/** O que outro app compartilhou com o Ideario (Android): vira uma nota nova. */
+export interface SharedIn {
+  /** Assunto (vira o título). */
+  subject?: string | null
+  text?: string | null
+  /** Caminhos das cópias dos arquivos (anexados pelo caminho, como os arrastados no desktop). */
+  files: string[]
+}

@@ -343,7 +343,13 @@ pub async fn export_note_cmd(app: tauri::AppHandle, id: String, format: String, 
 /// Imprime a janela (a interface deixa só a nota à vista): "Salvar como PDF" fica na janela de impressão do sistema.
 #[tauri::command]
 pub fn print_window(window: tauri::WebviewWindow) -> Result<()> {
-    window.print().map_err(err)
+    #[cfg(desktop)]
+    return window.print().map_err(err);
+    #[cfg(mobile)]
+    {
+        let _ = window;
+        Err("Exportar em PDF ainda não funciona no celular; use Markdown ou HTML.".into())
+    }
 }
 
 #[cfg(test)]

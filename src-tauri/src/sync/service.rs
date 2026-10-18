@@ -11,6 +11,7 @@ use std::time::{Duration, Instant};
 
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager};
+#[cfg(not(target_os = "android"))]
 use tauri_plugin_opener::OpenerExt;
 
 use super::auth::{self, Session};

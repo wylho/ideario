@@ -18,6 +18,7 @@ mod media;
 mod notify;
 mod projection;
 mod reminders;
+mod share;
 mod store;
 mod sync;
 mod system_fonts;
@@ -53,9 +54,9 @@ pub fn run() {
     // Desktop: ao fechar a janela, pode ficar na bandeja (segundo plano).
     #[cfg(desktop)]
     let app = app.manage(background::Background::default()).on_window_event(background::on_window_event);
-    // Android: lembretes agendados no sistema e login com a conta do aparelho.
+    // Android: lembretes agendados no sistema, login com a conta do aparelho e "compartilhar com o Ideario".
     #[cfg(target_os = "android")]
-    let app = app.plugin(tauri_plugin_notification::init()).plugin(sync::android::plugin());
+    let app = app.plugin(tauri_plugin_notification::init()).plugin(sync::android::plugin()).plugin(share::plugin());
     let app = app
         // Fotos, vídeos, áudios e documentos das notas: `att://localhost/<hash>` (convertFileSrc(hash, 'att')).
         .register_asynchronous_uri_scheme_protocol("att", |ctx, req, responder| {
@@ -145,6 +146,7 @@ pub fn run() {
             commands::import_keep,
             commands::set_preview,
             app_version,
+            share::take_shared,
             #[cfg(desktop)]
             updates::update_check,
             #[cfg(desktop)]

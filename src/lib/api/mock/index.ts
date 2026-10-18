@@ -827,6 +827,16 @@ export const mockApi: Api = {
     }
     return done(version ? { version, notes: null } : null)
   },
+  // Prévia e testes: um compartilhamento de exemplo em `ideario.mock.shared` (JSON), entregue uma vez.
+  takeShared() {
+    try {
+      const raw = localStorage.getItem('ideario.mock.shared')
+      localStorage.removeItem('ideario.mock.shared')
+      return done(raw ? JSON.parse(raw) : null)
+    } catch {
+      return done(null)
+    }
+  },
   async installUpdate(onProgress) {
     for (let i = 1; i <= 4; i++) {
       await new Promise((r) => setTimeout(r, 150))

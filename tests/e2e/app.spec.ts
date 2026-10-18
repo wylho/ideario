@@ -1993,6 +1993,50 @@ test('versão nova do app: aviso no canto, atualizar mostra o progresso; "Depois
   await expect(notice.getByRole('button')).toHaveCount(0)
 })
 
+test.describe('Android: compartilhar com o Ideario', () => {
+  const share = (page: Page, shared: object) =>
+    page.addInitScript((v) => {
+      if (sessionStorage.getItem('shared-once')) return
+      sessionStorage.setItem('shared-once', '1')
+      localStorage.setItem('ideario.mock.shared', JSON.stringify(v))
+      document.addEventListener('readystatechange', () => (document.documentElement.dataset.platform = 'android'))
+    }, shared)
+
+  test('um link vira nota com o cartão do link e o assunto no título', async ({ page }) => {
+    await share(page, { subject: 'Receita de pão', text: 'https://exemplo.com/pao', files: [] })
+    await page.reload()
+    await expect(page.locator('#titulo')).toHaveValue('Receita de pão')
+    await expect(page.locator('#corpo .link-card')).toHaveCount(1)
+    await expect(page.locator('#corpo .link-card')).toContainText('exemplo.com')
+  })
+
+  test('texto vira parágrafos de uma nota nova (uma vez só)', async ({ page }) => {
+    await share(page, { text: 'Comprar café\nLigar para a oficina', files: [] })
+    await page.reload()
+    await expect(page.locator('#corpo p')).toHaveText(['Comprar café', 'Ligar para a oficina'])
+    await page.keyboard.press('Escape')
+    await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')))
+    await expect(page.locator('#titulo')).toHaveCount(0)
+  })
+})
+
+test('Android: o Voltar fecha a nota aberta, e fechar pela tela não deixa entrada sobrando', async ({ page }) => {
+  await page.addInitScript(() =>
+    document.addEventListener('readystatechange', () => (document.documentElement.dataset.platform = 'android')),
+  )
+  await page.reload()
+  await cards(page).filter({ hasText: 'Mercado da semana' }).click()
+  await expect(page.locator('#titulo')).toHaveValue('Mercado da semana')
+  await page.goBack()
+  await expect(page.locator('#titulo')).toHaveCount(0)
+  await expect(cards(page).first()).toBeVisible()
+  // fechar pela tela também tira a entrada extra: o Voltar seguinte não fica "preso"
+  await cards(page).filter({ hasText: 'Mercado da semana' }).click()
+  await page.keyboard.press('Escape')
+  await expect(page.locator('#titulo')).toHaveCount(0)
+  await expect.poll(() => page.evaluate(() => history.state?.ideario ?? null)).toBeNull()
+})
+
 test('sem versão nova, nenhum aviso de atualização', async ({ page }) => {
   await page.waitForTimeout(5500)
   await expect(page.locator('.update-alerts')).toHaveCount(0)

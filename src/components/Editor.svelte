@@ -34,7 +34,7 @@
   import ReminderPopover from './ReminderPopover.svelte'
   import TagInput from './TagInput.svelte'
   import EmojiPicker from './EmojiPicker.svelte'
-  import type { Attachment, NoteColor, NoteInput, RichDoc, RichNode } from '../lib/types'
+  import type { Attachment, NoteColor, NoteInput, RichDoc, RichNode, SharedIn } from '../lib/types'
 
   let { target }: { target: EditorTarget } = $props()
 
@@ -80,6 +80,21 @@
       },
     })
   }
+  /** Compartilhado por outro app (Android): o assunto vira o título; um link sozinho vira cartão; o texto, parágrafos;
+   *  os arquivos entram depois, como os arrastados. */
+  function shareIn(ed: TipTap, s: SharedIn) {
+    if (s.subject?.trim() && meta) meta.title = s.subject.trim()
+    const text = s.text?.trim()
+    const url = text ? bareUrl(text) : null
+    if (url) {
+      insertLinkCard(ed.view, url, 0, ed.state.doc.content.size)
+      fillPreview(ed.view, url, (u) => api.linkPreview(u))
+    } else if (text) {
+      ed.commands.insertContent(text.split('\n').map((line) => ({ type: 'paragraph', content: line ? [{ type: 'text', text: line }] : [] })))
+    }
+    if (s.files.length) void addFiles(s.files.map((path) => ({ path })))
+  }
+
   /** A nota tem foto ou anexo (exportar vira .zip). */
   function hasMedia() {
     let found = false
@@ -319,6 +334,7 @@
       if (isNew) ed.commands.focus('end', { scrollIntoView: false })
       // Atalhos do "+": já abre gravando, com a câmera ou com os arquivos escolhidos.
       if (start && 'files' in start) void addFiles(start.files)
+      else if (start && 'shared' in start) shareIn(ed, start.shared)
       else if (start && 'record' in start) void recorder.start()
       // A câmera é outro diálogo: abrir no mesmo instante em que o editor nasce a deixava "aberta" e invisível
       // (e os cliques seguintes não faziam nada). Abre depois que o editor terminou de abrir.
