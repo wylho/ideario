@@ -200,6 +200,10 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
 - Emoji de capa: `emoji` no meta do Y.Doc → coluna `notes.emoji` (migração 8), `clean_emoji` no núcleo e `cleanEmoji`
   no front (`src/lib/emoji.ts`, mesma regra). Seletor `EmojiPicker.svelte` (lista do `emojibase-data` em português,
   carregada só ao abrir; nome antes das palavras-chave na busca). Sem emoji, não ocupa espaço (abre pelo ⋮).
+- Ordem das categorias (`app.categorySort`, escolha do aparelho): Nome (padrão), Mais notas ou Manual (arrastar na
+  lateral com o mouse ou "Mover para cima/baixo" no menu; `reorder_categories` grava `sort`, que vai no `categories.ydoc`).
+  Lateral, pílulas e seletores usam a mesma lista (`app.categories`).
+- Menus de contexto na tela estreita: submenu toma o lugar do menu, com linha de voltar (`MenuList.svelte`).
 - Filtro "Sem categoria"/"Sem tags": sentinelas `NO_CATEGORY`/`NO_TAGS` (`~none`) no `Filter` (TS e Rust).
 - **Fase 7 (Android, em andamento; prévia).** Projeto em `src-tauri/gen/android` (pacote `app.ideario`, via
   `tauri.android.conf.json`), compilado só no CI (job "APK (Android)"; aqui o SDK não baixa). APK assinado pela chave dos
@@ -209,5 +213,7 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
   exato) o que está por vir; o app aberto refaz a agenda quando ela muda. Compartilhar → nota nova (`SharePlugin.kt`,
   `share.rs`, `share.svelte.ts`). Voltar = Esc (`backbutton.svelte.ts`). Ponte do Android é o `postMessage` (tudo em
   JSON): comandos binários aceitam o corpo cru ou lista de bytes (`body_bytes` em `commands.rs`). `data-platform="android"` no `<html>` esconde
-  o que só existe no desktop (bandeja, Claude, backup em pasta, importar por arquivo). Ainda não: PDF da nota, backup e
-  importar do Keep no celular, abrir a nota pela notificação, widget.
+  o que só existe no desktop (bandeja, Claude, backup em pasta, importar por arquivo). Arquivos (`FilesPlugin.kt` +
+  `device.rs`): baixar vai para Downloads (MediaStore), exportar abre o Compartilhar do sistema, PDF pela impressão do
+  sistema. Notificação com `ic_stat_ideario` (`tauri.android.conf.json`); tocar abre a nota (`SharePlugin.kt` lê o
+  `extra.note`). Ainda não: backup e importar do Keep no celular, widget.
