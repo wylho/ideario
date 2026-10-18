@@ -22,6 +22,7 @@ use sha2::{Digest, Sha256};
 use crate::store::{CategoryRow, Millis, NoteInput};
 
 const META: &str = "meta";
+const POSITION: &str = "position";
 const BODY: &str = "body";
 
 type Result<T> = std::result::Result<T, String>;
@@ -134,6 +135,30 @@ pub(crate) fn update(state: &[u8], n: &NoteInput, body: bool) -> Result<Vec<u8>>
             let empty = vec![];
             patch_children(&frag, &mut txn, n.body.get("content").and_then(Value::as_array).unwrap_or(&empty));
         }
+    }
+    Ok(encode(&doc))
+}
+
+/// Lugar da nota na ordem personalizada. Fica no meta (e viaja com a nota), mas fora do `NoteInput`: mudar a ordem
+/// não é editar a nota (a data não muda). Sem lugar gravado: `None` (cada aparelho põe onde achar melhor).
+pub(crate) fn position(state: &[u8]) -> Result<Option<f64>> {
+    let doc = load(state)?;
+    let meta = doc.get_or_insert_map(META);
+    let txn = doc.transact();
+    Ok(match meta.get(&txn, POSITION) {
+        Some(Out::Any(Any::Number(Number::Float(f)))) if f.is_finite() => Some(f),
+        Some(Out::Any(Any::Number(Number::Int(n)))) => Some(n as f64),
+        _ => None,
+    })
+}
+
+/// Grava o lugar na ordem personalizada (só ele muda no estado).
+pub(crate) fn set_position(state: &[u8], pos: f64) -> Result<Vec<u8>> {
+    let doc = load(state)?;
+    {
+        let meta = doc.get_or_insert_map(META);
+        let mut txn = doc.transact_mut();
+        meta.insert(&mut txn, POSITION, Any::Number(Number::Float(pos)));
     }
     Ok(encode(&doc))
 }

@@ -24,6 +24,8 @@ const DAY: Millis = 24 * 60 * 60 * 1000;
 const TRASH_DAYS: Millis = 30;
 /// Espaço entre posições da ordem personalizada; mover usa o meio entre vizinhos.
 const STEP: f64 = 1024.0;
+/// A ordem personalizada daqui já foi para o Drive (todas as notas levam o seu lugar no Y.Doc).
+const ORDER_SHARED: &str = "order_shared";
 /// Repetições de lembrete que existem.
 pub const REPEATS: [&str; 4] = ["day", "week", "month", "year"];
 
@@ -1047,6 +1049,8 @@ impl Store {
             // Nota nova entra no topo da ordem personalizada.
             None => (t, t, self.min_position()? - STEP),
         };
+        // Lugar que veio com a nota (mudado aqui ou em outro aparelho) vale mais que o daqui.
+        let position = ydoc::position(state)?.unwrap_or(position);
         let tx = self.conn.unchecked_transaction().map_err(err)?;
         tx.execute(
             "INSERT INTO notes (id, body_json, title, label, label_fold, body_text, preview_json, cover_json, image_count, file_count, \
@@ -1057,7 +1061,7 @@ impl Store {
              cover_json = excluded.cover_json, image_count = excluded.image_count, file_count = excluded.file_count, \
              category_id = excluded.category_id, color = excluded.color, pinned = excluded.pinned, archived = excluded.archived, \
              trashed_at = excluded.trashed_at, reminder_at = excluded.reminder_at, reminder_done = excluded.reminder_done, \
-             reminder_repeat = excluded.reminder_repeat, emoji = excluded.emoji, \
+             reminder_repeat = excluded.reminder_repeat, emoji = excluded.emoji, position = excluded.position, \
              updated_at = excluded.updated_at, dirty = 1",
             params![
                 n.id,
@@ -1259,8 +1263,40 @@ impl Store {
         if pos == cur {
             return Ok(false);
         }
-        self.conn.execute("UPDATE notes SET position = ?2 WHERE id = ?1", params![id, pos]).map_err(err)?;
+        // A primeira vez que a ordem muda aqui, ela passa a valer para todos os aparelhos (todas as notas levam o seu
+        // lugar); depois, só a nota que mudou.
+        if !self.flag(ORDER_SHARED)? {
+            self.share_order()?;
+        }
+        self.put_position(id, pos)?;
         Ok(true)
+    }
+
+    /// Muda o lugar da nota na ordem personalizada: na coluna e no Y.Doc (viaja no sync, sem mudar a data).
+    fn put_position(&self, id: &str, pos: f64) -> Result<()> {
+        let Some(state) = self.ydoc(id)? else {
+            self.conn.execute("UPDATE notes SET position = ?2 WHERE id = ?1", params![id, pos]).map_err(err)?;
+            return Ok(());
+        };
+        if ydoc::position(&state)? == Some(pos) {
+            self.conn.execute("UPDATE notes SET position = ?2 WHERE id = ?1", params![id, pos]).map_err(err)?;
+            return Ok(());
+        }
+        let state = ydoc::set_position(&state, pos)?;
+        self.conn.execute("UPDATE notes SET position = ?2, ydoc = ?3, dirty = 1 WHERE id = ?1", params![id, pos, state]).map_err(err)?;
+        Ok(())
+    }
+
+    /// A ordem personalizada daqui vale para todos os aparelhos: cada nota leva o lugar que tem aqui.
+    fn share_order(&self) -> Result<()> {
+        let rows = self.ids("SELECT id FROM notes ORDER BY position", [])?;
+        let tx = self.conn.unchecked_transaction().map_err(err)?;
+        for id in rows {
+            let pos: f64 = self.conn.query_row("SELECT position FROM notes WHERE id = ?1", [&id], |r| r.get(0)).map_err(err)?;
+            self.put_position(&id, pos)?;
+        }
+        self.set_flag(ORDER_SHARED)?;
+        tx.commit().map_err(err)
     }
 
     /// A ordem personalizada passa a ser igual à ordem `sort` (ao começar a arrastar numa ordem por data).
@@ -1272,12 +1308,14 @@ impl Store {
         Ok(true)
     }
 
+    /// Lugares novos, espaçados, na ordem `order`. Vale para todos os aparelhos (vai no Y.Doc de cada nota).
     fn renumber(&self, order: &str) -> Result<()> {
         let ids = self.ids(&format!("SELECT n.id FROM notes n ORDER BY {order}"), [])?;
         let tx = self.conn.unchecked_transaction().map_err(err)?;
         for (i, id) in ids.iter().enumerate() {
-            tx.execute("UPDATE notes SET position = ?2 WHERE id = ?1", params![id, i as f64 * STEP]).map_err(err)?;
+            self.put_position(id, i as f64 * STEP)?;
         }
+        self.set_flag(ORDER_SHARED)?;
         tx.commit().map_err(err)
     }
 
@@ -1293,7 +1331,11 @@ impl Store {
         n.reminder_at = None;
         n.reminder_done = false;
         self.write_note(&n, true, &ydoc::from_note(&n))?;
-        self.conn.execute("UPDATE notes SET position = ?2 WHERE id = ?1", params![n.id, pos - 1.0]).map_err(err)?;
+        if self.flag(ORDER_SHARED)? {
+            self.put_position(&n.id, pos - 1.0)?;
+        } else {
+            self.conn.execute("UPDATE notes SET position = ?2 WHERE id = ?1", params![n.id, pos - 1.0]).map_err(err)?;
+        }
         Ok(n.id)
     }
 
@@ -1483,12 +1525,16 @@ impl Store {
         self.write_note(&n, false, &state)?;
         let dirty = ydoc::has_more_than(&state, remote)?;
         let (fresh, file_id, rev) = (prev.is_none(), file.0, file.1);
+        // Nota nova sem lugar na ordem personalizada (nunca reordenada): entra pela data, a mais recente no topo, e não
+        // na ordem em que os arquivos chegaram.
+        let by_date = fresh && ydoc::position(&state)?.is_none();
         self.conn
             .execute(
                 "UPDATE notes SET dirty = ?2, drive_file_id = ?3, drive_rev = ?4, \
                  updated_at = CASE WHEN ?5 THEN ?7 WHEN ?6 THEN MAX(updated_at, ?7) ELSE updated_at END, \
-                 created_at = CASE WHEN ?5 THEN ?8 ELSE created_at END WHERE id = ?1",
-                params![id, dirty, file_id, rev, fresh, changed, edited, created],
+                 created_at = CASE WHEN ?5 THEN ?8 ELSE created_at END, \
+                 position = CASE WHEN ?9 THEN -CAST(?7 AS REAL) ELSE position END WHERE id = ?1",
+                params![id, dirty, file_id, rev, fresh, changed, edited, created, by_date],
             )
             .map_err(err)?;
         Ok(changed)

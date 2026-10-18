@@ -734,3 +734,39 @@ fn a_new_device_shows_the_notes_batch_by_batch() {
     sync_once(&dev, &mut drive.clone()).unwrap();
     assert!(batches.borrow().is_empty());
 }
+
+#[test]
+fn the_custom_order_travels_with_the_notes_without_changing_dates() {
+    let drive = MemoryDrive::default();
+    let a = Dev::new();
+    for (i, id) in ["n1", "n2", "n3", "n4"].iter().enumerate() {
+        a.create(id, id, "texto");
+        a.s().set_times(id, 1_000 + i as i64, 2_000 + i as i64).unwrap();
+    }
+    a.sync(&drive).unwrap();
+    let b = Dev::new();
+    b.sync(&drive).unwrap();
+    let custom = |d: &Dev| -> Vec<String> {
+        d.s().list_notes(&Default::default(), "active", "", "custom").unwrap().into_iter().map(|n| n.id).filter(|i| i.starts_with('n')).collect()
+    };
+    // Ninguém reordenou: no aparelho novo a ordem personalizada começa pela data (e não pela ordem de chegada).
+    assert_eq!(custom(&b), vec!["n4", "n3", "n2", "n1"]);
+    // Reordenar em A: n1 vai para o topo. A ordem de A inteira passa a valer em B, e as datas não mudam.
+    let order_a = custom(&a);
+    a.s().move_note("n1", None, Some(&order_a[0])).unwrap();
+    let expected = custom(&a);
+    assert_eq!(expected[0], "n1");
+    let times: Vec<_> = expected.iter().map(|id| a.s().note_times(id).unwrap()).collect();
+    a.sync(&drive).unwrap();
+    b.sync(&drive).unwrap();
+    assert_eq!(custom(&b), expected);
+    assert_eq!(expected.iter().map(|id| b.s().note_times(id).unwrap()).collect::<Vec<_>>(), times);
+    // Depois, só a nota que muda viaja; e B reordenando também chega em A.
+    let (before, after) = (custom(&b)[2].clone(), custom(&b)[3].clone());
+    b.s().move_note("n1", Some(&before), Some(&after)).unwrap();
+    assert_eq!(b.s().local_changes().unwrap().dirty, 1);
+    b.sync(&drive).unwrap();
+    a.sync(&drive).unwrap();
+    assert_eq!(custom(&a), custom(&b));
+    assert_eq!(custom(&a)[2], "n1");
+}
