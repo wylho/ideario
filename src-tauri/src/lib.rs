@@ -11,6 +11,7 @@ mod background;
 mod commands;
 mod device;
 mod export;
+mod gtk_look;
 mod keep;
 mod link;
 mod markdown;
@@ -122,6 +123,9 @@ pub fn run() {
                 .state::<Core>()
                 .with(|s| Ok((s.sync_value("window_theme")?, s.sync_value("window_bg")?)))
                 .unwrap_or_default();
+            // Linux: a barra de título (tema GTK) já nasce no claro ou no escuro escolhido no app.
+            #[cfg(target_os = "linux")]
+            gtk_look::apply(look.as_deref().unwrap_or("system"));
             let mut window = WebviewWindowBuilder::from_config(app.handle(), &config)?
                 .initialization_script(format!("{}\n{}\n{}", system_fonts::init_script(), system_theme::init_script(), TITLEBAR_SCRIPT))
                 .theme(match look.as_deref() {

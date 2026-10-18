@@ -96,7 +96,15 @@ type Core_<'a> = State<'a, Core>;
 /// Aparência escolhida na interface ("light", "dark" ou "system") e a cor de fundo do tema: na próxima abertura a
 /// janela já nasce com elas (sem piscar clara antes de a página pintar, nem barra de título branca no tema escuro).
 #[tauri::command]
-pub fn set_window_look(core: Core_, theme: String, background: String) -> Result<()> {
+pub fn set_window_look(app: AppHandle, core: Core_, theme: String, background: String) -> Result<()> {
+    // Linux: a barra de título é do tema GTK, que muda na linha principal.
+    #[cfg(target_os = "linux")]
+    {
+        let look = theme.clone();
+        let _ = app.run_on_main_thread(move || crate::gtk_look::apply(&look));
+    }
+    #[cfg(not(target_os = "linux"))]
+    let _ = app;
     core.with(|s| {
         s.set_sync_value("window_theme", Some(&theme))?;
         s.set_sync_value("window_bg", Some(&background))
