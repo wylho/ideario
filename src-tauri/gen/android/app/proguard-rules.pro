@@ -19,6 +19,7 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
-# Plugin do login do Google: o núcleo Rust carrega pelo nome da classe e chama os métodos @Command por reflexão.
--keep class app.ideario.GoogleAuthPlugin { *; }
--keep class app.ideario.AuthorizeArgs { *; }
+# Plugins do app (login do Google, compartilhar, barras do sistema): o núcleo Rust carrega cada um pelo nome da
+# classe e chama os métodos @Command por reflexão; os argumentos (@InvokeArg) são preenchidos pelos nomes dos campos.
+-keep @app.tauri.annotation.TauriPlugin class * { *; }
+-keep @app.tauri.annotation.InvokeArg class * { *; }

@@ -153,6 +153,12 @@ class Theme {
       import('@tauri-apps/api/core')
         .then(({ invoke }) => invoke('set_window_look', { theme: pref, background: colors.bg }))
         .catch(() => {})
+      // Android: as barras do sistema (status e gestos) com o fundo do app e ícones legíveis.
+      if (root.dataset.platform === 'android') {
+        import('@tauri-apps/api/core')
+          .then(({ invoke }) => invoke('set_system_bars', { light: mode === 'light', color: colors.bg }))
+          .catch(() => {})
+      }
     }
   }
 }
