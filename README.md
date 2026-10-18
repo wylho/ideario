@@ -66,8 +66,9 @@ nosso no meio, e as categorias protegidas por PIN ficam de fora. Guia: [`docs/MC
 
 ## Do tamanho que a janela estiver
 
-Janela grande, lateral com categorias e tags. Janela estreita, o layout se ajusta, com as visões numa barra embaixo.
-Tema claro, escuro ou o do sistema, com as cores de destaque do seu Windows, macOS ou Linux.
+Janela grande, lateral com categorias e tags; feche a lateral e as categorias viram pílulas acima das notas.
+Janela estreita, o layout se ajusta, com as visões numa barra embaixo. Tema claro, escuro ou o do sistema, com as
+cores de destaque do seu Windows, macOS ou Linux.
 
 <p align="center"><img src="site/img/janela-estreita.webp" width="300" alt="O Ideario numa janela estreita, com as notas em duas colunas e a barra de visões embaixo"></p>
 
@@ -75,8 +76,8 @@ Tema claro, escuro ou o do sistema, com as cores de destaque do seu Windows, mac
 
 | | |
 |---|---|
-| **Sync pelo seu Drive** | Numa pasta oculta do app no seu Google Drive. Sem servidor no meio, sem conta nova. |
-| **Categorias com PIN** | Esconda uma categoria inteira das listas e da busca, e peça um PIN para abrir. |
+| **Sync pelo seu Drive** | Numa pasta oculta do app no seu Google Drive, entre computadores e o celular, até a ordem dos cards. Sem servidor no meio, sem conta nova. |
+| **Categorias com PIN** | Esconda uma categoria inteira das listas e da busca, e peça um PIN para abrir. Ordene por nome, por número de notas ou arrastando. |
 | **Importa do Google Keep** | Solte o arquivo do Google Takeout e as notas entram com fotos, cores, marcadores e datas. |
 | **Backup local** | Um arquivo com tudo, quando quiser ou toda semana. Restaurar junta com o que já existe. |
 | **Busca rápida** | Sem acento, por pedaço de palavra, em milhares de notas, no instante em que você digita. |
@@ -93,7 +94,7 @@ Depois de instalado, o Ideario se atualiza sozinho.
 |---|---|
 | **Windows** | Baixe o `-setup.exe` e instale. Quando sair versão nova, o app avisa ao abrir. |
 | **macOS** | Baixe o `.dmg` (Apple Silicon e Intel). Na primeira vez, clique com o botão direito no app e escolha **Abrir**: ele ainda não é assinado pela Apple. |
-| **Android** (prévia) | Baixe o `_android.apk` no celular e abra; o Android pede para permitir instalar apps dessa fonte. Para atualizar, instale o novo por cima ou use o Obtainium. |
+| **Android** (prévia) | Baixe o `_android.apk` no celular e abra; o Android pede para permitir instalar apps dessa fonte. Lembretes avisam com o app fechado; compartilhe de outro app para criar uma nota. Para atualizar, instale o novo por cima ou use o Obtainium. |
 
 <a id="linux"></a>
 
@@ -125,7 +126,7 @@ quiser, no seu Google Drive. Leia a [Política de Privacidade](https://ideario.p
 ## Ideario, in English
 
 Ideario is a free, Google Keep–style notes app for Windows, macOS and Linux, with an Android preview. It opens
-instantly, works offline and keeps your notes on your computer. Optionally, it syncs between your computers through your own Google Drive, in a hidden
+instantly, works offline and keeps your notes on your computer. Optionally, it syncs between your computers and phone through your own Google Drive, in a hidden
 app folder. There is no Ideario server and no data collection.
 
 - Notes with checklists, side-by-side photos, PDFs, audio, video, link cards and a big cover emoji
@@ -133,7 +134,7 @@ app folder. There is no Ideario server and no data collection.
 - Moodboard of all your images, filterable by color
 - Document mode and export to Markdown, HTML or PDF
 - Works with Claude (Desktop and Code) through a local MCP server
-- PIN-protected categories, Google Keep import, local backups
+- PIN-protected categories (sorted by name, note count or by hand), Google Keep import, local backups
 - Updates itself (Windows, macOS, AppImage) or through the apt/dnf repository on Linux
 
 [Download the latest version](https://github.com/wylho/ideario/releases/latest) · [Website](https://ideario.pages.dev) · [Privacy Policy](https://ideario.pages.dev/privacidade/#english) ·
