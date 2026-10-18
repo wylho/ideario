@@ -1,6 +1,7 @@
 //! Comandos que a UI chama (`invoke`). Um para cada método da interface `Api` (src/lib/api/index.ts).
 //! Todos rodam no núcleo, só com o banco local: nenhum espera a rede.
 
+use std::borrow::Cow;
 use std::fs::File;
 use std::io::BufReader;
 use std::path::{Path, PathBuf};
@@ -8,7 +9,7 @@ use std::sync::Mutex;
 
 use serde_json::{json, Map, Value};
 use tauri::ipc::{InvokeBody, Request, Response};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter, Manager, State};
 
 use crate::{attachments, keep, media};
@@ -261,9 +262,22 @@ pub fn get_note_state(core: Core_, id: String) -> Result<Response> {
 /// Atualização Yjs do editor (binária, id no cabeçalho `x-id`). Cria a nota se ela ainda não existe.
 #[tauri::command]
 pub fn apply_note_update(core: Core_, request: Request<'_>) -> Result<()> {
-    let InvokeBody::Raw(update) = request.body() else { return Err("atualização ausente".into()) };
+    let update = body_bytes(&request).ok_or("atualização ausente")?;
     let id = request.headers().get("x-id").and_then(|v| v.to_str().ok()).ok_or("nota ausente")?;
-    core.with(|s| s.apply_update(id, update))
+    core.with(|s| s.apply_update(id, &update))
+}
+
+/// Corpo binário do pedido. No desktop chega cru; no Android a ponte é o `postMessage`, que manda tudo em JSON, e os
+/// bytes chegam como uma lista de números.
+fn body_bytes<'a>(request: &'a Request<'_>) -> Option<Cow<'a, [u8]>> {
+    bytes_of(request.body())
+}
+
+fn bytes_of(body: &InvokeBody) -> Option<Cow<'_, [u8]>> {
+    match body {
+        InvokeBody::Raw(bytes) => Some(Cow::Borrowed(bytes)),
+        InvokeBody::Json(value) => Vec::<u8>::deserialize(value).ok().map(Cow::Owned),
+    }
 }
 
 /// Adiar um lembrete (o que se repete avisa de novo sem mudar a série).
@@ -342,11 +356,11 @@ pub fn get_attachments(core: Core_, hashes: Vec<String>) -> Result<Vec<Attachmen
 /// Assíncrono: a foto passa pelo pipeline numa thread à parte, com a janela livre e o banco destravado.
 #[tauri::command]
 pub async fn import_file(core: Core_<'_>, request: Request<'_>) -> Result<Attachment> {
-    let InvokeBody::Raw(bytes) = request.body() else { return Err("arquivo ausente".into()) };
+    let bytes = body_bytes(&request).ok_or("arquivo ausente")?.into_owned();
     let header = |k: &str| request.headers().get(k).and_then(|v| v.to_str().ok()).unwrap_or("").to_string();
     let name = percent_decode(&header("x-name"));
     let name = if name.is_empty() { "arquivo".to_string() } else { name };
-    import(&core, bytes.clone(), name, header("x-mime")).await
+    import(&core, bytes, name, header("x-mime")).await
 }
 
 async fn import(core: &Core, bytes: Vec<u8>, name: String, mime: String) -> Result<Attachment> {
@@ -384,12 +398,12 @@ pub fn pending_previews(core: Core_) -> Result<Vec<Value>> {
 /// Prévia em PNG (corpo binário; hash no cabeçalho `x-hash`). Corpo vazio = sem prévia possível.
 #[tauri::command]
 pub async fn set_preview(core: Core_<'_>, request: Request<'_>) -> Result<()> {
-    let InvokeBody::Raw(png) = request.body() else { return Err("prévia ausente".into()) };
+    let png = body_bytes(&request).ok_or("prévia ausente")?.into_owned();
     let hash: String = request.headers().get("x-hash").and_then(|v| v.to_str().ok()).unwrap_or("").chars().filter(char::is_ascii_hexdigit).collect();
     if hash.is_empty() {
         return Err("anexo ausente".into());
     }
-    let (data, png) = (core.data.clone(), png.clone());
+    let data = core.data.clone();
     tauri::async_runtime::spawn_blocking(move || attachments::save_preview(&data, &hash, &png)).await.map_err(|e| e.to_string())?
 }
 
@@ -549,6 +563,15 @@ mod tests {
         assert_eq!(parse_hex("rgb(1, 2, 3)"), None);
         assert_eq!(parse_hex("#12345"), None);
         assert_eq!(parse_hex("#ééé"), None);
+    }
+
+    #[test]
+    fn binary_body_raw_on_desktop_and_json_on_android() {
+        assert_eq!(bytes_of(&InvokeBody::Raw(vec![1, 2, 255])).as_deref(), Some(&[1u8, 2, 255][..]));
+        assert_eq!(bytes_of(&InvokeBody::Json(json!([1, 2, 255]))).as_deref(), Some(&[1u8, 2, 255][..]));
+        assert_eq!(bytes_of(&InvokeBody::Json(json!([]))).as_deref(), Some(&[][..]));
+        assert_eq!(bytes_of(&InvokeBody::Json(json!([256]))), None);
+        assert_eq!(bytes_of(&InvokeBody::Json(json!({ "id": "x" }))), None);
     }
 
     #[test]
