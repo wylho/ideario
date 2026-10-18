@@ -15,7 +15,8 @@ tudo com você. Se quiser, sincroniza entre os seus computadores pelo seu própr
   <a href="#baixar"><b>Baixar</b></a> ·
   <a href="https://ideario.pages.dev">ideario.pages.dev</a> ·
   <a href="https://ideario.pages.dev/privacidade/">Privacidade</a> ·
-  <a href="#english">English</a>
+  <a href="#english">English</a> ·
+  <a href="https://github.com/sponsors/wylho">♥ Apoiar</a>
 </p>
 
 <picture>
@@ -137,7 +138,7 @@ app folder. There is no Ideario server and no data collection.
 - PIN-protected categories (sorted by name, note count or by hand), Google Keep import, local backups
 - Updates itself (Windows, macOS, AppImage) or through the apt/dnf repository on Linux
 
-[Download the latest version](https://github.com/wylho/ideario/releases/latest) · [Website](https://ideario.pages.dev) · [Privacy Policy](https://ideario.pages.dev/privacidade/#english) ·
+[Download the latest version](https://github.com/wylho/ideario/releases/latest) · [Website](https://ideario.pages.dev) · [Sponsor ♥](https://github.com/sponsors/wylho) · [Privacy Policy](https://ideario.pages.dev/privacidade/#english) ·
 [Terms of Service](https://ideario.pages.dev/termos/#english)
 
 ---
