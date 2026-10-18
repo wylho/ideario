@@ -162,7 +162,7 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
   para o aviso dentro do app (`ReminderAlerts.svelte`, `notify.svelte.ts`) e `core-changed` para a UI recarregar.
   Com a janela fechada avisa se o segundo plano estiver ligado; ao marcar o primeiro lembrete o app sugere ligar
   (uma vez). Atalho global continua fora (decisão do usuário).
-- **Fase 5 (concluída no código): sync com o Google Drive** (`src-tauri/src/sync/`; detalhes em SPEC §6). Pasta oculta
+- **Fase 5 (concluída no código): sync com o Google Drive** (`src-tauri/src/sync/`; detalhes em SPEC §6). Downloads em lotes paralelos (`download_many`), a lista atualiza a cada lote; a ordem personalizada vai no meta do Y.Doc (`position`). Pasta oculta
   (`appDataFolder`): um arquivo por nota (Y.Doc), `categories.ydoc` e anexos por hash, reconhecidos pelo
   `appProperties`. `mod.rs` = motor (`sync_once`: puxar mudanças e juntar, depois subir anexos, notas `dirty`,
   categorias e exclusões) sobre o trait `Remote`; `memory.rs` = Drive em memória dos testes (dois/três aparelhos,
