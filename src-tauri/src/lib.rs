@@ -34,7 +34,6 @@ use tauri::{Manager, WebviewWindowBuilder};
 
 use commands::Core;
 
-#[cfg_attr(mobile, tauri::mobile_entry_point)]
 /// Avisa a página que a barra de título é transparente (macOS): ela abre espaço para os botões da janela no canto e
 /// deixa arrastar a janela pela barra do app. No Android, avisa que é o celular (some o que só existe no desktop).
 #[cfg(target_os = "macos")]
@@ -44,6 +43,7 @@ const TITLEBAR_SCRIPT: &str = "document.documentElement.dataset.platform = 'andr
 #[cfg(not(any(target_os = "macos", target_os = "android")))]
 const TITLEBAR_SCRIPT: &str = "";
 
+#[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let app = tauri::Builder::default()
         // Janela nativa de abrir arquivo (Importar do Google Keep).

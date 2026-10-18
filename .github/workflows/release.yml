@@ -5,7 +5,7 @@
 # (scripts/linux-repos.sh) e só então publica. Assim o "último Release" (de onde o app atualiza, o latest.json, e de
 # onde o site serve os repositórios Linux) nunca aponta para uma versão pela metade.
 # Segredos: TAURI_SIGNING_PRIVATE_KEY(_PASSWORD) assinam as atualizações; IDEARIO_GPG_PRIVATE_KEY assina os
-# repositórios; IDEARIO_GOOGLE_CLIENT_ID/_SECRET ligam o sync.
+# repositórios; IDEARIO_GOOGLE_CLIENT_ID/_SECRET ligam o sync; ANDROID_KEYSTORE(_PASSWORD) assinam o APK.
 name: Release
 
 on:
@@ -68,15 +68,56 @@ jobs:
             - **macOS** (Apple Silicon e Intel): baixe o `.dmg`. Na primeira vez, clique com o botão direito no app → **Abrir** (o app ainda não é assinado pela Apple).
             - **Windows**: baixe o `-setup.exe` (ou o `.msi`).
             - **Linux**: pelo repositório (atualiza junto com o sistema), veja https://ideario.pages.dev/#linux. Ou baixe o `.AppImage` (atualiza sozinho), o `.deb` ou o `.rpm`.
+            - **Android**: baixe o `_android.apk` no celular e abra (o Android pede para permitir instalar apps desta fonte). Para atualizar, instale o novo por cima, ou use o Obtainium apontando para este repositório.
 
             Os arquivos `apt-*`, `rpm-*` e `latest.json` são dos repositórios Linux e do atualizador; não precisa baixar.
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}
 
+  android:
+    name: APK (Android)
+    needs: release
+    runs-on: ubuntu-24.04
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+          key: android
+      - run: npm ci
+      - name: Chave que assina o APK
+        env:
+          KEYSTORE: ${{ secrets.ANDROID_KEYSTORE }}
+          PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          printf '%s' "$KEYSTORE" | base64 -d > "$RUNNER_TEMP/ideario.jks"
+          printf 'storeFile=%s\npassword=%s\nkeyAlias=ideario\n' "$RUNNER_TEMP/ideario.jks" "$PASSWORD" > src-tauri/gen/android/keystore.properties
+      - run: NDK_HOME="$ANDROID_NDK_LATEST_HOME" npx tauri android build --apk --target aarch64
+      - name: Anexar ao Release
+        run: |
+          version="$(node -p "require('./src-tauri/tauri.conf.json').version")"
+          apk="$(find src-tauri/gen/android/app/build/outputs/apk -name '*release*.apk' | head -1)"
+          cp "$apk" "Ideario_${version}_android.apk"
+          gh release upload "v$version" "Ideario_${version}_android.apk" --clobber
+
   publish:
     name: Publicar (repositórios Linux)
-    needs: release
+    needs: [release, android]
     runs-on: ubuntu-22.04
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

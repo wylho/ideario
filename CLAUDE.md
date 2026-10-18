@@ -197,4 +197,12 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
   no front (`src/lib/emoji.ts`, mesma regra). Seletor `EmojiPicker.svelte` (lista do `emojibase-data` em português,
   carregada só ao abrir; nome antes das palavras-chave na busca). Sem emoji, não ocupa espaço (abre pelo ⋮).
 - Filtro "Sem categoria"/"Sem tags": sentinelas `NO_CATEGORY`/`NO_TAGS` (`~none`) no `Filter` (TS e Rust).
-- **Próximo passo: Fase 7 (Android).**
+- **Fase 7 (Android, em andamento; prévia).** Projeto em `src-tauri/gen/android` (pacote `app.ideario`, via
+  `tauri.android.conf.json`), compilado só no CI (job "APK (Android)"; aqui o SDK não baixa). APK assinado pela chave dos
+  segredos (`ANDROID_KEYSTORE`, alias `ideario`; o SHA-1 vai no cliente OAuth "Android"). Login: a conta do aparelho pelo
+  Google Play Services (`GoogleAuthPlugin.kt` + `sync/android.rs`), sem token de renovação; o sync vê os dois logins
+  pelo trait `Login` (`service.rs`). Lembretes: `reminders::plan` agenda no sistema (plugin de notificação, alarme
+  exato) o que está por vir; o app aberto refaz a agenda quando ela muda. Compartilhar → nota nova (`SharePlugin.kt`,
+  `share.rs`, `share.svelte.ts`). Voltar = Esc (`backbutton.svelte.ts`). `data-platform="android"` no `<html>` esconde
+  o que só existe no desktop (bandeja, Claude, backup em pasta, importar por arquivo). Ainda não: PDF da nota, backup e
+  importar do Keep no celular, abrir a nota pela notificação, widget.

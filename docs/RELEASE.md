@@ -13,6 +13,7 @@
 | Ubuntu/Debian pelo repositório | `sudo apt upgrade` | índices `apt-*` no Release; `https://ideario.pages.dev/apt` redireciona para lá |
 | Fedora pelo repositório | `sudo dnf upgrade` | índices `rpm-*` no Release; `https://ideario.pages.dev/rpm` redireciona para lá |
 | `.deb`/`.rpm` baixado à mão | baixando de novo | o app não se atualiza sozinho fora do AppImage |
+| Android (`_android.apk`) | instalando o APK novo por cima (ou o Obtainium, que acompanha os Releases) | job `android` do Release |
 
 - O atualizador lê `https://github.com/wylho/ideario/releases/latest/download/latest.json` (gerado pelo
   `tauri-action`) e só aceita pacotes assinados com a chave cuja parte pública está em `tauri.conf.json`
@@ -44,6 +45,7 @@ sudo dnf install ideario
 | `IDEARIO_GOOGLE_CLIENT_ID`, `IDEARIO_GOOGLE_CLIENT_SECRET` | login do Google (sync), ver `docs/GOOGLE_DRIVE.md` |
 | `TAURI_SIGNING_PRIVATE_KEY`, `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` | assinar as atualizações do app |
 | `IDEARIO_GPG_PRIVATE_KEY` | assinar os repositórios apt/dnf |
+| `ANDROID_KEYSTORE` (base64 do `.jks`), `ANDROID_KEYSTORE_PASSWORD` | assinar o APK (alias `ideario`). O SHA-1 dessa chave vai no cliente OAuth "Android" do Google Cloud (pacote `app.ideario`) |
 
 **Guarde uma cópia das chaves fora do GitHub** (um gerenciador de senhas). O GitHub não deixa ler um segredo
 depois de salvo. Sem a chave das atualizações, quem já instalou nunca mais recebe versão nova: teria de
