@@ -81,10 +81,14 @@ pub fn start(app: AppHandle) {
     #[cfg(target_os = "macos")]
     let _ = notify_rust::set_application(&app.config().identifier);
     #[cfg(target_os = "android")]
-    let mut scheduled = Vec::new();
+    let (mut scheduled, opened) = (Vec::new(), std::time::Instant::now());
     std::thread::spawn(move || loop {
+        // Agendar no sistema é uma chamada por lembrete na linha principal do Android: não na abertura, que é quando
+        // a lista de notas está chegando à tela (o primeiro agendamento fica para a volta seguinte, 10 s depois).
         #[cfg(target_os = "android")]
-        schedule(&app, &mut scheduled);
+        if opened.elapsed() >= std::time::Duration::from_secs(5) {
+            schedule(&app, &mut scheduled);
+        }
         let notifier = SystemNotifier { app: app.clone() };
         if let Ok(alerts) = app.state::<Core>().with(|s| crate::reminders::tick(s, now(), &notifier)) {
             if !alerts.is_empty() {

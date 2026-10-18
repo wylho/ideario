@@ -9,6 +9,7 @@ mod backup;
 #[cfg(desktop)]
 mod background;
 mod commands;
+mod device;
 mod export;
 mod keep;
 mod link;
@@ -57,7 +58,7 @@ pub fn run() {
     let app = app.manage(background::Background::default()).on_window_event(background::on_window_event);
     // Android: lembretes agendados no sistema, login com a conta do aparelho e "compartilhar com o Ideario".
     #[cfg(target_os = "android")]
-    let app = app.plugin(tauri_plugin_notification::init()).plugin(sync::android::plugin()).plugin(share::plugin()).plugin(system_bars::plugin());
+    let app = app.plugin(tauri_plugin_notification::init()).plugin(sync::android::plugin()).plugin(share::plugin()).plugin(system_bars::plugin()).plugin(device::plugin());
     let app = app
         // Fotos, vídeos, áudios e documentos das notas: `att://localhost/<hash>` (convertFileSrc(hash, 'att')).
         .register_asynchronous_uri_scheme_protocol("att", |ctx, req, responder| {
@@ -203,6 +204,7 @@ pub fn run() {
             link::link_preview,
             link::open_url,
             export::export_note_cmd,
+            export::export_share,
             export::print_window,
             backup::backup_status,
             backup::backup_set_auto,

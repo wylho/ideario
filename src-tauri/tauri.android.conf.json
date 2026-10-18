@@ -1,3 +1,9 @@
 {
-  "identifier": "app.ideario"
+  "identifier": "app.ideario",
+  "plugins": {
+    "notification": {
+      "icon": "ic_stat_ideario",
+      "iconColor": "#F08A24"
+    }
+  }
 }

@@ -9,6 +9,8 @@
     <!-- Lembretes na hora certa, mesmo com o app fechado (app de lembretes: alarme exato sem pedir). -->
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Baixar anexo em Downloads: só o Android 9 ou anterior precisa (do 10 em diante vai pelo MediaStore). -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
 
     <!-- AndroidTV support -->
     <uses-feature android:name="android.software.leanback" android:required="false" />

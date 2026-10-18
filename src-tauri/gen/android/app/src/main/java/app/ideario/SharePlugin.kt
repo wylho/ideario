@@ -13,6 +13,9 @@ import app.tauri.plugin.JSArray
 import app.tauri.plugin.JSObject
 import app.tauri.plugin.Plugin
 import java.io.File
+import org.json.JSONObject
+
+private const val HANDLED = "ideario.handled"
 
 /**
  * "Compartilhar" do Android para o Ideario: texto, link, fotos e arquivos viram uma nota nova. Os arquivos chegam
@@ -41,6 +44,7 @@ class SharePlugin(private val activity: Activity) : Plugin(activity) {
   }
 
   private fun handle(intent: Intent?) {
+    if (intent != null && noteFromNotification(intent)) return
     if (intent == null || (intent.action != Intent.ACTION_SEND && intent.action != Intent.ACTION_SEND_MULTIPLE)) return
     val data = JSObject()
     intent.getStringExtra(Intent.EXTRA_SUBJECT)?.let { data.put("subject", it) }
@@ -60,6 +64,21 @@ class SharePlugin(private val activity: Activity) : Plugin(activity) {
     // Já tratado: girar a tela ou voltar ao app não cria a mesma nota de novo.
     intent.action = null
     pending = data
+  }
+
+  /** Tocou na notificação de um lembrete (agendada pelo plugin de notificação, com a nota em `extra.note`). */
+  private fun noteFromNotification(intent: Intent): Boolean {
+    if (intent.getBooleanExtra(HANDLED, false)) return false
+    val json = intent.getStringExtra("LocalNotficationObject") ?: return false
+    val note = runCatching { JSONObject(json).optJSONObject("extra")?.optString("note") }.getOrNull()
+    if (note.isNullOrEmpty()) return false
+    // Já tratado: voltar ao app ou girar a tela não abre a nota de novo.
+    intent.putExtra(HANDLED, true)
+    val data = JSObject()
+    data.put("note", note)
+    data.put("files", JSArray())
+    pending = data
+    return true
   }
 
   @Suppress("DEPRECATION")

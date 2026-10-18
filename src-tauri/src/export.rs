@@ -340,15 +340,52 @@ pub async fn export_note_cmd(app: tauri::AppHandle, id: String, format: String, 
     tauri::async_runtime::spawn_blocking(move || export_note(&app.state::<Core>(), &id, &format, Path::new(&path))).await.map_err(err)?
 }
 
-/// Imprime a janela (a interface deixa só a nota à vista): "Salvar como PDF" fica na janela de impressão do sistema.
+/// Android: exporta para a pasta do app e abre o "Compartilhar" do sistema (salvar em Arquivos, Drive, e-mail…), já que
+/// lá não há "salvar em" com um caminho. `name` já vem com a extensão (.md, .html ou .zip).
 #[tauri::command]
-pub fn print_window(window: tauri::WebviewWindow) -> Result<()> {
-    #[cfg(desktop)]
-    return window.print().map_err(err);
-    #[cfg(mobile)]
+pub async fn export_share(app: tauri::AppHandle, id: String, format: String, name: String) -> Result<ExportReport> {
+    #[cfg(target_os = "android")]
     {
-        let _ = window;
-        Err("Exportar em PDF ainda não funciona no celular; use Markdown ou HTML.".into())
+        use tauri::Manager;
+        let dir = app.path().app_cache_dir().map_err(err)?.join("exportar");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).map_err(err)?;
+        let safe = safe(&name);
+        let path = dir.join(&safe);
+        let report = {
+            let (app, id, path) = (app.clone(), id.clone(), path.clone());
+            tauri::async_runtime::spawn_blocking(move || export_note(&app.state::<Core>(), &id, &format, &path)).await.map_err(err)??
+        };
+        let mime = crate::device::mime_of_export(&safe);
+        crate::device::call::<serde_json::Value>(&app, "share", serde_json::json!({ "path": path, "mime": mime, "title": safe })).await?;
+        Ok(report)
+    }
+    #[cfg(not(target_os = "android"))]
+    {
+        let _ = (app, id, format, name);
+        Err("só no celular".into())
+    }
+}
+
+/// Imprime a janela (a interface deixa só a nota à vista): "Salvar como PDF" fica na janela de impressão do sistema.
+/// No Android, a impressão do sistema (que também salva em PDF).
+#[tauri::command]
+pub async fn print_window(window: tauri::WebviewWindow, title: Option<String>) -> Result<()> {
+    #[cfg(desktop)]
+    {
+        let _ = title;
+        window.print().map_err(err)
+    }
+    #[cfg(target_os = "android")]
+    {
+        use tauri::Manager;
+        let title = title.filter(|t| !t.trim().is_empty()).unwrap_or_else(|| "Nota".into());
+        crate::device::call::<serde_json::Value>(window.app_handle(), "print", serde_json::json!({ "title": title })).await.map(|_| ())
+    }
+    #[cfg(all(mobile, not(target_os = "android")))]
+    {
+        let _ = (window, title);
+        Err("ainda não funciona neste aparelho".into())
     }
 }
 

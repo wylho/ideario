@@ -274,8 +274,8 @@ pub fn apply_note_update(core: Core_, request: Request<'_>) -> Result<()> {
     core.with(|s| s.apply_update(id, &update))
 }
 
-/// Corpo binário do pedido. No desktop chega cru; no Android a ponte é o `postMessage`, que manda tudo em JSON, e os
-/// bytes chegam como uma lista de números.
+/// Corpo binário do pedido. No desktop chega cru; no Android a ponte é o `postMessage`, que manda tudo em JSON: os
+/// bytes chegam como uma lista de números, ou em base64 (arquivos grandes, `importFile`).
 fn body_bytes<'a>(request: &'a Request<'_>) -> Option<Cow<'a, [u8]>> {
     bytes_of(request.body())
 }
@@ -283,6 +283,10 @@ fn body_bytes<'a>(request: &'a Request<'_>) -> Option<Cow<'a, [u8]>> {
 fn bytes_of(body: &InvokeBody) -> Option<Cow<'_, [u8]>> {
     match body {
         InvokeBody::Raw(bytes) => Some(Cow::Borrowed(bytes)),
+        InvokeBody::Json(Value::String(b64)) => {
+            use base64::Engine;
+            base64::engine::general_purpose::STANDARD.decode(b64).ok().map(Cow::Owned)
+        }
         InvokeBody::Json(value) => Vec::<u8>::deserialize(value).ok().map(Cow::Owned),
     }
 }
@@ -537,9 +541,26 @@ impl Core {
 
 /// Salva uma cópia do anexo na pasta Downloads e devolve onde ficou.
 #[tauri::command]
-pub fn download_attachment(app: AppHandle, core: Core_, hash: String, name: String) -> Result<String> {
-    let downloads = app.path().download_dir().map_err(|e| e.to_string())?;
-    attachments::save_copy(&core.data, &downloads, &hash, &name).map(|p| p.display().to_string())
+pub async fn download_attachment(app: AppHandle, core: Core_<'_>, hash: String, name: String) -> Result<String> {
+    // Android: uma cópia com o nome certo na pasta do app, e o sistema põe em Downloads (MediaStore).
+    #[cfg(target_os = "android")]
+    {
+        let tmp = app.path().app_cache_dir().map_err(|e| e.to_string())?.join("baixar");
+        let _ = std::fs::remove_dir_all(&tmp);
+        let copy = attachments::save_copy(&core.data, &tmp, &hash, &name)?;
+        let mime = core.with(|s| Ok(s.get_attachments(std::slice::from_ref(&hash))?.into_iter().next().map(|a| a.mime)))?;
+        #[derive(serde::Deserialize)]
+        struct Saved {
+            name: String,
+        }
+        let saved: Saved = crate::device::call(&app, "saveToDownloads", json!({ "path": copy, "name": name, "mime": mime })).await?;
+        return Ok(saved.name);
+    }
+    #[cfg(not(target_os = "android"))]
+    {
+        let downloads = app.path().download_dir().map_err(|e| e.to_string())?;
+        attachments::save_copy(&core.data, &downloads, &hash, &name).map(|p| p.display().to_string())
+    }
 }
 
 fn percent_decode(s: &str) -> String {
@@ -578,6 +599,8 @@ mod tests {
         assert_eq!(bytes_of(&InvokeBody::Json(json!([1, 2, 255]))).as_deref(), Some(&[1u8, 2, 255][..]));
         assert_eq!(bytes_of(&InvokeBody::Json(json!([]))).as_deref(), Some(&[][..]));
         assert_eq!(bytes_of(&InvokeBody::Json(json!([256]))), None);
+        assert_eq!(bytes_of(&InvokeBody::Json(json!("AQL/"))).as_deref(), Some(&[1u8, 2, 255][..]));
+        assert_eq!(bytes_of(&InvokeBody::Json(json!("não é base64"))), None);
         assert_eq!(bytes_of(&InvokeBody::Json(json!({ "id": "x" }))), None);
     }
 

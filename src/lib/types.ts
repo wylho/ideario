@@ -321,4 +321,6 @@ export interface SharedIn {
   text?: string | null
   /** Caminhos das cópias dos arquivos (anexados pelo caminho, como os arrastados no desktop). */
   files: string[]
+  /** Tocou na notificação de um lembrete: abrir esta nota (sem texto nem arquivos). */
+  note?: string | null
 }

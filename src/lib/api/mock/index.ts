@@ -778,6 +778,7 @@ export const mockApi: Api = {
     return done(undefined)
   },
   exportNote: () => Promise.reject(new Error('exportar arquivos só existe no app')),
+  exportShare: () => Promise.reject(new Error('exportar arquivos só existe no app')),
   printWindow() {
     window.print()
     return done(undefined)

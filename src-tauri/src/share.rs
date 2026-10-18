@@ -12,6 +12,8 @@ pub struct Shared {
     text: Option<String>,
     #[serde(default)]
     files: Vec<String>,
+    /// Tocou na notificação de um lembrete: a nota a abrir.
+    note: Option<String>,
 }
 
 #[cfg(target_os = "android")]

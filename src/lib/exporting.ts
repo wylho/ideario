@@ -18,9 +18,18 @@ const safe = (s: string) => s.replace(/[/\\:*?"<>|\n\r\t]/g, '_').trim().slice(0
 
 export async function exportNote(id: string, title: string, format: 'md' | 'html', hasAttachments: boolean) {
   if (!isTauri()) return
-  const { save } = await import('@tauri-apps/plugin-dialog')
   const ext = hasAttachments ? 'zip' : format
   const label = format === 'md' ? 'Markdown' : 'HTML'
+  // Android: sem "salvar em" com caminho; o arquivo vai pelo "Compartilhar" do sistema (Arquivos, Drive, e-mail…).
+  if (document.documentElement.dataset.platform === 'android') {
+    try {
+      await api.exportShare(id, format, `${safe(title)}.${ext}`)
+    } catch (e) {
+      app.say(`Não foi possível exportar: ${e instanceof Error ? e.message : e}`)
+    }
+    return
+  }
+  const { save } = await import('@tauri-apps/plugin-dialog')
   const path = await save({
     title: `Exportar em ${label}`,
     defaultPath: `${safe(title)}.${ext}`,
@@ -48,7 +57,7 @@ export async function printNote() {
     addEventListener('keydown', done, { once: true })
   }, 500)
   try {
-    await api.printWindow()
+    await api.printWindow(document.querySelector<HTMLInputElement>('#titulo')?.value || undefined)
   } catch (e) {
     done()
     app.say(`Não foi possível imprimir: ${e instanceof Error ? e.message : e}`)

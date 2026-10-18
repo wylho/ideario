@@ -27,6 +27,18 @@ const changedSoon = () => {
 void import('@tauri-apps/api/event').then(({ listen }) => listen('core-changed', changed)).catch(() => {})
 
 /** Ouve um evento do núcleo; devolve a função que para de ouvir. */
+const ANDROID = document.documentElement.dataset.platform === 'android'
+
+/** Conteúdo do arquivo em base64 (sem o "data:…;base64," do começo). */
+function base64(file: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader()
+    r.onload = () => resolve(String(r.result).replace(/^data:[^,]*,/, ''))
+    r.onerror = () => reject(r.error)
+    r.readAsDataURL(file)
+  })
+}
+
 function onEvent<T>(name: string, fn: (payload: T) => void): () => void {
   let stop: (() => void) | undefined
   let gone = false
@@ -115,8 +127,11 @@ export const tauriApi: Api = {
   mediaUrl: (hash) => convertFileSrc(hash, 'att'),
   getAttachments: (hashes) => invoke('get_attachments', { hashes }),
   async importFile(file, name) {
-    const bytes = new Uint8Array(await file.arrayBuffer())
-    return invoke('import_file', bytes, { headers: { 'x-name': encodeURIComponent(name), 'x-mime': file.type } })
+    const headers = { 'x-name': encodeURIComponent(name), 'x-mime': file.type }
+    // Android: a ponte é o postMessage (tudo em JSON); bytes iriam como lista de números (4× maior). Em base64 vão
+    // como texto, lido pelo próprio sistema (FileReader), e o núcleo decodifica.
+    if (ANDROID) return invoke('import_file', (await base64(file)) as unknown as Uint8Array, { headers })
+    return invoke('import_file', new Uint8Array(await file.arrayBuffer()), { headers })
   },
   pendingPreviews: () => invoke('pending_previews'),
   setPreview: (hash, png) => invoke('set_preview', png, { headers: { 'x-hash': hash } }),
@@ -124,7 +139,8 @@ export const tauriApi: Api = {
   linkPreview: (url) => invoke('link_preview', { url }),
   openUrl: (url) => invoke('open_url', { url }),
   exportNote: (id, format, path) => invoke('export_note_cmd', { id, format, path }),
-  printWindow: () => invoke('print_window'),
+  exportShare: (id, format, name) => invoke('export_share', { id, format, name }),
+  printWindow: (title) => invoke('print_window', { title: title ?? null }),
   backupStatus: () => invoke('backup_status'),
   backupSetAuto: (enabled, dir) => invoke('backup_set_auto', { enabled, dir }),
   backupExport: (path, onProgress) => withProgress('backup-progress', onProgress, () => invoke('backup_export', { path })),

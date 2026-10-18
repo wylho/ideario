@@ -111,7 +111,9 @@ export interface Api {
   /** Exporta a nota em Markdown ou HTML para `path` (.zip = com os anexos). Só no app. */
   exportNote(id: string, format: 'md' | 'html', path: string): Promise<ExportReport>
   /** Abre a impressão do sistema (a interface deixa só a nota à vista): "Salvar como PDF". */
-  printWindow(): Promise<void>
+  /** Android: exporta e abre o "Compartilhar" do sistema (lá não há "salvar em" com caminho). `name` com a extensão. */
+  exportShare(id: string, format: 'md' | 'html', name: string): Promise<ExportReport>
+  printWindow(title?: string): Promise<void>
   /** Backup local (só no app): estado do automático, ligar/desligar e escolher a pasta. */
   backupStatus(): Promise<BackupStatus>
   backupSetAuto(enabled: boolean, dir: string | null): Promise<BackupStatus>
