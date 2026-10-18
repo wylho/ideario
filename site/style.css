@@ -57,3 +57,14 @@ footer{margin-top:48px;color:var(--muted);font-size:14px}
 @media (prefers-color-scheme:dark){.btn-gh{background:#f0f3f6;color:#1f2328}.btn-gh:hover{background:#d8dee4}}
 .home header nav{align-items:center}
 .home header nav a.gh{display:inline-flex;color:var(--fg)}
+.btn-dl{display:inline-flex;align-items:center;gap:10px;background:var(--accent);color:#1f2328;text-decoration:none;font-weight:600;font-size:16px;padding:11px 20px;border-radius:10px;margin-right:8px;border:1px solid transparent}
+.btn-dl:hover{filter:brightness(1.06)}
+.center{text-align:center;max-width:640px;margin:0 auto 24px !important}
+.dl{margin-bottom:16px}
+.tag{font-size:12px;font-weight:600;color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,transparent);border-radius:99px;padding:2px 8px;vertical-align:middle}
+code{font:14px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+pre{line-height:1.5;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:12px 14px;overflow-x:auto;margin:.6em 0}
+pre code{font-size:13px;white-space:pre-wrap;overflow-wrap:anywhere}
+#linux{margin-bottom:24px}
+#linux h3{margin:0 0 .3em;font-size:1.05em}
+.box{min-width:0}

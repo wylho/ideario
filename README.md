@@ -11,7 +11,8 @@ Um app de notas no estilo do Google Keep, feito para o computador: abre num inst
 tudo com você. Se quiser, sincroniza entre os seus computadores pelo seu próprio Google Drive.</p>
 
 <p align="center">
-  <b>Windows · macOS · Linux</b><br>
+  <b>Windows · macOS · Linux · Android</b><br>
+  <a href="#baixar"><b>Baixar</b></a> ·
   <a href="https://ideario.pages.dev">ideario.pages.dev</a> ·
   <a href="https://ideario.pages.dev/privacidade/">Privacidade</a> ·
   <a href="#english">English</a>
@@ -81,6 +82,38 @@ Tema claro, escuro ou o do sistema, com as cores de destaque do seu Windows, mac
 | **Busca rápida** | Sem acento, por pedaço de palavra, em milhares de notas, no instante em que você digita. |
 | **Fotos leves** | Fotos reduzidas e sem localização por padrão. Quer a original? Uma opção nas configurações. |
 
+<a id="baixar"></a>
+
+## Baixar
+
+Grátis. Os instaladores ficam na página de [versões do GitHub](https://github.com/wylho/ideario/releases/latest).
+Depois de instalado, o Ideario se atualiza sozinho.
+
+| | |
+|---|---|
+| **Windows** | Baixe o `-setup.exe` e instale. Quando sair versão nova, o app avisa ao abrir. |
+| **macOS** | Baixe o `.dmg` (Apple Silicon e Intel). Na primeira vez, clique com o botão direito no app e escolha **Abrir**: ele ainda não é assinado pela Apple. |
+| **Android** (prévia) | Baixe o `_android.apk` no celular e abra; o Android pede para permitir instalar apps dessa fonte. Para atualizar, instale o novo por cima ou use o Obtainium. |
+
+<a id="linux"></a>
+
+**Linux.** Pelo repositório, o Ideario atualiza junto com o resto do sistema. Ubuntu, Debian e derivados:
+
+```sh
+curl -fsSL https://ideario.pages.dev/linux/ideario.gpg | sudo tee /usr/share/keyrings/ideario.gpg > /dev/null
+echo "deb [signed-by=/usr/share/keyrings/ideario.gpg] https://ideario.pages.dev/apt stable main" | sudo tee /etc/apt/sources.list.d/ideario.list
+sudo apt update && sudo apt install ideario
+```
+
+Fedora:
+
+```sh
+sudo curl -fsSL -o /etc/yum.repos.d/ideario.repo https://ideario.pages.dev/linux/ideario.repo
+sudo dnf install ideario
+```
+
+Ou baixe o `.AppImage`, que roda em qualquer distribuição e também se atualiza sozinho.
+
 **Privacidade:** sem anúncios, sem rastreamento, sem coleta de dados. Suas notas ficam no seu computador e, se você
 quiser, no seu Google Drive. Leia a [Política de Privacidade](https://ideario.pages.dev/privacidade/) e os
 [Termos de Serviço](https://ideario.pages.dev/termos/).
@@ -91,8 +124,8 @@ quiser, no seu Google Drive. Leia a [Política de Privacidade](https://ideario.p
 
 ## Ideario, in English
 
-Ideario is a Google Keep–style notes app for Windows, macOS and Linux. It opens instantly, works offline and keeps
-your notes on your computer. Optionally, it syncs between your computers through your own Google Drive, in a hidden
+Ideario is a free, Google Keep–style notes app for Windows, macOS and Linux, with an Android preview. It opens
+instantly, works offline and keeps your notes on your computer. Optionally, it syncs between your computers through your own Google Drive, in a hidden
 app folder. There is no Ideario server and no data collection.
 
 - Notes with checklists, side-by-side photos, PDFs, audio, video, link cards and a big cover emoji
@@ -101,8 +134,9 @@ app folder. There is no Ideario server and no data collection.
 - Document mode and export to Markdown, HTML or PDF
 - Works with Claude (Desktop and Code) through a local MCP server
 - PIN-protected categories, Google Keep import, local backups
+- Updates itself (Windows, macOS, AppImage) or through the apt/dnf repository on Linux
 
-[Website](https://ideario.pages.dev) · [Privacy Policy](https://ideario.pages.dev/privacidade/#english) ·
+[Download the latest version](https://github.com/wylho/ideario/releases/latest) · [Website](https://ideario.pages.dev) · [Privacy Policy](https://ideario.pages.dev/privacidade/#english) ·
 [Terms of Service](https://ideario.pages.dev/termos/#english)
 
 ---
