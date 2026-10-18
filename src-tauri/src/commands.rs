@@ -27,6 +27,8 @@ impl Core {
     pub fn open(data: PathBuf) -> Result<Core> {
         std::fs::create_dir_all(&data).map_err(|e| e.to_string())?;
         let store = Store::open(&data.join("ideario.db"))?;
+        #[cfg(target_os = "android")]
+        store.order_by_date_once()?;
         welcome(&store)?;
         Ok(Core { store: Mutex::new(store), data })
     }

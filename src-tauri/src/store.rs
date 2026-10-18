@@ -1287,6 +1287,18 @@ impl Store {
         Ok(())
     }
 
+    /// Android, uma vez: as notas que desceram antes de a ordem viajar no sync ficaram na ordem de chegada dos
+    /// arquivos. Sem ordem própria ainda (nunca reordenada aqui), passa a ser a da data, até vir a de outro aparelho.
+    #[cfg(any(target_os = "android", test))]
+    pub fn order_by_date_once(&self) -> Result<()> {
+        const KEY: &str = "order_by_date";
+        if self.flag(KEY)? || self.flag(ORDER_SHARED)? {
+            return self.set_flag(KEY);
+        }
+        self.conn.execute("UPDATE notes SET position = -CAST(updated_at AS REAL)", []).map_err(err)?;
+        self.set_flag(KEY)
+    }
+
     /// A ordem personalizada daqui vale para todos os aparelhos: cada nota leva o lugar que tem aqui.
     fn share_order(&self) -> Result<()> {
         let rows = self.ids("SELECT id FROM notes ORDER BY position", [])?;
@@ -2156,6 +2168,21 @@ mod tests {
         assert_eq!(titles(&s.list_notes(&Filter::default(), "active", "", "custom").unwrap()), vec!["C", "A", "B"]);
         s.adopt_order("title").unwrap();
         assert_eq!(titles(&s.list_notes(&Filter::default(), "active", "", "custom").unwrap()), vec!["A", "B", "C"]);
+    }
+
+    #[test]
+    fn android_starts_the_custom_order_by_date_once() {
+        let s = Store::memory();
+        for (i, id) in ["a", "b", "c"].iter().enumerate() {
+            s.save_note(&note(id, &id.to_uppercase(), "x")).unwrap();
+            s.set_times(id, 1_000, [3_000, 1_000, 2_000][i]).unwrap();
+        }
+        s.order_by_date_once().unwrap();
+        assert_eq!(titles(&s.list_notes(&Filter::default(), "active", "", "custom").unwrap()), vec!["A", "C", "B"]);
+        // Só uma vez: a ordem que a pessoa fizer depois fica.
+        s.move_note("b", None, Some("a")).unwrap();
+        s.order_by_date_once().unwrap();
+        assert_eq!(titles(&s.list_notes(&Filter::default(), "active", "", "custom").unwrap()), vec!["B", "A", "C"]);
     }
 
     #[test]
