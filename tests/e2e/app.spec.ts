@@ -435,28 +435,27 @@ test.describe('visão × filtro', () => {
   })
 })
 
-test('desktop: barra superior fixa; lateral recolhe para trilho de ícones e lembra a escolha', async ({ page }) => {
+test('desktop: barra superior fixa; lateral fechada vira pílulas de categoria e lembra a escolha', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 })
   const menu = await page.getByLabel('Recolher barra lateral').boundingBox()
   const visoes = await page.locator('.view-switch').boundingBox()
+  // Aberta, as categorias ficam na lateral (sem pílulas acima das notas).
+  await expect(page.locator('.filter-row')).toHaveCount(0)
   await page.getByLabel('Recolher barra lateral').click()
-  await expect.poll(async () => (await page.locator('.sidebar').boundingBox())!.width).toBe(72)
+  await expect.poll(async () => (await page.locator('.sidebar').boundingBox())?.width ?? 0).toBe(0)
   // O topo não se move.
   expect(await page.getByLabel('Expandir barra lateral').boundingBox()).toEqual(menu)
   expect(await page.locator('.view-switch').boundingBox()).toEqual(visoes)
-  // No trilho, as categorias viram um ícone só (como as tags), que expande a barra.
+  // Fechada, as categorias aparecem em pílulas acima das notas (como na janela média).
   await expect(page.locator('.sidebar').getByRole('button', { name: 'Bem-estar 2' })).toBeHidden()
-  await page.locator('.sidebar').getByRole('button', { name: 'Categorias' }).click()
-  await expect(page.getByLabel('Recolher barra lateral')).toBeVisible()
-  await page.locator('.sidebar').getByRole('button', { name: 'Bem-estar 2' }).click()
+  await page.locator('.filter-row .chip', { hasText: 'Bem-estar' }).click()
   await expect(cards(page)).toHaveCount(2)
-  await page.keyboard.press('Control+\\')
-  await expect(page.locator('.sidebar').getByRole('button', { name: 'Categorias' })).toHaveClass(/\bon\b/)
   await page.reload()
   await expect(page.getByLabel('Expandir barra lateral')).toBeVisible()
+  await expect(page.locator('.filter-row')).toBeVisible()
   await page.keyboard.press('Control+\\')
   await expect(page.getByLabel('Recolher barra lateral')).toBeVisible()
-  for (const it of await page.locator('.sidebar .d-item.rail-only').all()) await expect(it).toBeHidden()
+  await expect(page.locator('.filter-row')).toHaveCount(0)
 })
 
 test('prévia do card mantém títulos, tópicos e a ordem do documento', async ({ page }) => {
@@ -2125,5 +2124,50 @@ test.describe('categorias e tags', () => {
     await page.getByRole('menuitem', { name: 'Tirar de todas as notas' }).click()
     await page.getByRole('button', { name: 'Tirar', exact: true }).click()
     await expect(chip('mercado')).toHaveCount(0)
+  })
+})
+
+test.describe('celular (toque)', () => {
+  test.use({ hasTouch: true, isMobile: true, viewport: { width: 390, height: 800 } })
+
+  test('a alça do bloco fica onde está o cursor: tocar abre o menu, arrastar reordena', async ({ page }) => {
+    await cards(page).filter({ hasText: 'Viagem para Paraty' }).first().tap()
+    const items = page.locator('#corpo ul[data-type="taskList"] > li')
+    await expect(items.first()).toBeVisible()
+    // Sem mouse não há "passar por cima": a alça só aparece com o cursor no texto, ao lado do item dele.
+    await expect(page.locator('.blk-handle')).toHaveCount(0)
+    await items.nth(2).locator('p').tap()
+    const h = page.locator('.blk-handle.item')
+    await expect(h).toBeVisible()
+    const [hb, ib] = [(await h.boundingBox())!, (await items.nth(2).boundingBox())!]
+    expect(hb.x + hb.width).toBeLessThanOrEqual(ib.x + 2)
+    expect(Math.abs(hb.y - ib.y)).toBeLessThan(12)
+    // Tocar na alça abre o menu do item, sem tirar o cursor do texto.
+    await h.tap()
+    await expect(page.getByRole('menuitem', { name: 'Diminuir recuo' })).toBeVisible()
+    await page.keyboard.press('Escape')
+    const third = await items.nth(2).locator('p').innerText()
+    // Arrastar com o dedo (eventos de ponteiro do tipo toque) leva o item para o topo.
+    await items.nth(2).locator('p').tap()
+    const box = (await h.boundingBox())!
+    const top = (await items.first().boundingBox())!
+    await page.evaluate(
+      ({ x, y, ty }) => {
+        const handle = document.querySelector('.blk-handle')!
+        const ev = (type: string, cx: number, cy: number) =>
+          new PointerEvent(type, { pointerType: 'touch', isPrimary: true, button: 0, buttons: 1, clientX: cx, clientY: cy, bubbles: true, cancelable: true })
+        handle.dispatchEvent(ev('pointerdown', x, y))
+        for (const yy of [y - 10, y - 30, ty + 3]) window.dispatchEvent(ev('pointermove', x + 30, yy))
+        window.dispatchEvent(ev('pointerup', x + 30, ty + 3))
+      },
+      { x: box.x + box.width / 2, y: box.y + box.height / 2, ty: top.y },
+    )
+    await expect(items.first().locator('p')).toHaveText(third)
+  })
+
+  test('modo documento não aparece no celular', async ({ page }) => {
+    await cards(page).first().tap()
+    await expect(page.getByLabel('Voltar e salvar')).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Abrir como documento' })).toHaveCount(0)
   })
 })

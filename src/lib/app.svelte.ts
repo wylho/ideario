@@ -392,7 +392,9 @@ export function live<T>(fn: () => Promise<T>, initial: T) {
     void app.revision
     let stale = false
     fn().then((v) => {
-      if (stale) return
+      // Uma resposta antiga só é descartada se já há algo na tela: com o sync trazendo notas e a lista recarregando,
+      // a primeira resposta sempre aparece (senão a tela ficava vazia até o sync sossegar).
+      if (stale && ready) return
       value = v
       ready = true
     })

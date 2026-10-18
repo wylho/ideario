@@ -66,7 +66,7 @@
       <!-- macOS: canto da lateral onde ficam os botões da janela; arrasta a janela, como a barra de título. -->
       <div class="mac-corner" data-tauri-drag-region></div>
     {/if}
-    <!-- Como no Keep: aberta mostra tudo; recolhida vira um trilho só de ícones. A barra superior não se move. -->
+    <!-- Aberta mostra tudo; fechada some, e as categorias viram pílulas acima das notas (FilterBar). -->
     <aside class="sidebar" aria-label="Navegação">
       <NavList />
     </aside>

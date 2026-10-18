@@ -6,8 +6,8 @@
   import ContextMenu from './ContextMenu.svelte'
   import { NO_CATEGORY, NO_TAGS } from '../lib/types'
 
-  // O que está sendo visto. No desktop: título com a categoria e as tags ativas.
-  // No celular: linha de categorias sempre à mão e as tags numa folha.
+  // O que está sendo visto. No desktop com a lateral aberta: título com a categoria e as tags ativas.
+  // No celular, na janela média e no desktop com a lateral fechada: linha de categorias sempre à mão e as tags numa folha.
   let tagsOpen = $state(false)
   const cat = $derived(app.category(app.filter.categoryId))
   const noCategory = $derived(app.filter.categoryId === NO_CATEGORY)
@@ -31,7 +31,7 @@
     </span>
     {#if app.hasFilter}<span class="filter-hint">Filtro: {app.filterLabel}</span>{/if}
   </div>
-{:else if app.wide}
+{:else if app.wide && app.sidebarOpen}
   {#if app.hasFilter}
     <div class="filter-bar">
       {#if cat || noCategory}

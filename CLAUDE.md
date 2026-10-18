@@ -60,7 +60,7 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
   pelo mock (`src/lib/api/mock`, dados de exemplo), que precisa acompanhar o núcleo método a método.
 - Layout responsivo (pedido do usuário: desktop primeiro): < 640 px = protótipo de celular; 640–959 px = gaveta + abas,
   largura total; ≥ 960 px = como o Google Keep: barra superior fixa (☰ e visões à esquerda, sem logo nem nome; ações ancoradas à direita; nuvem e campo de busca só crescem na folga, sem mover nada) e, abaixo, lateral (`NavList`)
-  que recolhe para um trilho de ícones (o topo não se move; categorias e tags viram um ícone cada, que expande a barra), editor e configurações como diálogo central.
+  que fecha de todo (ícone PanelLeft; o topo não se move) e aí as categorias viram pílulas acima das notas, como na janela média; editor e configurações como diálogo central.
   Masonry é JS (`Masonry.svelte` + `estimateCard`), porque a WebKitGTK não equilibra `columns:` do CSS. Cada card é
   posicionado por coordenadas numa lista só (nunca é recriado ao redimensionar ou reordenar; só desliza). O arraste
   (`drag.svelte.ts`) acha o card sob o ponteiro pela posição final (`data-x`/`data-y`), não pela animada, e só troca de
@@ -78,7 +78,7 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
 - macOS: barra de título transparente (`TitleBarStyle::Overlay` em `lib.rs`; botões em x 18, y 33 = centro a 32 px,
   medido num print). Com a janela larga, **lateral até o topo** (como Notas/Finder): grade de duas colunas só no Mac
   (`data-titlebar="overlay"` no `<html>`), lateral com fundo próprio e os botões no canto dela (`.mac-corner` arrasta a
-  janela), trilho recolhido da largura dos botões com a mesma folga dos dois lados (`mac_lights_width` mede no AppKit; 96 px no macOS 26) e ícones centrados sob eles. Estreita: os botões ficam na barra, que abre espaço (e fecha em tela cheia,
+  janela); fechada, a barra abre espaço para os botões (`--rail-w`: `mac_lights_width` mede no AppKit; 96 px no macOS 26). Estreita: os botões ficam na barra, que abre espaço (e fecha em tela cheia,
   `data-fullscreen` em `main.ts`). Barra do app arrasta a janela (`data-tauri-drag-region="deep"` no `TopBar`).
   Motivo: o `setTheme` não escurecia a barra de título no Mac.
 - Barra de título (macOS/Windows) e fundo da janela acompanham o claro/escuro do app (`theme.svelte.ts` → `setTheme`,
@@ -94,6 +94,7 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
   vídeo. O AppImage leva o GStreamer (`bundleMediaFramework`), senão não há player nem gravador. "+" em leque (`FabMenu`) com atalhos.
 - Blocos (`src/lib/editor/blocks.ts`): cada nó de primeiro nível é um bloco, como no Notion. Uma alça ⋮⋮ só, no hover,
   colada ao que está sob o ponteiro (`blockAt`; em lista, o item é o da linha, `itemAtRow`): arrasta e abre o menu (`MenuAt`).
+  No toque (sem hover) a alça fica no bloco onde está o cursor. Modo documento só com a janela larga.
   **Arrastar no editor é sempre pelo ponteiro, nunca pelo arrastar do HTML** (`dropTargetAt`/`moveNodeTo`; fotos em
   `photoDrag`): no macOS e no Windows o Tauri fica com todo arraste para receber arquivos e a página nunca recebe o soltar. Em lista/checklist ela é do
   item (reordenar como no Keep; menu com Aumentar/Diminuir recuo e o submenu "Checklist inteira"/"Lista inteira").
@@ -206,6 +207,7 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
   Google Play Services (`GoogleAuthPlugin.kt` + `sync/android.rs`), sem token de renovação; o sync vê os dois logins
   pelo trait `Login` (`service.rs`). Lembretes: `reminders::plan` agenda no sistema (plugin de notificação, alarme
   exato) o que está por vir; o app aberto refaz a agenda quando ela muda. Compartilhar → nota nova (`SharePlugin.kt`,
-  `share.rs`, `share.svelte.ts`). Voltar = Esc (`backbutton.svelte.ts`). `data-platform="android"` no `<html>` esconde
+  `share.rs`, `share.svelte.ts`). Voltar = Esc (`backbutton.svelte.ts`). Ponte do Android é o `postMessage` (tudo em
+  JSON): comandos binários aceitam o corpo cru ou lista de bytes (`body_bytes` em `commands.rs`). `data-platform="android"` no `<html>` esconde
   o que só existe no desktop (bandeja, Claude, backup em pasta, importar por arquivo). Ainda não: PDF da nota, backup e
   importar do Keep no celular, abrir a nota pela notificação, widget.

@@ -325,6 +325,8 @@
           attributes: { id: 'corpo', role: 'textbox', 'aria-multiline': 'true', 'aria-label': 'Texto da nota', spellcheck: 'true' },
         },
         onTransaction: () => tick++,
+        onSelectionUpdate: () => handleAtCaret(),
+        onFocus: () => handleAtCaret(),
         // O salvamento segue as atualizações do Y.Doc (doc.on('update')).
         onUpdate: ({ editor }) => (bodyTags = hashTags(editor.getText())),
       })
@@ -402,6 +404,20 @@
   let blocksEl: HTMLElement | undefined = $state()
   let handleDragging = false
 
+  /** Toque: sem "passar o mouse", a alça fica no bloco (ou item) onde está o cursor. */
+  const touchOnly = matchMedia('(hover: none)').matches
+  function handleAtCaret() {
+    if (!editor || !touchOnly || handleDragging) return
+    const view = editor.view
+    if (!view.hasFocus()) return
+    try {
+      const c = view.coordsAtPos(view.state.selection.from)
+      hover = blockAt(view, (c.top + c.bottom) / 2, c.left)
+    } catch {
+      hover = null
+    }
+  }
+
   function onBodyMove(e: PointerEvent) {
     if (!editor || e.pointerType !== 'mouse' || handleDragging || e.buttons) return
     if ((e.target as Element).closest('.blk-handle')) return
@@ -455,6 +471,7 @@
         setTimeout(() => (justDragged = false), 0)
         if (target != null) moveNodeTo(view, pos, target)
         hover = null
+        if (touchOnly) setTimeout(handleAtCaret)
       }
       handleDragging = false
       dropLine = null
@@ -653,11 +670,12 @@
   <Dialog.Root open onOpenChange={(o) => !o && close()}>
     <Dialog.Portal>
       <Dialog.Overlay class="overlay ed-overlay" />
-      <Dialog.Content class="editor c-{meta.color}" data-doc={docMode ? '' : undefined} aria-describedby={undefined} onOpenAutoFocus={(e) => e.preventDefault()}>
+      <Dialog.Content class="editor c-{meta.color}" data-doc={docMode && app.wide ? '' : undefined} aria-describedby={undefined} onOpenAutoFocus={(e) => e.preventDefault()}>
         <div class="ed-top">
           <button class="icon-btn" aria-label="Voltar e salvar" onclick={() => close()}><ArrowLeft size={20} /></button>
           <span class="ed-saved">{isNew ? 'Nova nota' : editedAt ? `Editada ${ago(editedAt)}` : ''}</span>
-          <button
+          <!-- Modo documento só na janela larga: no celular e na estreita a nota já abre na tela toda. -->
+          {#if app.wide}<button
             class="icon-btn"
             aria-pressed={docMode}
             aria-label={docMode ? 'Voltar ao card' : 'Abrir como documento'}
@@ -665,7 +683,7 @@
             onclick={toggleDoc}
           >
             {#if docMode}<Minimize2 size={19} />{:else}<BookOpen size={19} />{/if}
-          </button>
+          </button>{/if}
           <button class="icon-btn" aria-label={meta.pinned ? 'Desafixar' : 'Fixar'} aria-pressed={meta.pinned} onclick={() => meta && (meta.pinned = !meta.pinned)}>
             {#if meta.pinned}<PinOff size={19} />{:else}<Pin size={19} />{/if}
           </button>
@@ -729,8 +747,8 @@
             role="presentation"
             bind:this={blocksEl}
             onpointermove={onBodyMove}
-            onpointerleave={() => !handleDragging && (hover = null)}
-            onkeydowncapture={() => (hover = null)}
+            onpointerleave={(e) => e.pointerType === 'mouse' && !handleDragging && (hover = null)}
+            onkeydowncapture={() => !touchOnly && (hover = null)}
           >
             <div class="ed-body prose" {@attach mountEditor}></div>
             {#if hover}
@@ -746,6 +764,7 @@
                 aria-label={isItem ? 'Item: arraste para reordenar ou clique para o menu' : 'Bloco: arraste para mover ou clique para o menu'}
                 title={isItem ? 'Arraste para reordenar · clique para o menu' : 'Arraste para mover · clique para o menu'}
                 onpointerdown={(e) => handleDown(e, t.pos)}
+                onmousedown={(e) => touchOnly && e.preventDefault()}
                 onclick={(e) => !justDragged && openNodeMenu(t.pos, e.clientX, e.clientY)}
               ><GripVertical size={16} /></button>
             {/if}

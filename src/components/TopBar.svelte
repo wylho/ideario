@@ -2,7 +2,7 @@
   // macOS: a barra do app é também a barra de título (transparente): arrastar por ela move a janela.
   const overlayTitlebar = document.documentElement.dataset.titlebar === 'overlay'
   import { tick } from 'svelte'
-  import { Menu, Search, X } from '@lucide/svelte'
+  import { Menu, PanelLeft, Search, X } from '@lucide/svelte'
   import SyncIndicator from './SyncIndicator.svelte'
   import ViewActions from './ViewActions.svelte'
   import SelectionBar from './SelectionBar.svelte'
@@ -71,7 +71,7 @@
       title={app.wide ? `${navLabel} (Ctrl+\\)` : undefined}
       onclick={() => app.toggleNav()}
     >
-      <Menu size={20} />
+      {#if app.wide}<PanelLeft size={20} />{:else}<Menu size={20} />{/if}
     </button>
     {#if app.wide}
       <ViewSwitch />

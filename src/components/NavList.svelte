@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Archive, ChevronDown, EyeOff, Folder, Hash, LayoutGrid, Lock, LockOpen, Plus, Settings, Trash2 } from '@lucide/svelte'
+  import { Archive, ChevronDown, EyeOff, LayoutGrid, Lock, LockOpen, Plus, Settings, Trash2 } from '@lucide/svelte'
   import { app } from '../lib/app.svelte'
   import { categoryMenu, newCategory, tagMenu } from '../lib/menus'
   import { NO_CATEGORY, NO_TAGS } from '../lib/types'
@@ -85,15 +85,7 @@
     </button>
   {/if}
 
-  <!-- No trilho recolhido as categorias e as tags viram um ícone cada, que expande a barra. -->
-  <button class="d-item rail-only" class:on={!!app.filter.categoryId && app.box === 'active'} title="Categorias" aria-label="Categorias" onclick={() => app.toggleSidebar()}>
-    <Folder size={19} />
-  </button>
-
   <div class="d-sep"></div>
-  <button class="d-item rail-only" class:on={app.filter.tags.length > 0} title="Tags" aria-label="Tags" onclick={() => app.toggleSidebar()}>
-    <Hash size={19} />
-  </button>
   <div class="d-label">
     <button class="d-toggle" aria-expanded={tagsOpen} aria-controls="nav-tags" onclick={toggleTags}>
       Tags<ChevronDown size={15} />
