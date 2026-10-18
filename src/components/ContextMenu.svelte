@@ -1,8 +1,8 @@
 <script lang="ts">
   import { ContextMenu } from 'bits-ui'
-  import { Check, ChevronRight } from '@lucide/svelte'
   import type { Snippet } from 'svelte'
   import type { MenuEntry } from '../lib/menu'
+  import MenuList from './MenuList.svelte'
 
   // Menu de contexto: clique direito, tecla de menu/Shift+F10 e toque longo no celular.
   // `children` recebe as props do gatilho e as espalha no próprio elemento (card, linha, chip…).
@@ -36,28 +36,6 @@
   }
 </script>
 
-{#snippet list(entries: MenuEntry[])}
-  {#each entries as e, i (i)}
-    {#if 'separator' in e}
-      <ContextMenu.Separator class="menu-sep" />
-    {:else if 'sub' in e}
-      <ContextMenu.Sub>
-        <ContextMenu.SubTrigger class="menu-item">
-          {#if e.icon}<e.icon size={16} />{/if}<span class="grow">{e.label}</span><span class="menu-chev"><ChevronRight size={15} /></span>
-        </ContextMenu.SubTrigger>
-        <ContextMenu.SubContent class="menu ctx" sideOffset={2}>{@render list(e.sub)}</ContextMenu.SubContent>
-      </ContextMenu.Sub>
-    {:else}
-      <ContextMenu.Item class="menu-item{e.danger ? ' danger' : ''}" disabled={e.disabled} onSelect={e.onSelect}>
-        {#if e.swatch}<i class="menu-swatch" style:background={e.swatch}></i>{:else if e.icon}<e.icon size={16} />{/if}
-        <span class="grow">{e.label}</span>
-        {#if e.hint}<small class="menu-hint">{e.hint}</small>{/if}
-        {#if e.checked}<span class="menu-check"><Check size={15} /></span>{/if}
-      </ContextMenu.Item>
-    {/if}
-  {/each}
-{/snippet}
-
 <ContextMenu.Root bind:open>
   <ContextMenu.Trigger>
     {#snippet child({ props })}
@@ -72,7 +50,7 @@
   </ContextMenu.Trigger>
   <ContextMenu.Portal>
     <ContextMenu.Content class="menu ctx">
-      {#if open}{@render list(items())}{/if}
+      {#if open}<MenuList entries={items()} />{/if}
     </ContextMenu.Content>
   </ContextMenu.Portal>
 </ContextMenu.Root>

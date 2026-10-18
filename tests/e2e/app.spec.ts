@@ -2165,6 +2165,24 @@ test.describe('celular (toque)', () => {
     await expect(items.first().locator('p')).toHaveText(third)
   })
 
+  test('submenu do menu de contexto abre no lugar do menu, dentro da tela', async ({ page }) => {
+    await cards(page).filter({ hasText: 'Mercado da semana' }).click({ button: 'right' })
+    await page.getByRole('menuitem', { name: 'Cor' }).click()
+    const menu = page.locator('.menu.ctx')
+    await expect(menu).toHaveCount(1)
+    await expect(page.getByRole('menuitem', { name: 'Abrir' })).toHaveCount(0)
+    const box = (await menu.boundingBox())!
+    expect(box.x).toBeGreaterThanOrEqual(0)
+    expect(box.x + box.width).toBeLessThanOrEqual(390)
+    // A linha de cima volta ao menu.
+    await page.locator('.menu-back').click()
+    await expect(page.getByRole('menuitem', { name: 'Abrir' })).toBeVisible()
+    // Escolher no submenu fecha o menu e aplica.
+    await page.getByRole('menuitem', { name: 'Cor' }).click()
+    await menu.getByRole('menuitem').nth(3).click()
+    await expect(menu).toHaveCount(0)
+  })
+
   test('modo documento não aparece no celular', async ({ page }) => {
     await cards(page).first().tap()
     await expect(page.getByLabel('Voltar e salvar')).toBeVisible()
