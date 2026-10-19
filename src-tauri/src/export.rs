@@ -113,8 +113,14 @@ fn inline_html(nodes: &[Value]) -> String {
             Some("text") => {
                 let mut t = esc(n.get("text").and_then(Value::as_str).unwrap_or(""));
                 let marks: Vec<&str> = n.get("marks").and_then(Value::as_array).into_iter().flatten().filter_map(|m| m.get("type").and_then(Value::as_str)).collect();
+                if marks.contains(&"code") {
+                    t = format!("<code>{t}</code>");
+                }
                 if marks.contains(&"italic") {
                     t = format!("<em>{t}</em>");
+                }
+                if marks.contains(&"strike") {
+                    t = format!("<s>{t}</s>");
                 }
                 if marks.contains(&"bold") {
                     t = format!("<strong>{t}</strong>");
@@ -142,7 +148,20 @@ fn block_html(node: &Value, assets: &HashMap<String, Asset>) -> String {
     match node.get("type").and_then(Value::as_str).unwrap_or("") {
         "paragraph" if kids(node).is_empty() => "<p><br></p>\n".into(),
         "paragraph" => format!("<p>{}</p>\n", inline_html(kids(node))),
-        "heading" => format!("<h2>{}</h2>\n", inline_html(kids(node))),
+        // O título da nota é o <h1>; os do corpo descem um nível.
+        "heading" => {
+            let level = attr("level").as_u64().unwrap_or(3).clamp(1, 3) + 1;
+            format!("<h{level}>{}</h{level}>\n", inline_html(kids(node)))
+        }
+        "blockquote" => format!("<blockquote>\n{}</blockquote>\n", children()),
+        "horizontalRule" => "<hr>\n".into(),
+        "table" => format!("<table>\n{}</table>\n", children()),
+        "tableRow" => format!("<tr>{}</tr>\n", children()),
+        "tableHeader" | "tableCell" => {
+            let tag = if node.get("type").and_then(Value::as_str) == Some("tableHeader") { "th" } else { "td" };
+            let inner: Vec<String> = kids(node).iter().map(|p| inline_html(kids(p))).collect();
+            format!("<{tag}>{}</{tag}>", inner.join("<br>"))
+        }
         "bulletList" => format!("<ul>\n{}</ul>\n", children()),
         "orderedList" => {
             let start = attr("start").as_i64().unwrap_or(1);
@@ -224,7 +243,10 @@ fn kind_label(kind: &str) -> &'static str {
 
 const CSS: &str = "body{margin:0;background:#fff;color:#1f2328;font:17px/1.7 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif}\
 main{max-width:720px;margin:0 auto;padding:48px 24px 64px}.emoji{font-size:64px;line-height:1;margin-bottom:.2em}h1{font-size:2em;line-height:1.2;margin:0 0 .3em}\
-.meta{color:#6b7280;font-size:14px;margin-bottom:2em}h2{font-size:1.35em;margin:1.4em 0 .4em}p{margin:.5em 0}\
+.meta{color:#6b7280;font-size:14px;margin-bottom:2em}h2{font-size:1.5em;margin:1.4em 0 .4em}h3{font-size:1.25em;margin:1.3em 0 .4em}h4{font-size:1.1em;margin:1.2em 0 .3em}p{margin:.5em 0}\
+blockquote{margin:1em 0;padding:.1em 1em;border-left:3px solid #d0d7de;color:#57606a}hr{border:0;border-top:1px solid #d0d7de;margin:1.6em 0}\
+code{font:.9em ui-monospace,SFMono-Regular,Menlo,monospace;background:#f3f4f6;border-radius:4px;padding:.1em .3em}\
+table{border-collapse:collapse;margin:1em 0;width:100%}th,td{border:1px solid #d0d7de;padding:.4em .7em;text-align:left;vertical-align:top}th{background:#f6f8fa}\
 img{max-width:100%;border-radius:12px;display:block}figure{margin:1em 0}figure.row{display:flex;gap:8px}figure.row img{flex:1;min-width:0;object-fit:cover}\
 ul.tasks{list-style:none;padding-left:0}ul.tasks ul.tasks{padding-left:1.6em}li.task{display:flex;gap:.6em;align-items:flex-start}li.task input{margin-top:.45em}\
 li.task.done>div>p{text-decoration:line-through;color:#6b7280}pre{background:#f3f4f6;padding:14px 16px;border-radius:10px;overflow:auto;font-size:14px}\

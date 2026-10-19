@@ -47,6 +47,8 @@ Onde fica o executável:
 - "Põe um lembrete toda segunda às 9h na nota da reunião."
 - "Arquiva as notas de 2023 que não têm lembrete." (o Claude busca, mostra e arquiva)
 - "Anexa o PDF ~/Downloads/contrato.pdf na nota do apartamento."
+- "Monta uma tabela com os gastos da viagem na nota #a1b2c3d4." (o corpo é Markdown: títulos, listas, checklist,
+  citação, `código`, ~~tachado~~, tabelas)
 - "Na nota #a1b2c3d4, marca o primeiro item." Cada nota mostra o ID curto no topo do editor (clique para copiar;
   também em "Copiar ID" no menu do card). As ferramentas aceitam esse ID ou o id inteiro.
 

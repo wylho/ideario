@@ -131,6 +131,15 @@ fn block(n: &Value, depth: u32, p: &mut Projection, file: &dyn Fn(&str) -> Optio
             }
         }
         "bulletList" | "orderedList" | "taskList" => list_items(n, depth, p, file),
+        // Tabela: uma linha da prévia por linha da tabela ("Arroz · 2 kg").
+        "table" => {
+            for row in children(n) {
+                let cells: Vec<String> = children(row).iter().map(|c| clean(&inline(c))).filter(|t| !t.is_empty()).collect();
+                if !cells.is_empty() {
+                    p.blocks.push(Block::Text { text: cells.join(" · ") });
+                }
+            }
+        }
         "codeBlock" => {
             let raw = inline(n);
             let text = raw.trim_end().lines().take(MAX_CODE_LINES).collect::<Vec<_>>().join("\n");
@@ -251,6 +260,27 @@ pub fn plain_text(title: &str, p: &Projection) -> String {
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn table_rows_are_preview_lines_and_quotes_are_text() {
+        let body = json!({"type":"doc","content":[
+            {"type":"table","content":[
+                {"type":"tableRow","content":[
+                    {"type":"tableHeader","content":[{"type":"paragraph","content":[{"type":"text","text":"Item"}]}]},
+                    {"type":"tableHeader","content":[{"type":"paragraph","content":[{"type":"text","text":"Qtd"}]}]}]},
+                {"type":"tableRow","content":[
+                    {"type":"tableCell","content":[{"type":"paragraph","content":[{"type":"text","text":"Arroz"}]}]},
+                    {"type":"tableCell","content":[{"type":"paragraph"}]}]}]},
+            {"type":"horizontalRule"},
+            {"type":"blockquote","content":[{"type":"paragraph","content":[{"type":"text","text":"citação #ideia"}]}]}]});
+        let p = project(&body, &|_| None);
+        assert_eq!(p.blocks, vec![
+            Block::Text { text: "Item · Qtd".into() },
+            Block::Text { text: "Arroz".into() },
+            Block::Text { text: "citação #ideia".into() },
+        ]);
+        assert_eq!(p.hash_tags, vec!["ideia".to_string()]);
+    }
 
     #[test]
     fn link_cards_in_the_preview_and_search() {

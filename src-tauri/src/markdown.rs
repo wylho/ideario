@@ -1,7 +1,9 @@
 //! Corpo da nota ↔ Markdown, para o MCP (o Claude lê e escreve notas como texto).
 //!
 //! O que o editor tem e como fica aqui:
-//! - parágrafo, `### título`, **negrito**, *itálico*, quebra de linha (uma linha nova dentro do parágrafo);
+//! - parágrafo, títulos `#` a `###`, **negrito**, *itálico*, ~~tachado~~, `código`, quebra de linha (uma linha nova
+//!   dentro do parágrafo);
+//! - citação (`>`), linha divisória (`---`) e tabela (a do GitHub: a primeira linha é o cabeçalho);
 //! - listas com marcador, numeradas e checklist (`- [ ]`, `- [x]`), com subitens recuados em vários níveis;
 //! - bloco de código (```);
 //! - foto `![nome](ideario://att/<hash>)` (várias na mesma linha = fotos lado a lado) e anexo
@@ -9,7 +11,7 @@
 //! - parágrafo vazio = `&nbsp;` (sem isso o Markdown perde as linhas em branco da nota);
 //! - cartão de link = `[🔗 título](endereço)` sozinho na linha (descrição e imagem ficam guardadas na nota).
 //!
-//! O que o editor não tem vira texto: link → "texto (endereço)", citação → parágrafos, riscado e `código` → texto.
+//! O que o editor não tem vira texto: link → "texto (endereço)", HTML → o texto dele.
 //! Ida e volta (nota → Markdown → nota) devolve a mesma nota: é o que deixa o MCP editar um pedaço do texto sem
 //! mexer no resto (ver os testes de propriedade).
 
@@ -71,7 +73,17 @@ fn kind(node: &Value) -> &str {
 
 fn block(node: &Value, name: &dyn Fn(&str) -> Option<String>, alt: bool) -> String {
     match kind(node) {
-        "heading" => format!("### {}", inline(children(node), true)),
+        "heading" => {
+            let level = node.get("attrs").and_then(|a| a.get("level")).and_then(Value::as_u64).unwrap_or(3).clamp(1, 3) as usize;
+            format!("{} {}", "#".repeat(level), inline(children(node), true))
+        }
+        "blockquote" => {
+            let inner = blocks(children(node), name).into_iter().map(|(_, md)| md).collect::<Vec<_>>().join("\n\n");
+            let inner = if inner.is_empty() { EMPTY_PARAGRAPH.to_string() } else { inner };
+            inner.split('\n').map(|l| if l.is_empty() { ">".to_string() } else { format!("> {l}") }).collect::<Vec<_>>().join("\n")
+        }
+        "horizontalRule" => "---".into(),
+        "table" => table(node),
         "bulletList" | "orderedList" | "taskList" => list(node, name, alt),
         "codeBlock" => code(node),
         "noteImage" => image(node, name),
@@ -177,12 +189,14 @@ fn inline(nodes: &[Value], heading: bool) -> String {
                 let text = n.get("text").and_then(Value::as_str).unwrap_or("");
                 let marks: Vec<&str> =
                     n.get("marks").and_then(Value::as_array).into_iter().flatten().filter_map(|m| m.get("type").and_then(Value::as_str)).collect();
-                let delim = match (marks.contains(&"bold"), marks.contains(&"italic")) {
+                let emph = match (marks.contains(&"bold"), marks.contains(&"italic")) {
                     (true, true) => "***",
                     (true, false) => "**",
                     (false, true) => "*",
                     (false, false) => "",
                 };
+                let strike = if marks.contains(&"strike") { "~~" } else { "" };
+                let code = marks.contains(&"code");
                 // Linhas dentro do trecho (texto colado com "\n"): cada uma como quebra de linha.
                 for (k, piece) in text.split('\n').enumerate() {
                     if k > 0 {
@@ -190,15 +204,17 @@ fn inline(nodes: &[Value], heading: bool) -> String {
                         line_start = true;
                     }
                     let core = piece.trim_matches(' ');
-                    if delim.is_empty() || core.is_empty() {
+                    if (emph.is_empty() && strike.is_empty() && !code) || core.is_empty() {
                         out.push_str(&esc(piece, line_start, heading));
                     } else {
                         let lead = &piece[..piece.len() - piece.trim_start_matches(' ').len()];
                         let trail = &piece[piece.trim_end_matches(' ').len()..];
                         out.push_str(&esc(lead, line_start, heading));
-                        out.push_str(delim);
-                        out.push_str(&esc(core, false, heading));
-                        out.push_str(delim);
+                        out.push_str(strike);
+                        out.push_str(emph);
+                        out.push_str(&if code { code_span(core) } else { esc(core, false, heading) });
+                        out.push_str(emph);
+                        out.push_str(strike);
                         out.push_str(trail);
                     }
                     if !piece.is_empty() {
@@ -210,6 +226,44 @@ fn inline(nodes: &[Value], heading: bool) -> String {
         }
     }
     out
+}
+
+/// `código` no meio do texto: a cerca de crases é maior que qualquer sequência de crases de dentro; com crase nas
+/// pontas, um espaço de cada lado (que o Markdown tira).
+fn code_span(text: &str) -> String {
+    let longest = text.split(|c| c != '`').map(str::len).max().unwrap_or(0);
+    let fence = "`".repeat(longest + 1);
+    if text.starts_with('`') || text.ends_with('`') {
+        format!("{fence} {text} {fence}")
+    } else {
+        format!("{fence}{text}{fence}")
+    }
+}
+
+/// Tabela do GitHub. A primeira linha é o cabeçalho; cada célula é uma linha só (quebra = `<br>`, `|` escapado).
+fn table(node: &Value) -> String {
+    let rows: Vec<Vec<String>> = children(node)
+        .iter()
+        .map(|row| {
+            children(row)
+                .iter()
+                .map(|cell| {
+                    let text = children(cell).iter().map(|p| inline(children(p), true)).collect::<Vec<_>>().join("<br>");
+                    text.replace('|', "\\|")
+                })
+                .collect()
+        })
+        .collect();
+    let cols = rows.iter().map(Vec::len).max().unwrap_or(1).max(1);
+    let line = |cells: &[String]| {
+        let mut cells = cells.to_vec();
+        cells.resize(cols, String::new());
+        format!("| {} |", cells.join(" | "))
+    };
+    let mut out = vec![line(rows.first().map(Vec::as_slice).unwrap_or(&[]))];
+    out.push(format!("|{}", " --- |".repeat(cols)));
+    out.extend(rows.iter().skip(1).map(|r| line(r)));
+    out.join("\n")
 }
 
 /// Escapa o que o Markdown leria como formatação. No começo da linha, também o que abriria um bloco (título, lista,
@@ -318,7 +372,12 @@ pub fn keep_link_meta(old: &Value, new: &mut Value) {
 enum Frame {
     Doc(Vec<Value>),
     Paragraph(Vec<Piece>),
-    Heading(Vec<Piece>),
+    Heading(u8, Vec<Piece>),
+    Quote(Vec<Value>),
+    Table(Vec<Value>),
+    /// Linha da tabela: se é a do cabeçalho e as células prontas.
+    Row(bool, Vec<Value>),
+    Cell(Vec<Piece>),
     List { ordered: Option<u64>, items: Vec<(Option<bool>, Vec<Value>)> },
     Item { task: Option<bool>, content: Vec<Value> },
     Code { lang: String, text: String },
@@ -341,11 +400,23 @@ enum Piece {
 pub fn from_markdown(md: &str) -> Value {
     let mut stack: Vec<Frame> = vec![Frame::Doc(Vec::new())];
     let mut marks: Vec<&'static str> = Vec::new();
-    for ev in Parser::new_ext(md, Options::ENABLE_TASKLISTS | Options::ENABLE_STRIKETHROUGH) {
+    for ev in Parser::new_ext(md, Options::ENABLE_TASKLISTS | Options::ENABLE_STRIKETHROUGH | Options::ENABLE_TABLES) {
         match ev {
             Event::Start(tag) => match tag {
                 Tag::Paragraph => stack.push(Frame::Paragraph(Vec::new())),
-                Tag::Heading { .. } => stack.push(Frame::Heading(Vec::new())),
+                Tag::Heading { level, .. } => stack.push(Frame::Heading((level as u8).clamp(1, 3), Vec::new())),
+                Tag::BlockQuote(_) => {
+                    close_implicit(&mut stack);
+                    stack.push(Frame::Quote(Vec::new()))
+                }
+                Tag::Table(_) => {
+                    close_implicit(&mut stack);
+                    stack.push(Frame::Table(Vec::new()))
+                }
+                Tag::TableHead => stack.push(Frame::Row(true, Vec::new())),
+                Tag::TableRow => stack.push(Frame::Row(false, Vec::new())),
+                Tag::TableCell => stack.push(Frame::Cell(Vec::new())),
+                Tag::Strikethrough => marks.push("strike"),
                 Tag::List(start) => {
                     close_implicit(&mut stack);
                     stack.push(Frame::List { ordered: start, items: Vec::new() })
@@ -369,7 +440,7 @@ pub fn from_markdown(md: &str) -> Value {
                     open_inline(&mut stack);
                     stack.push(Frame::Link { url: dest_url.to_string(), image: true, inner: Vec::new() })
                 }
-                // citação, tabela, HTML, riscado…: só o conteúdo
+                // HTML e o resto: só o conteúdo
                 _ => {}
             },
             Event::End(end) => match end {
@@ -380,11 +451,38 @@ pub fn from_markdown(md: &str) -> Value {
                     }
                 }
                 TagEnd::Heading(_) => {
-                    if let Some(Frame::Heading(p)) = pop_if(&mut stack, |f| matches!(f, Frame::Heading(_))) {
-                        let node = json!({"type": "heading", "attrs": {"level": 3}, "content": inline_nodes(&p)});
+                    if let Some(Frame::Heading(level, p)) = pop_if(&mut stack, |f| matches!(f, Frame::Heading(..))) {
+                        let node = json!({"type": "heading", "attrs": {"level": level}, "content": inline_nodes(&p)});
                         push_blocks(&mut stack, vec![node]);
                     }
                 }
+                TagEnd::BlockQuote(_) => {
+                    if let Some(Frame::Quote(c)) = pop_if(&mut stack, |f| matches!(f, Frame::Quote(_))) {
+                        push_blocks(&mut stack, vec![quote_node(c)]);
+                    }
+                }
+                TagEnd::TableCell => {
+                    if let Some(Frame::Cell(p)) = pop_if(&mut stack, |f| matches!(f, Frame::Cell(_))) {
+                        if let Some(Frame::Row(header, cells)) = stack.last_mut() {
+                            cells.push(cell_node(*header, &p));
+                        }
+                    }
+                }
+                TagEnd::TableHead | TagEnd::TableRow => {
+                    if let Some(Frame::Row(_, cells)) = pop_if(&mut stack, |f| matches!(f, Frame::Row(..))) {
+                        if let Some(Frame::Table(rows)) = stack.last_mut() {
+                            rows.push(json!({"type": "tableRow", "content": cells}));
+                        }
+                    }
+                }
+                TagEnd::Table => {
+                    if let Some(Frame::Table(rows)) = pop_if(&mut stack, |f| matches!(f, Frame::Table(_))) {
+                        if !rows.is_empty() {
+                            push_blocks(&mut stack, vec![json!({"type": "table", "content": rows})]);
+                        }
+                    }
+                }
+                TagEnd::Strikethrough => remove_last(&mut marks, "strike"),
                 TagEnd::Item => {
                     close_implicit(&mut stack);
                     if let Some(Frame::Item { task, content }) = pop_if(&mut stack, |f| matches!(f, Frame::Item { .. })) {
@@ -432,8 +530,17 @@ pub fn from_markdown(md: &str) -> Value {
                 }
             }
             Event::InlineHtml(t) if is_br(&t) => push_piece(&mut stack, Piece::Break),
-            // `código` e HTML no meio do texto: o texto como está
-            Event::Code(t) | Event::InlineHtml(t) | Event::InlineMath(t) | Event::DisplayMath(t) => push_text(&mut stack, &t, &marks),
+            Event::Code(t) => {
+                let mut with_code = marks.clone();
+                with_code.push("code");
+                push_text(&mut stack, &t, &with_code)
+            }
+            // HTML no meio do texto: o texto como está
+            Event::InlineHtml(t) | Event::InlineMath(t) | Event::DisplayMath(t) => push_text(&mut stack, &t, &marks),
+            Event::Rule => {
+                close_implicit(&mut stack);
+                push_blocks(&mut stack, vec![json!({"type": "horizontalRule"})]);
+            }
             Event::Html(t) => {
                 let t = t.trim_end_matches('\n').to_string();
                 push_text(&mut stack, &t, &marks)
@@ -454,7 +561,21 @@ pub fn from_markdown(md: &str) -> Value {
             let top = stack.pop();
             let blocks = match top {
                 Some(Frame::Paragraph(p)) => paragraph_blocks(p),
-                Some(Frame::Heading(p)) => vec![json!({"type": "heading", "attrs": {"level": 3}, "content": inline_nodes(&p)})],
+                Some(Frame::Heading(level, p)) => vec![json!({"type": "heading", "attrs": {"level": level}, "content": inline_nodes(&p)})],
+                Some(Frame::Quote(c)) => vec![quote_node(c)],
+                Some(Frame::Cell(p)) => {
+                    if let Some(Frame::Row(header, cells)) = stack.last_mut() {
+                        cells.push(cell_node(*header, &p));
+                    }
+                    vec![]
+                }
+                Some(Frame::Row(_, cells)) => {
+                    if let Some(Frame::Table(rows)) = stack.last_mut() {
+                        rows.push(json!({"type": "tableRow", "content": cells}));
+                    }
+                    vec![]
+                }
+                Some(Frame::Table(rows)) if !rows.is_empty() => vec![json!({"type": "table", "content": rows})],
                 Some(Frame::List { ordered, items }) => vec![list_node(ordered, items)],
                 Some(Frame::Item { task, content }) => {
                     if let Some(Frame::List { items, .. }) = stack.last_mut() {
@@ -481,6 +602,19 @@ pub fn from_markdown(md: &str) -> Value {
     crate::ydoc::canon(&json!({"type": "doc", "content": content}))
 }
 
+/// Citação: os blocos de dentro (pelo menos um parágrafo, o editor exige).
+fn quote_node(content: Vec<Value>) -> Value {
+    let content = if content.is_empty() { vec![json!({"type": "paragraph"})] } else { content };
+    json!({"type": "blockquote", "content": content})
+}
+
+/// Célula da tabela: um parágrafo com o texto (cabeçalho na primeira linha).
+fn cell_node(header: bool, pieces: &[Piece]) -> Value {
+    let nodes = inline_nodes(pieces);
+    let p = if nodes.is_empty() { json!({"type": "paragraph"}) } else { json!({"type": "paragraph", "content": nodes}) };
+    json!({"type": if header { "tableHeader" } else { "tableCell" }, "attrs": {"colspan": 1, "rowspan": 1}, "content": [p]})
+}
+
 fn is_br(html: &str) -> bool {
     let t: String = html.chars().filter(|c| !c.is_whitespace()).collect::<String>().to_ascii_lowercase();
     matches!(t.as_str(), "<br>" | "<br/>")
@@ -503,7 +637,7 @@ fn pop_if(stack: &mut Vec<Frame>, f: impl Fn(&Frame) -> bool) -> Option<Frame> {
 
 /// Item de lista "apertada": o texto vem sem parágrafo. Abre um parágrafo implícito para ele.
 fn open_inline(stack: &mut Vec<Frame>) {
-    if matches!(stack.last(), Some(Frame::Item { .. }) | Some(Frame::Doc(_))) {
+    if matches!(stack.last(), Some(Frame::Item { .. }) | Some(Frame::Doc(_)) | Some(Frame::Quote(_))) {
         stack.push(Frame::Paragraph(Vec::new()));
     }
 }
@@ -516,7 +650,7 @@ fn close_implicit(stack: &mut Vec<Frame>) {
 fn close_implicit_unless(stack: &mut Vec<Frame>, keep: &dyn Fn(&Frame) -> bool) {
     let implicit = stack.len() >= 2
         && matches!(stack.last(), Some(Frame::Paragraph(_)))
-        && matches!(stack.get(stack.len() - 2), Some(Frame::Item { .. }) | Some(Frame::Doc(_)))
+        && matches!(stack.get(stack.len() - 2), Some(Frame::Item { .. }) | Some(Frame::Doc(_)) | Some(Frame::Quote(_)))
         && !stack.last().is_some_and(keep);
     if implicit {
         if let Some(Frame::Paragraph(p)) = stack.pop() {
@@ -545,7 +679,7 @@ fn push_text(stack: &mut Vec<Frame>, t: &str, marks: &[&'static str]) {
 fn push_piece(stack: &mut Vec<Frame>, p: Piece) {
     open_inline(stack);
     match stack.last_mut() {
-        Some(Frame::Paragraph(v)) | Some(Frame::Heading(v)) | Some(Frame::Link { inner: v, .. }) => v.push(p),
+        Some(Frame::Paragraph(v)) | Some(Frame::Heading(_, v)) | Some(Frame::Link { inner: v, .. }) | Some(Frame::Cell(v)) => v.push(p),
         Some(Frame::Code { text, .. }) => {
             if let Piece::Text(t, _) = p {
                 text.push_str(&t)
@@ -557,9 +691,9 @@ fn push_piece(stack: &mut Vec<Frame>, p: Piece) {
 
 fn push_blocks(stack: &mut [Frame], blocks: Vec<Value>) {
     match stack.last_mut() {
-        Some(Frame::Doc(c)) | Some(Frame::Item { content: c, .. }) => c.extend(blocks),
+        Some(Frame::Doc(c)) | Some(Frame::Item { content: c, .. }) | Some(Frame::Quote(c)) => c.extend(blocks),
         // bloco dentro de algo que só leva texto (não acontece com Markdown bem formado): vira texto
-        Some(Frame::Paragraph(v)) | Some(Frame::Heading(v)) => {
+        Some(Frame::Paragraph(v)) | Some(Frame::Heading(_, v)) | Some(Frame::Cell(v)) => {
             for b in blocks {
                 let text = plain(&b);
                 if !text.is_empty() {
@@ -782,12 +916,38 @@ mod tests {
 
     #[test]
     fn what_the_editor_lacks_becomes_text() {
-        let doc = from_markdown("Veja [o site](https://ideario.app) e <https://x.y>\n\n> citação\n\n~~riscado~~ e `código`\n\n---\n\n# Grande");
+        let doc = from_markdown("Veja [o site](https://ideario.app) e <https://x.y>\n\n<b>negrito</b> em HTML");
         let c = doc["content"].as_array().unwrap();
         assert_eq!(c[0]["content"][0]["text"], "Veja o site (https://ideario.app) e https://x.y");
-        assert_eq!(c[1]["content"][0]["text"], "citação");
-        assert_eq!(c[2]["content"][0]["text"], "riscado e código");
-        assert_eq!(c[3], json!({"type":"heading","attrs":{"level":3},"content":[{"type":"text","text":"Grande"}]}));
+        assert_eq!(c[1]["content"][0]["text"], "<b>negrito</b> em HTML", "HTML fica como texto");
+    }
+
+    #[test]
+    fn titles_quotes_rules_strike_and_code() {
+        let doc = from_markdown("# Grande\n\n## Médio\n\n> citação\n> - item\n\n~~riscado~~ e `código`\n\n---\n\n#### Pequeno demais");
+        let c = doc["content"].as_array().unwrap();
+        assert_eq!(c[0], json!({"type":"heading","attrs":{"level":1},"content":[{"type":"text","text":"Grande"}]}));
+        assert_eq!(c[1]["attrs"]["level"], 2);
+        assert_eq!(c[2]["type"], "blockquote");
+        assert_eq!(c[2]["content"][0]["content"][0]["text"], "citação");
+        assert_eq!(c[2]["content"][1]["type"], "bulletList");
+        assert_eq!(c[3]["content"][0], json!({"type":"text","text":"riscado","marks":[{"type":"strike"}]}));
+        assert_eq!(c[3]["content"][2], json!({"type":"text","text":"código","marks":[{"type":"code"}]}));
+        assert_eq!(c[4], json!({"type":"horizontalRule"}));
+        assert_eq!(c[5]["attrs"]["level"], 3, "#### vira o menor título que o editor tem");
+    }
+
+    #[test]
+    fn tables() {
+        let md = "| Item | Qtd |\n| --- | --- |\n| Arroz | 2 kg |\n| Feijão \\| preto |  |";
+        let doc = from_markdown(md);
+        let t = &doc["content"][0];
+        assert_eq!(t["type"], "table");
+        assert_eq!(t["content"][0]["content"][0]["type"], "tableHeader");
+        assert_eq!(t["content"][1]["content"][1]["content"][0]["content"][0]["text"], "2 kg");
+        assert_eq!(t["content"][2]["content"][0]["content"][0]["content"][0]["text"], "Feijão | preto");
+        assert_eq!(t["content"][2]["content"][1]["content"][0], json!({"type":"paragraph"}), "célula vazia");
+        assert_eq!(to_markdown(&doc, &names), md);
     }
 
     #[test]

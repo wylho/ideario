@@ -2277,3 +2277,71 @@ test.describe('colar no editor', () => {
     await expect(page.locator('#corpo')).toContainText('Arroz')
   })
 })
+
+test.describe('Markdown no editor', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 })
+    await newNote(page)
+  })
+
+  test('atalhos enquanto escreve: títulos, citação, linha, tachado e código', async ({ page }) => {
+    const body = page.locator('#corpo')
+    for (const line of ['# Grande', '## Médio', '### Pequeno', '> Citação']) {
+      await page.keyboard.type(line)
+      await page.keyboard.press('Enter')
+      if (line.startsWith('>')) await page.keyboard.press('Enter')
+    }
+    await page.keyboard.type('---')
+    await page.keyboard.type('Texto com ~~riscado~~ e `código` no meio')
+    await expect(body.locator('h1')).toHaveText('Grande')
+    await expect(body.locator('h2')).toHaveText('Médio')
+    await expect(body.locator('h3')).toHaveText('Pequeno')
+    await expect(body.locator('blockquote')).toContainText('Citação')
+    await expect(body.locator('hr')).toHaveCount(1)
+    await expect(body.locator('s')).toHaveText('riscado')
+    await expect(body.locator('code')).toHaveText('código')
+  })
+
+  test('título pelo botão escolhe o tamanho', async ({ page }) => {
+    await page.keyboard.type('Seção')
+    await page.getByRole('button', { name: 'Título' }).click()
+    await page.getByRole('menuitem', { name: /Título médio/ }).click()
+    await expect(page.locator('#corpo h2')).toHaveText('Seção')
+  })
+
+  test('tabela pelo +: cabeçalho, Tab entre células, linha e coluna pelo menu', async ({ page }) => {
+    await page.getByRole('button', { name: 'Inserir' }).click()
+    await page.getByRole('menuitem', { name: 'Tabela' }).click()
+    const table = page.locator('#corpo table')
+    await expect(table.locator('tr')).toHaveCount(3)
+    await expect(table.locator('th')).toHaveCount(3)
+    await page.keyboard.type('Item')
+    await page.keyboard.press('Tab')
+    await page.keyboard.type('Qtd')
+    await expect(table.locator('th').nth(1)).toHaveText('Qtd')
+    // Menu da tabela pela alça ⋮⋮ (no texto, o clique direito é o do sistema: copiar, colar).
+    const menu = async (item: string) => {
+      await table.locator('td').first().hover()
+      await page.locator('.blk-handle').click()
+      await page.getByRole('menuitem', { name: item }).click()
+    }
+    await menu('Linha abaixo')
+    await expect(table.locator('tr')).toHaveCount(4)
+    await menu('Coluna à direita')
+    await expect(table.locator('th')).toHaveCount(4)
+  })
+
+  test('colar Markdown vira título, lista e tabela', async ({ page }) => {
+    const md = '# Compras\n\n- arroz\n- feijão\n\n| Item | Qtd |\n| --- | --- |\n| Café | 1 |'
+    await page.evaluate((text) => {
+      const dt = new DataTransfer()
+      dt.setData('text/plain', text)
+      document.querySelector('#corpo')!.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }))
+    }, md)
+    const body = page.locator('#corpo')
+    await expect(body.locator('h1')).toHaveText('Compras')
+    await expect(body.locator('ul li')).toHaveCount(2)
+    await expect(body.locator('table th')).toHaveText(['Item', 'Qtd'])
+    await expect(body).not.toContainText('|')
+  })
+})

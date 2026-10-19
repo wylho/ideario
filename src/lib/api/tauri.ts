@@ -134,6 +134,7 @@ export const tauriApi: Api = {
     return invoke('import_file', new Uint8Array(await file.arrayBuffer()), { headers })
   },
   pendingPreviews: () => invoke('pending_previews'),
+  markdownToDoc: (md) => invoke('markdown_to_doc', { md }),
   async clipboardImage() {
     const png = new Uint8Array(await invoke<ArrayBuffer>('clipboard_image'))
     return png.byteLength ? new File([png], 'imagem colada.png', { type: 'image/png' }) : null

@@ -1,11 +1,11 @@
 <script lang="ts">
   import { mount, untrack, unmount } from 'svelte'
-  import { Editor as TipTap } from '@tiptap/core'
+  import { Editor as TipTap, type ChainedCommands } from '@tiptap/core'
   import { NodeSelection } from '@tiptap/pm/state'
   import { Dialog, DropdownMenu, Popover, Select } from 'bits-ui'
   import {
     Archive, ArchiveRestore, ArrowLeft, Bold, Camera, Check, ChevronDown, ChevronLeft, ChevronRight, Columns2, Heading, Image, Italic, List,
-    ListChecks, Mic, MoreVertical, SquareCode, Palette, Paperclip, Pin, PinOff, Plus, Redo2, Rows2, Square, Tag, Trash2, Undo2, X,
+    ListChecks, Mic, MoreVertical, SquareCode, Palette, Table, TextQuote, Minus, BetweenHorizontalStart, BetweenVerticalStart, Paperclip, Pin, PinOff, Plus, Redo2, Rows2, Square, Tag, Trash2, Undo2, X,
     ArrowDown, ArrowUp, Copy, CopyPlus, Download, Eye, GripVertical, ListTodo, Pilcrow, Scissors, SquareCheck, SquareDashed, ExternalLink,
     ListIndentDecrease, ListIndentIncrease, BookOpen, Minimize2, FileDown, Link2, RefreshCw, SmilePlus,
   } from '@lucide/svelte'
@@ -205,7 +205,8 @@
     // Só destaca a formatação enquanto se escreve.
     const e = editor?.isFocused ? editor : null
     return {
-      bold: !!e?.isActive('bold'), italic: !!e?.isActive('italic'), heading: !!e?.isActive('heading', { level: 3 }),
+      bold: !!e?.isActive('bold'), italic: !!e?.isActive('italic'),
+      heading: ([1, 2, 3] as const).find((level) => e?.isActive('heading', { level })) ?? 0,
       list: !!e?.isActive('bulletList'), check: !!e?.isActive('taskList'), code: !!e?.isActive('codeBlock'),
       undo: !!editor?.can().undo(), redo: !!editor?.can().redo(),
     }
@@ -319,6 +320,7 @@
           onFiles: (list, pos) => void addFiles(list, pos),
           onMenu: (pos, e) => openNodeMenu(pos, e.clientX, e.clientY, e.target as Element),
           clipboardImage: () => api.clipboardImage().catch(() => null),
+          markdown: (md) => api.markdownToDoc(md).catch(() => null),
           placeholder: 'Escreva… use #tag para marcar',
           ydoc: doc,
           link: { preview: (u) => api.linkPreview(u), open: (u) => void api.openUrl(u) },
@@ -557,6 +559,23 @@
       { label: 'Mover para cima', icon: ArrowUp, disabled: !canMove(view, pos, -1), onSelect: () => moveNode(view, pos, -1) },
       { label: 'Mover para baixo', icon: ArrowDown, disabled: !canMove(view, pos, 1), onSelect: () => moveNode(view, pos, 1) },
     )
+    if (name === 'table') {
+      // Na linha/coluna do cursor, se ele está nesta tabela; senão, na primeira célula.
+      const at = (fn: (c: ChainedCommands) => ChainedCommands) => () => {
+        if (!editor) return
+        const { from } = editor.state.selection
+        const inside = from > pos && from < pos + node.nodeSize
+        const chain = editor.chain().focus()
+        fn(inside ? chain : chain.setTextSelection(pos + 4)).run()
+      }
+      out.push(
+        SEP,
+        { label: 'Linha abaixo', icon: BetweenHorizontalStart, onSelect: at((c) => c.addRowAfter()) },
+        { label: 'Coluna à direita', icon: BetweenVerticalStart, onSelect: at((c) => c.addColumnAfter()) },
+        { label: 'Apagar linha', icon: Minus, onSelect: at((c) => c.deleteRow()) },
+        { label: 'Apagar coluna', icon: Minus, onSelect: at((c) => c.deleteColumn()) },
+      )
+    }
     if (TEXTISH.has(name)) {
       const cur = shapeOf(name)
       const opt = (label: string, icon: typeof Pilcrow, to: Shape): MenuEntry => ({ label, icon, checked: cur === to, onSelect: () => transform(pos, to) })
@@ -888,13 +907,29 @@
                 <DropdownMenu.Separator class="menu-sep" />
                 <DropdownMenu.Item class="menu-item" onSelect={askLink}><Link2 size={16} />Link…</DropdownMenu.Item>
                 <DropdownMenu.Item class="menu-item" onSelect={() => run((c) => c.toggleCodeBlock())}><SquareCode size={16} />Bloco de código</DropdownMenu.Item>
+                <DropdownMenu.Item class="menu-item" onSelect={() => run((c) => c.insertTable({ rows: 3, cols: 3, withHeaderRow: true }))}><Table size={16} />Tabela</DropdownMenu.Item>
+                <DropdownMenu.Item class="menu-item" onSelect={() => run((c) => c.toggleBlockquote())}><TextQuote size={16} />Citação</DropdownMenu.Item>
+                <DropdownMenu.Item class="menu-item" onSelect={() => run((c) => c.setHorizontalRule())}><Minus size={16} />Linha divisória</DropdownMenu.Item>
               </DropdownMenu.Content>
             </DropdownMenu.Portal>
           </DropdownMenu.Root>
           <span class="ed-tools-sep" aria-hidden="true"></span>
           <button onmousedown={(e) => e.preventDefault()} onclick={() => run((c) => c.toggleBold())} aria-label="Negrito" aria-pressed={active.bold}><Bold size={18} /></button>
           <button onmousedown={(e) => e.preventDefault()} onclick={() => run((c) => c.toggleItalic())} aria-label="Itálico" aria-pressed={active.italic}><Italic size={18} /></button>
-          <button onmousedown={(e) => e.preventDefault()} onclick={() => run((c) => c.toggleHeading({ level: 3 }))} aria-label="Título" aria-pressed={active.heading}><Heading size={18} /></button>
+          <!-- Títulos como no Markdown: # grande, ## médio, ### pequeno. -->
+          <DropdownMenu.Root>
+            <DropdownMenu.Trigger aria-label="Título" title="Título" aria-pressed={!!active.heading} onmousedown={(e) => e.preventDefault()}><Heading size={18} /></DropdownMenu.Trigger>
+            <DropdownMenu.Portal>
+              <DropdownMenu.Content class="menu" side="top" align="start" sideOffset={10} onCloseAutoFocus={(e) => e.preventDefault()}>
+                {#each [[1, 'Título grande', '#'], [2, 'Título médio', '##'], [3, 'Título pequeno', '###']] as const as [level, label, md] (level)}
+                  <DropdownMenu.Item class="menu-item" onSelect={() => run((c) => c.toggleHeading({ level }))}>
+                    <span class="grow">{label}</span><small class="menu-hint">{md}</small>
+                    {#if active.heading === level}<span class="menu-check"><Check size={15} /></span>{/if}
+                  </DropdownMenu.Item>
+                {/each}
+              </DropdownMenu.Content>
+            </DropdownMenu.Portal>
+          </DropdownMenu.Root>
           <button onmousedown={(e) => e.preventDefault()} onclick={() => run((c) => c.toggleBulletList())} aria-label="Lista" aria-pressed={active.list}><List size={18} /></button>
           <button onmousedown={(e) => e.preventDefault()} onclick={() => run((c) => c.toggleTaskList())} aria-label="Checklist" aria-pressed={active.check}><ListChecks size={18} /></button>
           <Popover.Root>

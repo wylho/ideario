@@ -4,8 +4,10 @@ import Collaboration from '@tiptap/extension-collaboration'
 import type * as Y from 'yjs'
 import { BODY } from '../ydoc'
 import { TaskItem, TaskList } from '@tiptap/extension-list'
+import { TableKit } from '@tiptap/extension-table'
 import { Placeholder } from '@tiptap/extensions'
 import { AllSelection, Plugin, PluginKey, Selection } from '@tiptap/pm/state'
+import { Fragment, Slice } from '@tiptap/pm/model'
 import { Mapping } from '@tiptap/pm/transform'
 import { ySyncPluginKey } from '@tiptap/y-tiptap'
 import { Decoration, DecorationSet } from '@tiptap/pm/view'
@@ -111,6 +113,50 @@ const Hashtags = Extension.create({
 })
 
 /** Esquema do corpo das notas. O mesmo conjunto serve ao editor e à conversão de HTML. */
+/** Texto com cara de Markdown: título, lista, checklist, citação, linha, tabela, bloco de código ou marcas no meio. */
+const MARKDOWN = /^(#{1,3} |[-*+] |\d+[.)] |> |```|---\s*$|\|.+\|\s*$)|\*\*[^*\n]+\*\*|~~[^~\n]+~~|`[^`\n]+`/m
+
+/** Colar Markdown (de um chat, do VS Code, de um README): vira título, lista, tabela… em vez de texto com # e |. */
+export const MarkdownPaste = Extension.create<{ convert?: (md: string) => Promise<{ content?: unknown[] } | null> }>({
+  name: 'markdownPaste',
+  addOptions: () => ({}),
+  addProseMirrorPlugins() {
+    const { convert } = this.options
+    return [
+      new Plugin({
+        key: new PluginKey('markdownPaste'),
+        props: {
+          handlePaste(view, e) {
+            const cd = e.clipboardData
+            const md = cd?.getData('text/plain') ?? ''
+            if (!convert || !md || !MARKDOWN.test(md)) return false
+            // Com HTML de verdade (página, outro app de texto, outra nota), vale o HTML. Editor de código manda o
+            // texto num HTML só de estilo: ali o texto é o Markdown.
+            const html = cd?.getData('text/html') ?? ''
+            if (html && new DOMParser().parseFromString(html, 'text/html').body.querySelector('h1,h2,h3,h4,ul,ol,li,table,blockquote,img,a,b,strong,em,i')) return false
+            // Dentro de código ou de tabela, cola como está.
+            const $from = view.state.selection.$from
+            for (let d = $from.depth; d > 0; d--) if (['codeBlock', 'table'].includes($from.node(d).type.name)) return false
+            e.preventDefault()
+            void convert(md).then((doc) => {
+              const { state } = view
+              if (!doc?.content?.length) {
+                view.dispatch(state.tr.insertText(md))
+                return
+              }
+              const frag = Fragment.fromJSON(state.schema, doc.content)
+              // Um parágrafo só: entra no meio do texto, sem quebrar a linha.
+              const open = frag.childCount === 1 && frag.firstChild?.type.name === 'paragraph' ? 1 : 0
+              view.dispatch(state.tr.replaceSelection(new Slice(frag, open, open)).scrollIntoView())
+            })
+            return true
+          },
+        },
+      }),
+    ]
+  },
+})
+
 export function noteExtensions(opts: {
   media?: (hash: string) => MediaInfo
   load?: (hash: string) => Promise<MediaInfo | null>
@@ -118,6 +164,8 @@ export function noteExtensions(opts: {
   onFiles?: (files: File[], pos: number) => void
   onMenu?: (pos: number, e: MouseEvent) => void
   clipboardImage?: () => Promise<File | null>
+  /** Markdown colado → corpo do editor. */
+  markdown?: (md: string) => Promise<{ content?: unknown[] } | null>
   placeholder?: string
   /** Y.Doc da nota: o corpo vive no `body` dele (TipTap Collaboration, com o desfazer do Yjs). */
   ydoc?: Y.Doc
@@ -128,16 +176,15 @@ export function noteExtensions(opts: {
     StarterKit.configure({
       // Com o Y.Doc, desfazer/refazer vêm do Yjs (Collaboration).
       ...(opts.ydoc ? { undoRedo: false as const } : {}),
-      heading: { levels: [3] },
-      blockquote: false,
-      code: false,
-      horizontalRule: false,
-      strike: false,
+      // Markdown: # ## ### (o título da nota fica à parte), > citação, `código`, ~~tachado~~, --- linha.
+      heading: { levels: [1, 2, 3] },
       underline: false,
       link: false,
       // Sem nó final automático: abrir uma nota não pode alterá-la.
       trailingNode: false,
     }),
+    // Tabela (a primeira linha é o cabeçalho, como no Markdown).
+    TableKit.configure({ table: { resizable: false, HTMLAttributes: { class: 'note-table' } } }),
     TaskList,
     // Subitens em vários níveis (Tab recua, Shift+Tab volta), como nos marcadores.
     TaskItem.configure({
@@ -149,6 +196,7 @@ export function noteExtensions(opts: {
     NoteFile.configure({ render: opts.renderFile }),
     LinkCard.configure(opts.link ?? {}),
     MediaLayout.configure({ onFiles: opts.onFiles, onMenu: opts.onMenu, clipboardImage: opts.clipboardImage }),
+    MarkdownPaste.configure({ convert: opts.markdown }),
     Hashtags,
     CheckCascade,
     SelectAllDom,

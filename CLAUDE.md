@@ -203,6 +203,11 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
 - Ordem das categorias (`app.categorySort`, escolha do aparelho): Nome (padrão), Mais notas ou Manual (arrastar na
   lateral com o mouse ou "Mover para cima/baixo" no menu; `reorder_categories` grava `sort`, que vai no `categories.ydoc`).
   Lateral, pílulas e seletores usam a mesma lista (`app.categories`).
+- Editor Markdown: títulos # ## ### (botão H escolhe o tamanho), citação, linha (---), `código`, ~~tachado~~ e tabela
+  (`TableKit`; primeira linha = cabeçalho; linha/coluna pelo menu da alça). Colar Markdown (`MarkdownPaste` em
+  `extensions.ts`) converte pelo núcleo (`markdown_to_doc` = o mesmo `markdown.rs` do MCP; no mock, `mock/markdown.ts`).
+  Colar imagem: arquivos do clipboard, HTML só com imagem e, sem nada, `clipboard_image` (núcleo, PNG).
+  ID curto da nota (`#` + 8 últimos caracteres, `noteid.ts`) no topo do editor e em "Copiar ID"; o MCP aceita (`full_id`).
 - Menus de contexto na tela estreita: submenu toma o lugar do menu, com linha de voltar (`MenuList.svelte`).
 - Filtro "Sem categoria"/"Sem tags": sentinelas `NO_CATEGORY`/`NO_TAGS` (`~none`) no `Filter` (TS e Rust).
 - **Fase 7 (Android, em andamento; prévia).** Projeto em `src-tauri/gen/android` (pacote `app.ideario`, via

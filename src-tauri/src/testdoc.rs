@@ -26,14 +26,15 @@ fn words(nasty: bool) -> BoxedStrategy<String> {
     prop::collection::vec(word(nasty), 1..5).prop_map(|w| w.join(" ")).boxed()
 }
 
-/// Conteúdo de um parágrafo: trechos com ou sem negrito/itálico, separados por espaço sem marca, e às vezes uma
-/// quebra de linha.
+/// Conteúdo de um parágrafo: trechos com ou sem negrito/itálico/tachado/código, separados por espaço sem marca, e às
+/// vezes uma quebra de linha.
 fn inline(nasty: bool) -> BoxedStrategy<Vec<Value>> {
-    let run = (words(nasty), any::<bool>(), any::<bool>(), prop::bool::weighted(0.1)).prop_map(|(text, bold, italic, br)| (text, bold, italic, br));
+    let marks = (any::<bool>(), any::<bool>(), prop::bool::weighted(0.15), prop::bool::weighted(0.15));
+    let run = (words(nasty), marks, prop::bool::weighted(0.1));
     prop::collection::vec(run, 1..4)
         .prop_map(|runs| {
             let mut out: Vec<Value> = Vec::new();
-            for (i, (text, bold, italic, br)) in runs.into_iter().enumerate() {
+            for (i, (text, (bold, italic, strike, code), br)) in runs.into_iter().enumerate() {
                 if i > 0 {
                     if br {
                         out.push(json!({"type": "hardBreak"}));
@@ -47,6 +48,12 @@ fn inline(nasty: bool) -> BoxedStrategy<Vec<Value>> {
                 }
                 if italic {
                     marks.push(json!({"type": "italic"}));
+                }
+                if strike {
+                    marks.push(json!({"type": "strike"}));
+                }
+                if code {
+                    marks.push(json!({"type": "code"}));
                 }
                 let mut t = json!({"type": "text", "text": text});
                 if !marks.is_empty() {
@@ -104,11 +111,42 @@ fn list(item_kind: &'static str, depth: u32, nasty: bool) -> BoxedStrategy<Value
     }
 }
 
+/// Tabela retangular; a primeira linha é o cabeçalho (como a tabela do Markdown). Célula vazia às vezes.
+fn table(nasty: bool) -> BoxedStrategy<Value> {
+    (1..4usize, 1..4usize)
+        .prop_flat_map(move |(rows, cols)| prop::collection::vec(prop::collection::vec(prop::option::weighted(0.85, inline(nasty)), cols), rows + 1))
+        .prop_map(|rows| {
+            let rows: Vec<Value> = rows
+                .into_iter()
+                .enumerate()
+                .map(|(i, cells)| {
+                    let cells: Vec<Value> = cells
+                        .into_iter()
+                        .map(|c| {
+                            let p = match c {
+                                Some(c) => json!({"type": "paragraph", "content": c}),
+                                None => json!({"type": "paragraph"}),
+                            };
+                            json!({"type": if i == 0 { "tableHeader" } else { "tableCell" }, "attrs": {"colspan": 1, "rowspan": 1}, "content": [p]})
+                        })
+                        .collect();
+                    json!({"type": "tableRow", "content": cells})
+                })
+                .collect();
+            json!({"type": "table", "content": rows})
+        })
+        .boxed()
+}
+
 fn block(nasty: bool) -> BoxedStrategy<Value> {
     prop_oneof![
         4 => paragraph(nasty),
         1 => Just(json!({"type": "paragraph"})),
-        1 => inline(nasty).prop_map(|c| json!({"type": "heading", "attrs": {"level": 3}, "content": c})),
+        1 => (inline(nasty), 1..=3u8).prop_map(|(c, level)| json!({"type": "heading", "attrs": {"level": level}, "content": c})),
+        1 => prop::collection::vec(prop_oneof![3 => paragraph(nasty), 1 => list("listItem", 1, nasty)], 1..3)
+            .prop_map(|c| json!({"type": "blockquote", "content": c})),
+        1 => Just(json!({"type": "horizontalRule"})),
+        1 => table(nasty),
         2 => list("taskItem", 2, nasty),
         2 => list("listItem", 2, nasty),
         1 => prop::collection::vec("[a-zA-Z0-9 (){};=*_#<>-]{0,20}", 1..4)

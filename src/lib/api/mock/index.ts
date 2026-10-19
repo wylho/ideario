@@ -11,6 +11,7 @@ import { cleanEmoji } from '../../emoji'
 import { uuidv7 } from '../../uuid'
 import { NO_CATEGORY, NO_TAGS } from '../../types'
 import { noteToState, stateToNote } from './ydoc'
+import { mockMarkdown } from './markdown'
 import { fakeImageSrc } from './fake-images'
 import { DAY, SEED_CATEGORIES, SEED_FILES, SEED_IMAGES, seedNotes } from './seed'
 
@@ -144,6 +145,13 @@ function project(body: RichDoc): Projection {
       case 'orderedList':
       case 'taskList':
         return listItems(n, depth)
+      // Tabela: uma linha da prévia por linha da tabela (como o núcleo).
+      case 'table':
+        for (const row of n.content ?? []) {
+          const cells = (row.content ?? []).map((c) => clean(inline(c))).filter(Boolean)
+          if (cells.length) blocks.push({ kind: 'text', text: cells.join(' · ') })
+        }
+        return
       case 'codeBlock': {
         const text = inline(n).replace(/\s+$/, '').split('\n').slice(0, MAX_CODE_LINES).join('\n')
         if (text.trim()) blocks.push({ kind: 'code', text })
@@ -798,6 +806,7 @@ export const mockApi: Api = {
   pendingPreviews: () => done([]),
   setPreview: () => done(undefined),
   clipboardImage: () => done(null),
+  markdownToDoc: (md) => done(mockMarkdown(md)),
 
   // No navegador os arquivos arrastados chegam como File (importFile); caminhos só existem no app.
   async importPath() {

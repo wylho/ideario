@@ -219,6 +219,7 @@ pub fn run() {
             commands::get_attachments,
             commands::import_file,
             commands::clipboard_image,
+            commands::markdown_to_doc,
             commands::download_attachment,
             link::link_preview,
             link::open_url,

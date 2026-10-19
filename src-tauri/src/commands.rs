@@ -390,6 +390,12 @@ async fn import(core: &Core, bytes: Vec<u8>, name: String, mime: String) -> Resu
     core.with(|s| attachments::save(s, &core.data, prepared))
 }
 
+/// Markdown colado no editor → corpo no formato do editor (o mesmo leitor do MCP).
+#[tauri::command]
+pub fn markdown_to_doc(md: String) -> Value {
+    crate::markdown::from_markdown(&md)
+}
+
 /// Imagem da área de transferência do sistema, em PNG (vazio se não há imagem). Colar no editor usa quando a página
 /// não recebe a imagem (print colado no Mac e no Linux). No celular não há.
 #[tauri::command]
