@@ -56,7 +56,11 @@ pub fn run() {
         .manage(sync::Sync::default());
     // Desktop: ao fechar a janela, pode ficar na bandeja (segundo plano).
     #[cfg(desktop)]
-    let app = app.manage(background::Background::default()).on_window_event(background::on_window_event).plugin(
+    let app = app
+        .manage(background::Background::default())
+        .on_window_event(background::on_window_event)
+        .plugin(tauri_plugin_clipboard_manager::init())
+        .plugin(
         // A janela reabre do tamanho e no lugar em que estava (só isso: a aparência é do próprio app).
         tauri_plugin_window_state::Builder::default()
             .with_state_flags(
@@ -214,6 +218,7 @@ pub fn run() {
             sync::service::sync_sign_out,
             commands::get_attachments,
             commands::import_file,
+            commands::clipboard_image,
             commands::download_attachment,
             link::link_preview,
             link::open_url,

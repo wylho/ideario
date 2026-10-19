@@ -58,6 +58,8 @@ keyring = { version = "3", features = ["apple-native", "windows-native"] }
 tauri-plugin-updater = "2"
 # Tamanho, posição e tela cheia da janela voltam como estavam ao reabrir.
 tauri-plugin-window-state = "2"
+# Colar imagem quando a página não recebe nada (print no Mac/Linux): lida da área de transferência do sistema.
+tauri-plugin-clipboard-manager = "2"
 notify-rust = "4.18"
 
 # Android: lembretes agendados no sistema (dispara com o app fechado).

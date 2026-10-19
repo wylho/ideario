@@ -797,6 +797,7 @@ export const mockApi: Api = {
   // Prévias de PDF e vídeo são feitas só no app (o mock não guarda o conteúdo dos exemplos).
   pendingPreviews: () => done([]),
   setPreview: () => done(undefined),
+  clipboardImage: () => done(null),
 
   // No navegador os arquivos arrastados chegam como File (importFile); caminhos só existem no app.
   async importPath() {

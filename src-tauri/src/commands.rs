@@ -390,6 +390,37 @@ async fn import(core: &Core, bytes: Vec<u8>, name: String, mime: String) -> Resu
     core.with(|s| attachments::save(s, &core.data, prepared))
 }
 
+/// Imagem da área de transferência do sistema, em PNG (vazio se não há imagem). Colar no editor usa quando a página
+/// não recebe a imagem (print colado no Mac e no Linux). No celular não há.
+#[tauri::command]
+pub async fn clipboard_image(app: AppHandle) -> Result<Response> {
+    #[cfg(desktop)]
+    {
+        use tauri_plugin_clipboard_manager::ClipboardExt;
+        let png = tauri::async_runtime::spawn_blocking(move || {
+            let Ok(img) = app.clipboard().read_image() else { return Vec::new() };
+            png_of(img.rgba(), img.width(), img.height()).unwrap_or_default()
+        })
+        .await
+        .map_err(|e| e.to_string())?;
+        Ok(Response::new(png))
+    }
+    #[cfg(mobile)]
+    {
+        let _ = app;
+        Ok(Response::new(Vec::new()))
+    }
+}
+
+/// RGBA cru → PNG.
+#[cfg_attr(mobile, allow(dead_code))]
+fn png_of(rgba: &[u8], width: u32, height: u32) -> Option<Vec<u8>> {
+    let img = image::RgbaImage::from_raw(width, height, rgba.to_vec())?;
+    let mut out = std::io::Cursor::new(Vec::new());
+    img.write_to(&mut out, image::ImageFormat::Png).ok()?;
+    Some(out.into_inner())
+}
+
 /// Importa um arquivo do computador pelo caminho (arrastado para a janela): lido aqui, sem passar pela ponte.
 #[tauri::command]
 pub async fn import_path(core: Core_<'_>, path: String) -> Result<Attachment> {
@@ -610,6 +641,15 @@ mod tests {
         assert_eq!(bytes_of(&InvokeBody::Json(json!("AQL/"))).as_deref(), Some(&[1u8, 2, 255][..]));
         assert_eq!(bytes_of(&InvokeBody::Json(json!("não é base64"))), None);
         assert_eq!(bytes_of(&InvokeBody::Json(json!({ "id": "x" }))), None);
+    }
+
+    #[test]
+    fn clipboard_pixels_become_a_png() {
+        let png = png_of(&[255, 0, 0, 255, 0, 255, 0, 255], 2, 1).unwrap();
+        let back = image::load_from_memory(&png).unwrap().to_rgba8();
+        assert_eq!((back.width(), back.height()), (2, 1));
+        assert_eq!(back.get_pixel(1, 0).0, [0, 255, 0, 255]);
+        assert!(png_of(&[0; 3], 2, 1).is_none(), "tamanho errado não vira imagem");
     }
 
     #[test]

@@ -309,11 +309,13 @@ export const MediaLayout = Extension.create<{
   onFiles?: (files: File[], pos: number) => void
   /** Clique direito numa foto ou anexo: `pos` é o nó clicado. */
   onMenu?: (pos: number, e: MouseEvent) => void
+  /** Colar sem nada que a página consiga ler (print no Mac/Linux): a imagem da área de transferência do sistema. */
+  clipboardImage?: () => Promise<File | null>
 }>({
   name: 'mediaLayout',
   addOptions: () => ({}),
   addProseMirrorPlugins() {
-    const { onFiles, onMenu } = this.options
+    const { onFiles, onMenu, clipboardImage } = this.options
     return [
       new Plugin({
         key,
@@ -368,13 +370,47 @@ export const MediaLayout = Extension.create<{
             return true
           },
           handlePaste(view, e) {
-            const files = [...(e.clipboardData?.files ?? [])]
-            if (!files.length || !onFiles) return false
-            onFiles(files, view.state.selection.from)
-            return true
+            const cd = e.clipboardData
+            if (!cd || !onFiles) return false
+            const at = view.state.selection.from
+            const pasted = pastedFiles(cd)
+            const html = cd.getData('text/html')
+            const onlyImage = html ? imageOnly(html) : null
+            // Arquivos (foto copiada, print, arquivo do gerenciador). Mas planilhas e outras notas mandam texto em HTML
+            // junto com uma imagem do trecho: aí vale o HTML (tabela, texto, fotos com data-hash).
+            if (pasted.length && (!html || onlyImage)) {
+              onFiles(pasted, at)
+              return true
+            }
+            // HTML que é só uma imagem embutida (data:), sem arquivo: vira foto.
+            if (onlyImage?.startsWith('data:')) {
+              void fetch(onlyImage).then((r) => r.blob()).then((b) => onFiles([new File([b], 'imagem.' + (b.type.split('/')[1] || 'png'), { type: b.type })], at))
+              return true
+            }
+            // Nada que a página leia (o sistema não entregou a imagem ao navegador): pergunta ao sistema.
+            if (!html && !cd.getData('text/plain') && !pasted.length && clipboardImage) {
+              void clipboardImage().then((f) => f && onFiles([f], at))
+              return true
+            }
+            return false
           },
         },
       }),
     ]
   },
 })
+
+/** Arquivos colados: `files` ou, quando o navegador só os põe em `items`, de lá. */
+function pastedFiles(cd: DataTransfer): File[] {
+  const files = [...cd.files]
+  if (files.length) return files
+  return [...cd.items].filter((i) => i.kind === 'file').map((i) => i.getAsFile()).filter((f): f is File => !!f)
+}
+
+/** O HTML colado é só uma imagem (sem texto, e não é uma foto de outra nota)? Devolve o endereço dela. */
+function imageOnly(html: string): string | null {
+  const doc = new DOMParser().parseFromString(html, 'text/html')
+  const imgs = doc.querySelectorAll('img')
+  if (imgs.length !== 1 || doc.body.textContent?.trim() || imgs[0].hasAttribute('data-hash')) return null
+  return imgs[0].getAttribute('src') ?? ''
+}

@@ -134,6 +134,10 @@ export const tauriApi: Api = {
     return invoke('import_file', new Uint8Array(await file.arrayBuffer()), { headers })
   },
   pendingPreviews: () => invoke('pending_previews'),
+  async clipboardImage() {
+    const png = new Uint8Array(await invoke<ArrayBuffer>('clipboard_image'))
+    return png.byteLength ? new File([png], 'imagem colada.png', { type: 'image/png' }) : null
+  },
   setPreview: (hash, png) => invoke('set_preview', png, { headers: { 'x-hash': hash } }),
   inspectTakeout: (path) => invoke('inspect_takeout', { path }),
   linkPreview: (url) => invoke('link_preview', { url }),

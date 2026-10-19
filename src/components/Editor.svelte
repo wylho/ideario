@@ -318,6 +318,7 @@
           },
           onFiles: (list, pos) => void addFiles(list, pos),
           onMenu: (pos, e) => openNodeMenu(pos, e.clientX, e.clientY, e.target as Element),
+          clipboardImage: () => api.clipboardImage().catch(() => null),
           placeholder: 'Escreva… use #tag para marcar',
           ydoc: doc,
           link: { preview: (u) => api.linkPreview(u), open: (u) => void api.openUrl(u) },

@@ -100,6 +100,8 @@ export interface Api {
   pendingPreviews(): Promise<{ hash: string; kind: AttachmentKind }[]>
   /** Prévia em PNG (primeira página do PDF, um quadro do vídeo); vazio = não foi possível. */
   setPreview(hash: string, png: Uint8Array): Promise<void>
+  /** Imagem da área de transferência do sistema (colar um print no Mac/Linux); null se não houver. */
+  clipboardImage(): Promise<File | null>
   /** É um Takeout do Google Keep? Quantas notas e mídias (null = um zip qualquer). Só no app. */
   inspectTakeout(path: string): Promise<{ notes: number; media: number } | null>
   /** Importa o Takeout (a lista se atualiza no fim). Só no app. */

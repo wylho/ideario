@@ -2246,3 +2246,34 @@ test.describe('ID da nota', () => {
     await expect(page.getByRole('menuitem', { name: /Copiar ID/ })).toContainText(short)
   })
 })
+
+test.describe('colar no editor', () => {
+  const paste = (page: Page, opts: { png?: boolean; html?: string; text?: string }) =>
+    page.evaluate(async ({ png, html, text }) => {
+      const dt = new DataTransfer()
+      if (png) {
+        const c = document.createElement('canvas')
+        c.width = c.height = 8
+        c.getContext('2d')!.fillRect(0, 0, 8, 8)
+        const blob = await new Promise<Blob>((r) => c.toBlob((b) => r(b!), 'image/png'))
+        dt.items.add(new File([blob], 'print.png', { type: 'image/png' }))
+      }
+      if (html) dt.setData('text/html', html)
+      if (text) dt.setData('text/plain', text)
+      document.querySelector('#corpo')!.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }))
+    }, opts)
+
+  test('imagem colada vira foto da nota', async ({ page }) => {
+    await newNote(page)
+    await page.keyboard.type('Antes da foto')
+    await paste(page, { png: true })
+    await expect(page.locator('#corpo img')).toHaveCount(1)
+  })
+
+  test('trecho de planilha (HTML com imagem junto) cola o texto, não a imagem', async ({ page }) => {
+    await newNote(page)
+    await paste(page, { png: true, html: '<table><tr><td>Arroz</td><td>2 kg</td></tr></table>', text: 'Arroz\t2 kg' })
+    await expect(page.locator('#corpo img')).toHaveCount(0)
+    await expect(page.locator('#corpo')).toContainText('Arroz')
+  })
+})

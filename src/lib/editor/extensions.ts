@@ -117,6 +117,7 @@ export function noteExtensions(opts: {
   renderFile?: (hash: string, dom: HTMLElement) => () => void
   onFiles?: (files: File[], pos: number) => void
   onMenu?: (pos: number, e: MouseEvent) => void
+  clipboardImage?: () => Promise<File | null>
   placeholder?: string
   /** Y.Doc da nota: o corpo vive no `body` dele (TipTap Collaboration, com o desfazer do Yjs). */
   ydoc?: Y.Doc
@@ -147,7 +148,7 @@ export function noteExtensions(opts: {
     ImageRow,
     NoteFile.configure({ render: opts.renderFile }),
     LinkCard.configure(opts.link ?? {}),
-    MediaLayout.configure({ onFiles: opts.onFiles, onMenu: opts.onMenu }),
+    MediaLayout.configure({ onFiles: opts.onFiles, onMenu: opts.onMenu, clipboardImage: opts.clipboardImage }),
     Hashtags,
     CheckCascade,
     SelectAllDom,
