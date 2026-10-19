@@ -31,6 +31,8 @@ arrasta para onde quiser.
 
 - Checklists com subitens, como no Keep
 - Grave áudio ou tire foto sem sair da nota
+- Títulos, citações e tabelas; cole Markdown e ele já vira formatação
+- Cole um print direto na nota
 - Cole um link e ele vira um cartão com título e imagem
 - Um emoji grande de capa para achar a nota de longe
 
@@ -61,7 +63,8 @@ anexos juntos.
 
 Ligue o Ideario no Claude Desktop ou no Claude Code com um clique e peça: “cria uma lista de compras”, “marca o leite
 como comprado”, “o que eu anotei sobre a viagem?”. O Claude fala com o Ideario direto do seu computador, sem servidor
-nosso no meio, e as categorias protegidas por PIN ficam de fora. Guia: [`docs/MCP.md`](docs/MCP.md).
+nosso no meio, e as categorias protegidas por PIN ficam de fora. Cada nota tem um ID curto (#a1b2c3d4): copie e diga
+“na nota #a1b2c3d4, monta uma tabela com os gastos”. Guia: [`docs/MCP.md`](docs/MCP.md).
 
 <img src="site/img/claude.webp" alt="Configurações do Ideario com a sincronização do Google Drive e o botão para ligar no Claude Desktop">
 
@@ -130,7 +133,7 @@ Ideario is a free, Google Keep–style notes app for Windows, macOS and Linux, w
 instantly, works offline and keeps your notes on your computer. Optionally, it syncs between your computers and phone through your own Google Drive, in a hidden
 app folder. There is no Ideario server and no data collection.
 
-- Notes with checklists, side-by-side photos, PDFs, audio, video, link cards and a big cover emoji
+- Notes with checklists, tables, headings and quotes (paste Markdown or a screenshot), side-by-side photos, PDFs, audio, video, link cards and a big cover emoji
 - Reminders with system notifications, snooze and repeat
 - Moodboard of all your images, filterable by color
 - Document mode and export to Markdown, HTML or PDF
