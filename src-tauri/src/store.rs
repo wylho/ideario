@@ -1018,6 +1018,11 @@ impl Store {
         self.conn.query_row("SELECT EXISTS (SELECT 1 FROM notes WHERE id = ?1)", [id], |r| r.get(0)).map_err(err)
     }
 
+    /// Notas cujo id termina com estes caracteres (sem os hífens): o ID curto que o app mostra ("#a1b2c3d4").
+    pub fn note_ids_ending_with(&self, suffix: &str) -> Result<Vec<String>> {
+        self.ids("SELECT id FROM notes WHERE replace(lower(id), '-', '') LIKE '%' || ?1", [suffix.to_ascii_lowercase()])
+    }
+
     /// Datas vindas de fora (importação do Keep): criação e última edição originais.
     pub fn set_times(&self, id: &str, created: Millis, updated: Millis) -> Result<()> {
         self.conn.execute("UPDATE notes SET created_at = ?2, updated_at = ?3 WHERE id = ?1", params![id, created, updated]).map_err(err)?;

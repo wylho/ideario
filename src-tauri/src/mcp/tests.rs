@@ -346,3 +346,16 @@ fn writing_while_the_app_writes_waits_instead_of_failing() {
     });
     assert!(done.contains("título: Na fila"));
 }
+
+#[test]
+fn the_short_id_shown_in_the_app_works_too() {
+    let (core, _t) = setup();
+    let id = id_in(&tool(&core, "create_note", json!({ "title": "Viagem", "content": "malas" }), true));
+    let short = format!("#{}", &id.replace('-', "")[24..]);
+    assert!(tool(&core, "get_note", json!({ "id": short }), true).contains("malas"));
+    // sem o # e em maiúsculas também
+    assert!(tool(&core, "get_note", json!({ "id": short[1..].to_uppercase() }), true).contains("malas"));
+    tool(&core, "update_note", json!({ "id": short, "title": "Viagem de julho" }), true);
+    assert!(tool(&core, "get_note", json!({ "id": id }), true).contains("Viagem de julho"));
+    assert!(tool(&core, "get_note", json!({ "id": "#00000000" }), false).contains("não existe nota com o ID #00000000"));
+}

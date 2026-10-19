@@ -1,7 +1,8 @@
 // Menus de contexto de cada tipo de elemento. Um lugar só, para o mesmo item se comportar igual em todo o app.
 import {
-  ArrowDown, ArrowUp, Archive, ArchiveRestore, Bell, BellOff, Check, CircleCheck, Copy, Pencil, Download, ExternalLink, Files, Filter, FilterX, Image, Palette, Pin, PinOff, FileText, Play, Plus, RotateCcw, Tag, Trash2, AlarmClock, Eye, EyeOff, Lock, LockOpen, KeyRound,
+  ArrowDown, ArrowUp, Archive, Hash, ArchiveRestore, Bell, BellOff, Check, CircleCheck, Copy, Pencil, Download, ExternalLink, Files, Filter, FilterX, Image, Palette, Pin, PinOff, FileText, Play, Plus, RotateCcw, Tag, Trash2, AlarmClock, Eye, EyeOff, Lock, LockOpen, KeyRound,
 } from '@lucide/svelte'
+import { copyNoteId, shortId } from './noteid'
 import { api } from './api'
 import { exportEntries } from './exporting'
 import { app } from './app.svelte'
@@ -115,6 +116,7 @@ export function noteMenu(n: NoteSummary): MenuEntry[] {
     },
     SEP,
     { label: 'Copiar texto', icon: Copy, onSelect: async () => copy(await api.noteText(n.id), 'Texto') },
+    { label: 'Copiar ID', icon: Hash, hint: shortId(n.id), onSelect: () => void copyNoteId(n.id, (m) => app.say(m)) },
     {
       label: 'Fazer uma cópia', icon: Files,
       onSelect: async () => {

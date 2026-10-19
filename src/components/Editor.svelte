@@ -27,6 +27,7 @@
   import { app, type DroppedFile, type EditorTarget } from '../lib/app.svelte'
   import * as Y from 'yjs'
   import { noteExtensions } from '../lib/editor/extensions'
+  import { copyNoteId, shortId } from '../lib/noteid'
   import { readMeta, writeMeta, type NoteMeta } from '../lib/ydoc'
   import { makePreviews } from '../lib/previews.svelte'
   import { reminderSet } from '../lib/notify.svelte'
@@ -673,7 +674,11 @@
       <Dialog.Content class="editor c-{meta.color}" data-doc={docMode && app.wide ? '' : undefined} aria-describedby={undefined} onOpenAutoFocus={(e) => e.preventDefault()}>
         <div class="ed-top">
           <button class="icon-btn" aria-label="Voltar e salvar" onclick={() => close()}><ArrowLeft size={20} /></button>
-          <span class="ed-saved">{isNew ? 'Nova nota' : editedAt ? `Editada ${ago(editedAt)}` : ''}</span>
+          <span class="ed-saved">
+            {isNew ? 'Nova nota' : editedAt ? `Editada ${ago(editedAt)}` : ''}
+            <!-- ID curto: falar desta nota com o Claude ("na nota #a1b2c3d4"). Clicar copia. -->
+            {#if !isNew}<button class="ed-id" title="Copiar o ID da nota (para o Claude)" onclick={() => void copyNoteId(id, (m) => app.say(m))}>{shortId(id)}</button>{/if}
+          </span>
           <!-- Modo documento só na janela larga: no celular e na estreita a nota já abre na tela toda. -->
           {#if app.wide}<button
             class="icon-btn"

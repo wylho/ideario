@@ -62,7 +62,7 @@ fn strings(desc: &str) -> Value {
     json!({ "type": "array", "items": { "type": "string" }, "description": desc })
 }
 
-const ID: &str = "id da nota (de search_notes ou create_note)";
+const ID: &str = "id da nota (de search_notes ou create_note), ou o ID curto que o app mostra na nota (#a1b2c3d4)";
 const WHEN: &str = "data e hora em ISO 8601, no fuso do usuário (ex.: 2026-10-11T09:00) ou com fuso; só a data = 9h";
 const EMOJI: &str = "emoji grande de capa do card (um emoji só, ex.: 🍰); vazio tira";
 
@@ -470,8 +470,9 @@ enum Out {
 /// Executa a ferramenta. Erro de uso (nota que não existe, parâmetro faltando) volta como resultado com `isError`,
 /// para o modelo ler e corrigir.
 pub fn call(core: &Core, name: &str, args: &Value) -> Value {
-    let args = args.as_object().cloned().unwrap_or_default();
-    match run(core, name, &Args(&args)) {
+    let mut args = args.as_object().cloned().unwrap_or_default();
+    let res = full_id(core, &mut args).and_then(|()| run(core, name, &Args(&args)));
+    match res {
         Ok(Out::Text(t)) => json!({ "content": [{ "type": "text", "text": t }] }),
         Ok(Out::Json(v)) => {
             let text = serde_json::to_string_pretty(&v).unwrap_or_default();
@@ -502,6 +503,25 @@ impl Args<'_> {
     }
     fn strings(&self, k: &str) -> Option<Vec<String>> {
         self.0.get(k).and_then(Value::as_array).map(|a| a.iter().filter_map(|v| v.as_str().map(str::to_string)).collect())
+    }
+}
+
+/// O ID curto que o app mostra ("#a1b2c3d4", os últimos caracteres do id) vira o id inteiro.
+fn full_id(core: &Core, args: &mut Map<String, Value>) -> Result<()> {
+    let Some(raw) = args.get("id").and_then(Value::as_str) else { return Ok(()) };
+    let short = raw.trim().trim_start_matches('#');
+    let is_short = (4..32).contains(&short.len()) && short.bytes().all(|b| b.is_ascii_hexdigit());
+    if !is_short || core.with(|s| s.note_exists(short))? {
+        return Ok(());
+    }
+    let found = core.with(|s| s.note_ids_ending_with(short))?;
+    match found.as_slice() {
+        [one] => {
+            args.insert("id".into(), Value::String(one.clone()));
+            Ok(())
+        }
+        [] => Err(format!("não existe nota com o ID #{short} (use search_notes)")),
+        _ => Err(format!("mais de uma nota termina com #{short}: use mais caracteres do id ou search_notes")),
     }
 }
 

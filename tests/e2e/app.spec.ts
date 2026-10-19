@@ -2229,3 +2229,20 @@ test.describe('celular (toque)', () => {
     await expect(page.getByRole('button', { name: 'Abrir como documento' })).toHaveCount(0)
   })
 })
+
+test.describe('ID da nota', () => {
+  test.use({ permissions: ['clipboard-read', 'clipboard-write'] })
+  test('o editor mostra o ID curto e copia; o menu do card também', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 })
+    await cards(page).filter({ hasText: 'Mercado da semana' }).first().click()
+    const chip = page.locator('.ed-id')
+    await expect(chip).toHaveText(/^#\w{1,8}$/)
+    const short = await chip.innerText()
+    await chip.click()
+    await expect(page.locator('.toast')).toContainText(`ID ${short} copiado`)
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(short)
+    await back(page)
+    await cards(page).filter({ hasText: 'Mercado da semana' }).first().click({ button: 'right' })
+    await expect(page.getByRole('menuitem', { name: /Copiar ID/ })).toContainText(short)
+  })
+})
