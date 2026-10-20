@@ -74,7 +74,8 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
   conexão ou com erro; nada de controles que ainda não funcionam).
 - Navegação (proposta A): `app.view` (como ver) e `app.filter` (categoria + tags, o que ver) são independentes; `app.box`
   = active/archive/trash só na visão Notas. Seletor de visão: no desktop logo depois do ☰ (busca é ícone à direita), no celular barra flutuante (pílula) embaixo; número só em Lembretes (`app.counts`).
-- Barra superior = ☰ + visões | folga | **menu dinâmico** (`ViewActions.svelte`). O menu dinâmico tem tudo o que depende
+- Barra superior = ☰ + visões | folga | **menu dinâmico** (`ViewActions.svelte`) | busca. Da direita para a esquerda (pedido
+  do usuário): o que é fixo (a busca) fica na ponta, sempre no mesmo lugar; as ações da visão ficam à esquerda dele. O menu dinâmico tem tudo o que depende
   da visão ou do lugar, sempre na mesma ordem e com os mesmos componentes: filtro da visão (`FilterGroup`: ícones no
   desktop, um menu no celular) → ordenar (`SortMenu`) → lista/grade (`LayoutToggle`). Lembretes: mostrar concluídos;
   Lixeira: ícone de esvaziar (vassoura, neutro, com confirmação, só quando há notas). Nada de controles soltos no meio do conteúdo.

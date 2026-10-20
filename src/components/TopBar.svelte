@@ -11,9 +11,8 @@
   import { viewInfo } from '../lib/views'
 
   // Desktop: barra superior fixa. ☰ e as visões à esquerda (o nome do app já está no Dock/barra de título);
-  // o resto ancorado à direita.
-  // O que aparece ou cresce (nuvem, campo de busca) fica à esquerda dos itens fixos e só ocupa a folga livre:
-  // nada que já estava ali sai do lugar. A busca é um ícone que vira campo e fica aberto enquanto houver texto.
+  // o resto ancorado à direita: a busca na ponta (sempre no mesmo lugar) e, à esquerda dela, as ações da visão.
+  // O que aparece (nuvem) fica à esquerda de tudo e só ocupa a folga livre. A busca é um ícone que vira campo e fica aberto enquanto houver texto.
   // Celular: ☰ + campo de busca no topo do conteúdo.
   const where = $derived(app.box === 'archive' ? 'Arquivo' : app.box === 'trash' ? 'Lixeira' : app.filterLabel)
   const placeholder = $derived(`Buscar ${viewInfo(app.view).many}${where ? ` em ${where}` : ''}`)
@@ -80,8 +79,11 @@
     {/if}
   </div>
 
+  <!-- Da direita para a esquerda: primeiro o que está sempre lá (busca), no mesmo lugar em todas as visões; à
+       esquerda dele, as ações da visão, que mudam de uma visão para outra. -->
   <div class="top-actions">
     <SyncIndicator />
+    <ViewActions />
     {#if app.wide}
       {#if searchShown}
         {@render searchField()}
@@ -89,7 +91,6 @@
         <button class="icon-btn" aria-label="Buscar" title="Buscar (Ctrl+F)" onclick={() => (app.searchOpen = true)}><Search size={19} /></button>
       {/if}
     {/if}
-    <ViewActions />
   </div>
 
   {/if}
