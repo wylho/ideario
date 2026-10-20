@@ -49,6 +49,8 @@ filtram qualquer visão.
 - **Sincronização mais rápida:** as notas sobem para o Drive em paralelo, e mudar a ordem só envia o que mudou.
 - Títulos longos quebram linha, e a busca fica sempre no mesmo lugar da barra.
 
+Na 0.4.1: o ícone novo com as cores limpas (sem a borda azul que aparecia no macOS).
+
 <details>
 <summary>Versões anteriores</summary>
 
