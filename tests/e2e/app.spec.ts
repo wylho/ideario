@@ -2381,8 +2381,18 @@ test.describe('Calendário e Kanban', () => {
     // e aparece concluído em Lembretes
     await lens(page, 'Lembretes').click()
     await expect(page.locator('.r-item', { hasText: 'Comprar pilha' })).toHaveCount(0)
-    // clicar no card abre a nota
+    // o + da coluna Em andamento cria o lembrete já amarelo
     await lens(page, 'Kanban').click()
+    await page.getByRole('button', { name: 'Novo lembrete em Em andamento' }).click()
+    await expect(page.locator('.editor').getByRole('radio', { name: 'Em andamento' })).toHaveAttribute('aria-checked', 'true')
+    await page.locator('#titulo').fill('Revisar orçamento')
+    await back(page)
+    await expect(col('Em andamento').locator('.kb-card', { hasText: 'Revisar orçamento' })).toHaveCount(1)
+    // setas do teclado no seletor de cores
+    await col('Em andamento').locator('.kb-card', { hasText: 'Revisar orçamento' }).getByRole('radio', { name: 'Em andamento' }).focus()
+    await page.keyboard.press('ArrowRight')
+    await expect(col('Concluído').locator('.kb-card', { hasText: 'Revisar orçamento' })).toHaveCount(1)
+    // clicar no card abre a nota
     await page.locator('.kb-card', { hasText: 'Mercado da semana' }).click()
     await expect(page.locator('#titulo')).toHaveValue('Mercado da semana')
   })
@@ -2403,6 +2413,22 @@ test.describe('Calendário e Kanban', () => {
     await page.locator('#titulo').fill('Ligar para a gráfica')
     await back(page)
     await expect(next.locator('.cal-chip', { hasText: 'Ligar para a gráfica' })).toHaveCount(1)
+    // dia escolhido: o "+" de criar (e o Enter) usam ele, também depois de ir para outro mês e voltar
+    await page.getByRole('button', { name: 'Próximo mês' }).click()
+    await page.getByRole('button', { name: 'Mês anterior' }).click()
+    await expect(page.locator('.cal-day.sel')).toHaveCount(1)
+    await page.locator('.cal-day.sel').click({ position: { x: 4, y: 100 } })
+    await page.keyboard.press('t')
+    await expect(page.locator('.cal-day.sel.today')).toHaveCount(1)
+    await page.keyboard.press('ArrowRight')
+    await expect(page.locator('.cal-day.today + .cal-day.sel')).toHaveCount(1)
+    await page.keyboard.press('Enter')
+    await expect(page.locator('.rem-pill')).toContainText('Amanhã, 09:00')
+    await page.keyboard.press('Escape')
+    // concluídos só com "Mostrar concluídos"
+    await expect(page.locator('.cal-chip.done')).toHaveCount(0)
+    await page.getByRole('button', { name: 'Mostrar concluídos' }).click()
+    await expect(page.locator('.cal-chip.done').first()).toBeVisible()
     // semana: sete dias
     await page.getByRole('radio', { name: 'Semana' }).click()
     await expect(page.locator('.cal-day')).toHaveCount(7)

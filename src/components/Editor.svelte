@@ -140,7 +140,7 @@
   if (isNew) {
     meta = {
       title: '', categoryId: defaults?.categoryId ?? null, color: 'none', pinned: false, archived: false,
-      trashedAt: null, reminderAt: defaults?.reminderAt ?? null, reminderDone: false, reminderDoing: false, reminderRepeat: null, emoji: null, tags: defaults?.tags ?? [],
+      trashedAt: null, reminderAt: defaults?.reminderAt ?? null, reminderDone: false, reminderDoing: !!defaults?.reminderDoing, reminderRepeat: null, emoji: null, tags: defaults?.tags ?? [],
     }
   } else {
     Promise.all([api.getNoteState(id), api.getNote(id)]).then(([state, n]) => {

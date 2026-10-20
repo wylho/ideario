@@ -27,10 +27,12 @@ export function gridDays(anchor: Millis, mode: 'month' | 'week'): Date[] {
   return out
 }
 
-/** Mês ou semana seguinte (ou anterior, com -1). */
-export function shift(anchor: Millis, mode: 'month' | 'week', by: number): Millis {
-  const a = new Date(anchor)
-  return mode === 'month' ? new Date(a.getFullYear(), a.getMonth() + by, 1).getTime() : addDays(a, 7 * by).getTime()
+/** O mesmo dia no mês ou na semana seguinte (ou anterior, com -1); 31 vira o último dia de um mês mais curto. */
+export function shift(key: string, mode: 'month' | 'week', by: number): string {
+  const a = fromKey(key)
+  if (mode === 'week') return dayKey(addDays(a, 7 * by))
+  const last = new Date(a.getFullYear(), a.getMonth() + by + 1, 0).getDate()
+  return dayKey(new Date(a.getFullYear(), a.getMonth() + by, Math.min(a.getDate(), last)))
 }
 
 /** Mesma hora do lembrete, em outro dia (arrastar no calendário). */

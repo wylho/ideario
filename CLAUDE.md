@@ -15,6 +15,8 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
 - **Dados de exemplo sempre fictícios** (mock, testes, protótipo, docs, prints do site/README): nunca nomes de clientes,
   empresas, cursos, saúde ou qualquer coisa da vida do usuário, nem tirados do Takeout dele. O repositório é público.
   Antes de publicar um print, olhar o print inteiro.
+- **Git (pedido do usuário):** commit local ao terminar; `git push` só quando o usuário pedir (o push publica o site e
+  dispara o CI). Avisar quando houver commits esperando o push.
 - Trabalhar por fases (SPEC §10). Antes de começar uma fase, conferir as decisões pendentes (SPEC §11) e perguntar o que estiver em aberto.
 - Ao fim de cada fase: compilar, rodar e verificar o critério "Pronto quando".
 
@@ -217,8 +219,10 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
   se ligado, para `from_note` continuar determinístico), verde = concluído (`reminderDone`). Regra em `reminders::set_status`
   (verde num que se repete pula para a próxima e volta ao vermelho); UI em `src/lib/status.ts`. Calendário
   (`CalendarView.svelte`, `src/lib/calendar.ts`): mês/semana, próximas vezes dos que se repetem, arrastar muda o dia, "+" do
-  dia cria lembrete nele (`app.newReminderAt`); no celular, pontinhos e a lista do dia. Kanban (`KanbanView.svelte`): três
-  colunas pelo status. Arrastar pelo ponteiro (`boarddrag.ts`, `data-drop`; toque: segurar 350 ms). MCP:
+  dia (ou dois cliques, ou Enter) cria lembrete nele (`app.calDay` = dia escolhido; `app.newReminderAt`); setas mudam o dia,
+  PageUp/PageDown o período, T volta a hoje; concluídos só com "Mostrar concluídos" (`app.showDone`, o mesmo de Lembretes);
+  no celular, pontinhos, a lista do dia e arrastar o dedo para o lado muda o mês. Kanban (`KanbanView.svelte`): três
+  colunas pelo status; o "+" de A fazer/Em andamento cria o lembrete já nesse status (`app.openNewInColumn`). Arrastar pelo ponteiro (`boarddrag.ts`, `data-drop`; toque: segurar 350 ms; perto da borda a área rola sozinha). MCP:
   `set_reminder_status`, `list_reminders` com `status`/`from`/`to`.
 - Sync (0.4): notas e anexos sobem em paralelo (`Remote::upload_many`; no Drive, lote em paralelo e o que falha tenta de
   novo um por um), como já desciam. `adopt_order` só reposiciona as notas fora do lugar (`keep_most_positions`, maior

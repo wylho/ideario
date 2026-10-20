@@ -18,6 +18,9 @@ export function boardDrag(node: HTMLElement, opts: BoardDrag) {
   let dy = 0
   let over: HTMLElement | null = null
   let timer: ReturnType<typeof setTimeout> | undefined
+  let px = 0
+  let py = 0
+  let raf = 0
   const blockScroll = (e: TouchEvent) => e.preventDefault()
   // segurando para arrastar, o toque longo não abre o menu de contexto
   const noMenu = (e: Event) => ghost && (e.preventDefault(), e.stopPropagation())
@@ -33,10 +36,26 @@ export function boardDrag(node: HTMLElement, opts: BoardDrag) {
     node.classList.add('drag-src')
     node.addEventListener('touchmove', blockScroll, { passive: false })
     move(x, y)
+    raf = requestAnimationFrame(autoscroll)
+  }
+
+  // Perto da borda de uma área que rola (as colunas do Kanban no celular, a lista), ela rola sozinha.
+  function autoscroll() {
+    if (!ghost) return
+    for (let e = document.elementFromPoint(px, py) as HTMLElement | null; e; e = e.parentElement) {
+      const cs = getComputedStyle(e)
+      const r = e.getBoundingClientRect()
+      const step = (pos: number, lo: number, hi: number) => (pos < lo + 48 ? -12 : pos > hi - 48 ? 12 : 0)
+      if (/auto|scroll/.test(cs.overflowX) && e.scrollWidth > e.clientWidth) e.scrollLeft += step(px, r.left, r.right)
+      if (/auto|scroll/.test(cs.overflowY) && e.scrollHeight > e.clientHeight) e.scrollTop += step(py, r.top, r.bottom)
+    }
+    move(px, py)
+    raf = requestAnimationFrame(autoscroll)
   }
 
   function move(x: number, y: number) {
     if (!ghost) return
+    ;[px, py] = [x, y]
     ghost.style.transform = `translate(${x - dx}px, ${y - dy}px) rotate(2deg)`
     const t = (document.elementFromPoint(x, y)?.closest('[data-drop]') as HTMLElement | null) ?? null
     if (t !== over) {
@@ -48,6 +67,7 @@ export function boardDrag(node: HTMLElement, opts: BoardDrag) {
 
   function end(drop: boolean) {
     clearTimeout(timer)
+    cancelAnimationFrame(raf)
     const target = over?.dataset.drop
     over?.classList.remove('drop-over')
     over = null

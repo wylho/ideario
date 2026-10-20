@@ -7,7 +7,22 @@
   const STATES: [ReminderStatus, string][] = [['todo', 'A fazer'], ['doing', 'Em andamento'], ['done', 'Concluído']]
 </script>
 
-<span class="status-toggle" role="radiogroup" aria-label={label}>
+<!-- Setas do teclado andam entre as três cores, como num grupo de opções. -->
+<span
+  class="status-toggle"
+  role="radiogroup"
+  tabindex="-1"
+  aria-label={label}
+  onkeydown={(e) => {
+    const i = STATES.findIndex(([s]) => s === value)
+    const to = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? i + 1 : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? i - 1 : -1
+    if (to < 0 || to > 2 || e.key === 'Tab') return
+    e.preventDefault()
+    e.stopPropagation()
+    onchange(STATES[to][0])
+    ;(e.currentTarget.children[to] as HTMLElement).focus()
+  }}
+>
   {#each STATES as [s, name] (s)}
     <button
       type="button"
@@ -15,6 +30,7 @@
       class="st-dot st-{s}"
       class:on={value === s}
       aria-checked={value === s}
+      tabindex={value === s ? 0 : -1}
       aria-label={name}
       title={name}
       onclick={(e) => {

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Repeat } from '@lucide/svelte'
+  import { Plus, Repeat } from '@lucide/svelte'
   import { api } from '../lib/api'
   import { app, live } from '../lib/app.svelte'
   import { boardDrag } from '../lib/boarddrag'
@@ -39,7 +39,12 @@
     {#each ['todo', 'doing', 'done'] as const as st (st)}
       {@const notes = st === 'done' && !allDone ? cols.done.slice(0, DONE_SHOWN) : cols[st]}
       <section class="kb-col st-{st}" data-drop={st} aria-label={STATUS[st].label}>
-        <h2 class="kb-head"><i class="st-mark" aria-hidden="true"></i>{STATUS[st].label}<span class="count">{cols[st].length}</span></h2>
+        <h2 class="kb-head">
+          <i class="st-mark" aria-hidden="true"></i>{STATUS[st].label}<span class="count">{cols[st].length}</span>
+          {#if st !== 'done'}
+            <button class="kb-add" aria-label="Novo lembrete em {STATUS[st].label}" title="Novo lembrete em {STATUS[st].label}" onclick={() => app.openNewInColumn(st === 'doing')}><Plus size={16} /></button>
+          {/if}
+        </h2>
         <div class="kb-cards">
           {#each notes as n (n.id)}
             {@const cat = app.category(n.categoryId)}
