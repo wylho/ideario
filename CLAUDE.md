@@ -28,14 +28,17 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
 - **Ícone oficial (desde a 0.4; desenho atual depois da 0.4.2):** três quadrados translúcidos sobrepostos sobre branco, desenho do
   usuário: azul no alto à direita, roxo (maior) no meio, amarelo embaixo à esquerda, na frente.
   `source/ideario.svg` (quadrado arredondado: Windows, Linux, favicon, `BrandMark.svelte`, `public/favicon.svg`,
-  `site/favicon.svg`); `ideario-full-bleed.svg` (quadrado inteiro); `macos.svg` (margem da grade da Apple).
+  `site/favicon.svg`); `ideario-full-bleed.svg` (quadrado inteiro); `macos.svg` (margem da grade da Apple);
+  `linux.svg` = sem o fundo branco, desenho a 1,12× (pedido do usuário: no GNOME fica melhor sem placa), só nos PNG
+  `32x32`/`64x64`/`128x128`/`128x128@2x` (.deb, .rpm, AppImage, ícone da janela); Windows (.ico) e Mac (.icns) mantêm o fundo.
   Android adaptativo: fundo branco e, na frente (`android-foreground.svg`), o desenho da versão redonda do usuário
   reduzido a 72/108, ou seja, o círculo do launcher mostra exatamente a versão redonda e nada é cortado.
   Bandeja/barra de menus e notificação do Android: os três quadrados numa cor só, separados por um vão
   (`source/tray.svg`; `source/tray-png.py` gera `tray-dark.png`/`tray-light.png` e `drawable-*/ic_stat_ideario.png`):
   template no macOS, branco ou preto no Linux conforme o painel, colorido no Windows.
   Para regenerar: `npx tauri icon src-tauri/icons/source/icon-manifest.json` (e o `.icns` a partir de `macos.svg`),
-  depois `python3 src-tauri/icons/source/android-legacy.py` (os ícones antigos do Android; o do Tauri sai cortado) e,
+  depois os quatro PNG do Linux (`npx tauri icon src-tauri/icons/source/linux.svg -o <pasta>` e copiar `32x32`, `64x64`,
+  `128x128`, `128x128@2x`), `python3 src-tauri/icons/source/android-legacy.py` (os ícones antigos do Android; o do Tauri sai cortado) e,
   dentro de `src-tauri/icons`, `python3 source/tray-png.py`.
 - **Tipografia:** fonte do sistema em toda a UI, para parecer nativo (substitui Bricolage/Figtree/JetBrains Mono do protótipo).
   No Linux o núcleo lê a fonte do GNOME/KDE (`src-tauri/src/system_fonts.rs`); nos demais, `system-ui`.
