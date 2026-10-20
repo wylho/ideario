@@ -6,9 +6,11 @@
 
 <h1 align="center">Ideario</h1>
 
-<p align="center"><b>Suas ideias, na hora.</b><br>
-Um app de notas no estilo do Google Keep, feito para o computador: abre num instante, funciona sem internet e guarda
-tudo com você. Se quiser, sincroniza entre os seus computadores pelo seu próprio Google Drive.</p>
+<p align="center"><b>Organize sua vida em notas.</b><br>
+Notas, lembretes, calendário e kanban num lugar só: você escreve uma vez e vê do jeito que precisar. Abre num instante,
+funciona sem internet e guarda tudo no seu computador. Se quiser, sincroniza pelo seu próprio Google Drive.</p>
+
+<p align="center"><a href="#novidades-da-versão-04"><b>Novo na versão 0.4: calendário, kanban e um ícone novo →</b></a></p>
 
 <p align="center">
   <b>Windows · macOS · Linux · Android</b><br>
@@ -24,12 +26,48 @@ tudo com você. Se quiser, sincroniza entre os seus computadores pelo seu própr
   <img src="site/img/notas.webp" alt="Tela principal do Ideario: notas coloridas em cards, com checklists, fotos, lembretes e categorias na lateral">
 </picture>
 
+## Uma nota, seis jeitos de ver
+
+Tudo começa numa nota. O resto são visões dela, e nada é copiado: mudou num lugar, mudou em todos. Categorias e tags
+filtram qualquer visão.
+
+| | |
+|---|---|
+| **Notas** | Cards coloridos, fixados no topo, na ordem que você arrastar. |
+| **Lembretes** | O que vence hoje, amanhã e depois, com o que ficou atrasado em cima. |
+| **Calendário** | Cada lembrete no seu dia, por mês ou por semana. |
+| **Kanban** | A fazer, em andamento e concluído, em três colunas. |
+| **Arquivos** | PDFs, áudios, vídeos e documentos de todas as notas, com leitor de PDF. |
+| **Moodboard** | Todas as fotos num mural, com a paleta de cores de cada uma. |
+
+## Novidades da versão 0.4
+
+- **Calendário:** os lembretes no dia de cada um, por mês ou semana; arraste para mudar o dia.
+- **Kanban:** a fazer, em andamento e concluído; arraste o card entre as colunas.
+- **Status em três cores** em todo lembrete: vermelho, amarelo e verde, também pelo Claude.
+- **Ícone novo.**
+- **Sincronização mais rápida:** as notas sobem para o Drive em paralelo, e mudar a ordem só envia o que mudou.
+- Títulos longos quebram linha, e a busca fica sempre no mesmo lugar da barra.
+
+<details>
+<summary>Versões anteriores</summary>
+
+**0.3:** editor com títulos, citações, código e tabelas; colar Markdown e prints direto na nota; um ID curto em cada nota
+para falar dela com o Claude.
+
+**0.2:** Android (prévia); categorias em ordem de nome, de número de notas ou do seu jeito; lateral que vira pílulas; a
+janela lembra o tamanho; sincronização em lotes, com a ordem dos cards indo junto.
+</details>
+
+Quem já usa recebe sozinho: o app avisa ao abrir. Todas as versões estão em
+[Releases](https://github.com/wylho/ideario/releases).
+
 ## Tudo numa nota só
 
 Texto, checklist, fotos lado a lado, PDFs, áudio e vídeo convivem na mesma nota, cada um como um bloco que você
 arrasta para onde quiser.
 
-- Checklists com subitens, como no Keep
+- Checklists com subitens em vários níveis; marcar um item marca os de dentro
 - Grave áudio ou tire foto sem sair da nota
 - Títulos, citações e tabelas; cole Markdown e ele já vira formatação
 - Cole um print direto na nota
@@ -95,9 +133,11 @@ cores de destaque do seu Windows, macOS ou Linux.
 
 | | |
 |---|---|
+| **Várias de uma vez** | Selecione notas com o mouse, Ctrl ou Shift e mude a cor, a categoria ou arquive todas juntas, com Desfazer. |
+| **Clique direito em tudo** | Cards, lembretes, arquivos e categorias têm menu próprio, no clique direito ou no toque longo. |
 | **Sync pelo seu Drive** | Numa pasta oculta do app no seu Google Drive, entre computadores e o celular, até a ordem dos cards. Sem servidor no meio, sem conta nova. |
 | **Categorias com PIN** | Esconda uma categoria inteira das listas e da busca, e peça um PIN para abrir. Ordene por nome, por número de notas ou arrastando. |
-| **Importa do Google Keep** | Solte o arquivo do Google Takeout e as notas entram com fotos, cores, marcadores e datas. |
+| **Vem do Google Keep?** | Solte o arquivo do Google Takeout e as notas entram com fotos, cores, marcadores e datas. |
 | **Backup local** | Um arquivo com tudo, quando quiser ou toda semana. Restaurar junta com o que já existe. |
 | **Busca rápida** | Sem acento, por pedaço de palavra, em milhares de notas, no instante em que você digita. |
 | **Fotos leves** | Fotos reduzidas e sem localização por padrão. Quer a original? Uma opção nas configurações. |
@@ -144,16 +184,18 @@ quiser, no seu Google Drive. Leia a [Política de Privacidade](https://ideario.p
 
 ## Ideario, in English
 
-Ideario is a free, Google Keep–style notes app for Windows, macOS and Linux, with an Android preview. It opens
-instantly, works offline and keeps your notes on your computer. Optionally, it syncs between your computers and phone through your own Google Drive, in a hidden
+Ideario is a free app to organize your life in notes, for Windows, macOS and Linux, with an Android preview. Notes,
+reminders, a calendar and a kanban board are views of the same notes. It opens instantly, works offline and keeps your
+notes on your computer. Optionally, it syncs between your computers and phone through your own Google Drive, in a hidden
 app folder. There is no Ideario server and no data collection.
 
 - Notes with checklists, tables, headings and quotes (paste Markdown or a screenshot), side-by-side photos, PDFs, audio, video, link cards and a big cover emoji
 - Reminders with system notifications, snooze and repeat, a three-color status, a calendar and a kanban board
-- Moodboard of all your images, filterable by color
+- Files view with a built-in PDF reader, and a moodboard of all your images, filterable by color
 - Document mode and export to Markdown, HTML or PDF
 - Works with Claude (Desktop and Code) through a local MCP server
-- PIN-protected categories (sorted by name, note count or by hand), Google Keep import, local backups
+- Multi-select with batch actions, PIN-protected categories (sorted by name, note count or by hand), Google Keep import, local backups
+- New in 0.4: calendar, kanban, three-color reminder status, a new icon and faster sync
 - Updates itself (Windows, macOS, AppImage) or through the apt/dnf repository on Linux
 
 [Download the latest version](https://github.com/wylho/ideario/releases/latest) · [Website](https://ideario.pages.dev) · [Sponsor ♥](https://github.com/sponsors/wylho) · [Privacy Policy](https://ideario.pages.dev/privacidade/#english) ·
