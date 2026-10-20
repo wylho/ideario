@@ -1,14 +1,14 @@
 import os
 
 from PIL import Image, ImageChops, ImageDraw
-# Mesmo desenho de source/tray.svg (coordenadas do ícone 512, recorte 64..448), com supersampling: os três
-# quadrados numa cor só, cada um separado do de trás por um vão (o de cima, aumentado, recorta o de trás).
-SQUARES = [(96, 64, 178, 179, 32), (148, 149, 215, 215, 36), (238, 269, 178, 179, 32)]
+# Mesmo desenho de source/tray.svg (coordenadas do ícone 512, recorte 56..456), com supersampling: os três
+# quadrados numa cor só, cada um separado do de trás por um vão (o da frente, aumentado, recorta o de trás).
+SQUARES = [(256, 56, 160, 160, 32), (134, 144, 244, 224, 36), (96, 296, 160, 160, 32)]
 GAP = 20
 def render(color, size):
-    k = 16; S = size * k; s = S / 384
+    k = 16; S = size * k; s = S / 400
     def box(x, y, w, h, grow=0):
-        return [(x - grow - 64) * s, (y - grow - 64) * s, (x + w + grow - 64) * s - 1, (y + h + grow - 64) * s - 1]
+        return [(x - grow - 56) * s, (y - grow - 56) * s, (x + w + grow - 56) * s - 1, (y + h + grow - 56) * s - 1]
     alpha = Image.new('L', (S, S), 0)
     for x, y, w, h, r in SQUARES:
         cut = Image.new('L', (S, S), 0)

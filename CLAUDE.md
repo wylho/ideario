@@ -25,7 +25,8 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
 - **D1:** frontend em **Svelte 5 + Bits UI** (ícones `@lucide/svelte`, editor TipTap v3).
 - **D2:** desktop primeiro (Windows, macOS, Linux); Android depois.
 - **D4:** nome **Ideario** (sem acento).
-- **Ícone oficial (desde a 0.4):** três quadrados sobrepostos (roxo, azul, amarelo) sobre branco, desenho do usuário.
+- **Ícone oficial (desde a 0.4; desenho atual depois da 0.4.2):** três quadrados translúcidos sobrepostos sobre branco, desenho do
+  usuário: azul no alto à direita, roxo (maior) no meio, amarelo embaixo à esquerda, na frente.
   `source/ideario.svg` (quadrado arredondado: Windows, Linux, favicon, `BrandMark.svelte`, `public/favicon.svg`,
   `site/favicon.svg`); `ideario-full-bleed.svg` (quadrado inteiro); `macos.svg` (margem da grade da Apple).
   Android adaptativo: fundo branco e, na frente (`android-foreground.svg`), o desenho da versão redonda do usuário
