@@ -15,8 +15,9 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
 - **Dados de exemplo sempre fictícios** (mock, testes, protótipo, docs, prints do site/README): nunca nomes de clientes,
   empresas, cursos, saúde ou qualquer coisa da vida do usuário, nem tirados do Takeout dele. O repositório é público.
   Antes de publicar um print, olhar o print inteiro.
-- **Git (pedido do usuário):** commit local ao terminar; `git push` só quando o usuário pedir (o push publica o site e
-  dispara o CI). Avisar quando houver commits esperando o push.
+- **Git (combinado com o usuário):** commit e push ao terminar cada tarefa (o ambiente é temporário: o que não subiu pode
+  se perder). O push não chega a quem usa o app: só o workflow Release lança versão, e só quando o usuário pedir.
+  Lembrar que o push com mudança em `site/` publica o site.
 - Trabalhar por fases (SPEC §10). Antes de começar uma fase, conferir as decisões pendentes (SPEC §11) e perguntar o que estiver em aberto.
 - Ao fim de cada fase: compilar, rodar e verificar o critério "Pronto quando".
 
