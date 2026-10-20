@@ -176,7 +176,7 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
   Falta validar com uma conta Google real (precisa do cliente OAuth do usuário). Ficam para depois: cache LRU dos
   anexos e "só no Wi-Fi" (Android).
 - **MCP (concluído; guia em `docs/MCP.md`, SPEC §3.11).** `ideario --mcp` (`src-tauri/src/mcp/`) fala JSON-RPC por
-  stdin/stdout sobre o mesmo `Core`/banco, com 32 ferramentas. O corpo entra e sai em Markdown (`markdown.rs`; ida e volta
+  stdin/stdout sobre o mesmo `Core`/banco, com 33 ferramentas. O corpo entra e sai em Markdown (`markdown.rs`; ida e volta
   sem perda, proptest), com fotos e anexos como `ideario://att/<hash>`. A gravação no Y.Doc mexe só no que mudou
   (`ydoc::patch_children`), então o Claude marca um item com a nota aberta e as edições se juntam. Cada mudança vai para
   `external_changes` (migração 6); o app aberto olha o `PRAGMA data_version` (`mcp/watch.rs`) e emite os eventos do sync.
@@ -211,6 +211,19 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
   Colar imagem: arquivos do clipboard, HTML só com imagem e, sem nada, `clipboard_image` (núcleo, PNG).
   ID curto da nota (`#` + 8 últimos caracteres, `noteid.ts`) no topo do editor e em "Copiar ID"; o MCP aceita (`full_id`).
 - Menus de contexto na tela estreita: submenu toma o lugar do menu, com linha de voltar (`MenuList.svelte`).
+- **Calendário e Kanban (0.4):** duas visões a mais dos lembretes (a mesma lista de Lembretes, `list_reminders`).
+  Status do lembrete num seletor de três cores (`StatusToggle.svelte`; pedido do usuário: minimalista): vermelho = a fazer,
+  amarelo = em andamento (`reminderDoing` no meta do Y.Doc → `notes.reminder_doing`, migração 9; só entra num estado novo
+  se ligado, para `from_note` continuar determinístico), verde = concluído (`reminderDone`). Regra em `reminders::set_status`
+  (verde num que se repete pula para a próxima e volta ao vermelho); UI em `src/lib/status.ts`. Calendário
+  (`CalendarView.svelte`, `src/lib/calendar.ts`): mês/semana, próximas vezes dos que se repetem, arrastar muda o dia, "+" do
+  dia cria lembrete nele (`app.newReminderAt`); no celular, pontinhos e a lista do dia. Kanban (`KanbanView.svelte`): três
+  colunas pelo status. Arrastar pelo ponteiro (`boarddrag.ts`, `data-drop`; toque: segurar 350 ms). MCP:
+  `set_reminder_status`, `list_reminders` com `status`/`from`/`to`.
+- Sync (0.4): notas e anexos sobem em paralelo (`Remote::upload_many`; no Drive, lote em paralelo e o que falha tenta de
+  novo um por um), como já desciam. `adopt_order` só reposiciona as notas fora do lugar (`keep_most_positions`, maior
+  subsequência crescente): antes, começar a arrastar numa ordem por data subia todas as notas.
+- Título da nota é `textarea` que cresce (`autosize` no Editor): título longo quebra linha.
 - Filtro "Sem categoria"/"Sem tags": sentinelas `NO_CATEGORY`/`NO_TAGS` (`~none`) no `Filter` (TS e Rust).
 - **Fase 7 (Android, em andamento; prévia).** Projeto em `src-tauri/gen/android` (pacote `app.ideario`, via
   `tauri.android.conf.json`), compilado só no CI (job "APK (Android)"; aqui o SDK não baixa). APK assinado pela chave dos

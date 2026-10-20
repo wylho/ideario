@@ -70,7 +70,8 @@ Onde fica o executável:
 | `delete_note_forever` | Só para nota que já está na Lixeira |
 | `empty_trash` | Esvazia a Lixeira |
 | `duplicate_note`, `reorder_note` | Duplicar; mudar de lugar na ordem personalizada |
-| `list_reminders`, `set_reminder`, `clear_reminder`, `complete_reminder`, `snooze_reminder` | Lembretes (com repetição) |
+| `list_reminders`, `set_reminder`, `clear_reminder`, `complete_reminder`, `snooze_reminder` | Lembretes (com repetição); `list_reminders` filtra por status e por período (Calendário) |
+| `set_reminder_status` | Status do lembrete: `todo` (vermelho), `doing` (amarelo), `done` (verde), as colunas do Kanban |
 | `list_categories`, `create_category`, `update_category`, `delete_category` | Categorias (nome e cor) |
 | `list_tags`, `rename_tag`, `delete_tag` | Tags, também as `#tags` escritas no texto |
 | `list_attachments`, `get_attachment` | Anexos; fotos voltam como imagem, textos como texto |

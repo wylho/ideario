@@ -41,9 +41,24 @@ arrasta para onde quiser.
 ## Lembretes que avisam de verdade
 
 Notificação do sistema na hora certa, com Adiar e Concluir. Lembretes que se repetem todo dia, semana, mês ou ano.
-Se o computador estava desligado, o Ideario avisa o que passou assim que abrir.
+Se o computador estava desligado, o Ideario avisa o que passou assim que abrir. Cada lembrete tem um status em três
+cores: vermelho (a fazer), amarelo (em andamento) e verde (concluído).
 
 <img src="site/img/lembretes.webp" alt="Lista de lembretes agrupada em atrasados, hoje, amanhã e próximos">
+
+## Calendário
+
+Os mesmos lembretes, no dia de cada um, por mês ou por semana. Arraste para outro dia e a data muda (a hora fica);
+toque no + de um dia para criar um lembrete nele. Os que se repetem já mostram as próximas vezes.
+
+<img src="site/img/calendario.webp" alt="Calendário do mês com os lembretes em cada dia, coloridos pelo status">
+
+## Kanban
+
+A fazer, em andamento e concluído, em três colunas. Arraste o card de uma coluna para outra ou toque no seletor de
+cores dele. Tudo isso também pelo Claude.
+
+<img src="site/img/kanban.webp" alt="Kanban com os lembretes em três colunas: a fazer, em andamento e concluído">
 
 ## Moodboard das suas fotos
 
@@ -134,7 +149,7 @@ instantly, works offline and keeps your notes on your computer. Optionally, it s
 app folder. There is no Ideario server and no data collection.
 
 - Notes with checklists, tables, headings and quotes (paste Markdown or a screenshot), side-by-side photos, PDFs, audio, video, link cards and a big cover emoji
-- Reminders with system notifications, snooze and repeat
+- Reminders with system notifications, snooze and repeat, a three-color status, a calendar and a kanban board
 - Moodboard of all your images, filterable by color
 - Document mode and export to Markdown, HTML or PDF
 - Works with Claude (Desktop and Code) through a local MCP server

@@ -71,6 +71,8 @@ try {
     await p.locator('h3', { hasText: 'Google Drive' }).evaluate((el) => el.scrollIntoView({ block: 'start' }))
   })
   await shot(browser, 'lembretes', desk, (p) => p.getByRole('button', { name: /Lembretes/ }).first().click())
+  await shot(browser, 'calendario', desk, (p) => p.locator('.view-switch .lens', { hasText: 'Calendário' }).click())
+  await shot(browser, 'kanban', desk, (p) => p.locator('.view-switch .lens', { hasText: 'Kanban' }).click())
   await shot(browser, 'moodboard', desk, (p) => p.getByRole('button', { name: /Moodboard/ }).first().click())
   await shot(browser, 'janela-estreita', { width: 390, height: 844, scale: 3 })
   await browser.close()
