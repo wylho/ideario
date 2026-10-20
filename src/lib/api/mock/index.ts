@@ -9,6 +9,7 @@ import type {
 import * as Y from 'yjs'
 import { cleanEmoji } from '../../emoji'
 import { uuidv7 } from '../../uuid'
+import { nextOccurrence } from '../../reminders'
 import { NO_CATEGORY, NO_TAGS } from '../../types'
 import { noteToState, stateToNote } from './ydoc'
 import { mockMarkdown } from './markdown'
@@ -89,7 +90,7 @@ for (const s of seedNotes()) {
   notes.set(s.id, {
     id: s.id, title: s.title, body, categoryId: s.categoryId, color: s.color, pinned: s.pinned,
     archived: !!s.archived, trashedAt: s.trashedDaysAgo != null ? Date.now() - s.trashedDaysAgo * DAY : null,
-    reminderAt: s.reminderAt, reminderDone: !!s.reminderDone, reminderRepeat: s.reminderRepeat ?? null, emoji: s.emoji ?? null, tags: s.tags,
+    reminderAt: s.reminderAt, reminderDone: !!s.reminderDone, reminderDoing: !!s.reminderDoing, reminderRepeat: s.reminderRepeat ?? null, emoji: s.emoji ?? null, tags: s.tags,
     createdAt: s.updatedAt - 2 * DAY, updatedAt: s.updatedAt,
     files: [],
     position: 0,
@@ -242,7 +243,7 @@ function summarize(n: StoredNote): NoteSummary {
     id: n.id, title: n.title, label: labelOf(n), preview: p.preview,
     cover, imageCount: p.images.length, fileCount: n.files.length + p.files.length,
     categoryId: n.categoryId, color: n.color, pinned: n.pinned, archived: n.archived, trashedAt: n.trashedAt,
-    reminderAt: n.reminderAt, reminderDone: n.reminderDone, reminderRepeat: n.reminderRepeat, emoji: n.emoji, tags: tagsOf(n), createdAt: n.createdAt, updatedAt: n.updatedAt,
+    reminderAt: n.reminderAt, reminderDone: n.reminderDone, reminderDoing: n.reminderDoing, reminderRepeat: n.reminderRepeat, emoji: n.emoji, tags: tagsOf(n), createdAt: n.createdAt, updatedAt: n.updatedAt,
     position: n.position,
   }
 }
@@ -347,7 +348,7 @@ function purgeTrash() {
 }
 
 const INPUT_KEYS: (keyof NoteInput)[] = [
-  'title', 'body', 'categoryId', 'color', 'pinned', 'archived', 'trashedAt', 'reminderAt', 'reminderDone', 'reminderRepeat', 'emoji', 'tags',
+  'title', 'body', 'categoryId', 'color', 'pinned', 'archived', 'trashedAt', 'reminderAt', 'reminderDone', 'reminderDoing', 'reminderRepeat', 'emoji', 'tags',
 ]
 const sameContent = (a: NoteInput, b: NoteInput) => INPUT_KEYS.every((k) => JSON.stringify(a[k]) === JSON.stringify(b[k]))
 
@@ -627,11 +628,19 @@ export const mockApi: Api = {
 
   setReminderDone(id, value) {
     const n = notes.get(id)
-    if (n && n.reminderDone !== value) {
+    if (n && (n.reminderDone !== value || n.reminderDoing)) {
       n.reminderDone = value
+      n.reminderDoing = false
       changed()
     }
     return done(undefined)
+  },
+
+  setReminderStatus(id, status) {
+    const n = notes.get(id)
+    if (!n || n.reminderAt == null) return done(undefined)
+    if (status === 'done') return mockApi.completeReminder(id)
+    return mockApi.updateNote(id, { reminderDone: false, reminderDoing: status === 'doing' })
   },
 
   snoozeReminder(id, until) {
@@ -645,11 +654,7 @@ export const mockApi: Api = {
     const n = notes.get(id)
     if (!n || n.reminderAt == null) return done(undefined)
     if (!n.reminderRepeat) return mockApi.setReminderDone(id, true)
-    const d = new Date(n.reminderAt)
-    const step = { day: () => d.setDate(d.getDate() + 1), week: () => d.setDate(d.getDate() + 7), month: () => d.setMonth(d.getMonth() + 1), year: () => d.setFullYear(d.getFullYear() + 1) }
-    do step[n.reminderRepeat]()
-    while (d.getTime() <= Date.now())
-    return mockApi.updateNote(id, { reminderAt: d.getTime() })
+    return mockApi.updateNote(id, { reminderAt: nextOccurrence(n.reminderAt, n.reminderRepeat), reminderDoing: false })
   },
 
   updateNote(id, patch) {
@@ -671,7 +676,7 @@ export const mockApi: Api = {
     const now = Date.now()
     const copy: StoredNote = {
       ...structuredClone(n), id: uuidv7(), title: n.title ? `${n.title} (cópia)` : '', pinned: false,
-      reminderAt: null, reminderDone: false, reminderRepeat: null, createdAt: now, updatedAt: now, position: n.position - 1,
+      reminderAt: null, reminderDone: false, reminderDoing: false, reminderRepeat: null, createdAt: now, updatedAt: now, position: n.position - 1,
     }
     notes.set(copy.id, copy)
     changed()

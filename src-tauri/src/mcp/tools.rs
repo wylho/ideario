@@ -259,8 +259,16 @@ fn defs() -> Vec<Def> {
         Def {
             name: "list_reminders",
             title: "Lembretes",
-            description: "Notas com lembrete, da mais próxima para a mais distante (atrasados primeiro).",
-            params: json!({ "include_done": b("incluir os concluídos"), "overdue_only": b("só os atrasados") }),
+            description: "Notas com lembrete, da mais próxima para a mais distante (atrasados primeiro). É o que o app mostra em \
+                          Lembretes, no Calendário (por dia: use from/to) e no Kanban (por status: vermelho = todo, amarelo = doing, \
+                          verde = done).",
+            params: json!({
+                "include_done": b("incluir os concluídos"),
+                "overdue_only": b("só os atrasados"),
+                "status": one_of(&["todo", "doing", "done"], "só este status (done inclui os concluídos)"),
+                "from": s("desde (ISO 8601; só a data = o dia inteiro)"),
+                "to": s("até (ISO 8601; só a data = até o fim desse dia)"),
+            }),
             required: &[],
             read_only: true,
             destructive: false,
@@ -289,6 +297,17 @@ fn defs() -> Vec<Def> {
             description: "Conclui o lembrete. Se ele se repete, pula para a próxima vez.",
             params: json!({ "id": s(ID), "done": b("false = reabrir um concluído (padrão: true)") }),
             required: &["id"],
+            read_only: false,
+            destructive: false,
+        },
+        Def {
+            name: "set_reminder_status",
+            title: "Status do lembrete",
+            description: "Muda o status do lembrete (o seletor de três cores e as colunas do Kanban): todo = a fazer (vermelho), \
+                          doing = em andamento (amarelo), done = concluído (verde; se ele se repete, pula para a próxima vez e \
+                          volta para todo).",
+            params: json!({ "id": s(ID), "status": one_of(&["todo", "doing", "done"], "novo status") }),
+            required: &["id", "status"],
             read_only: false,
             destructive: false,
         },
@@ -561,7 +580,13 @@ fn run(core: &Core, name: &str, a: &Args) -> Result<Out> {
         }),
         "list_reminders" => reminders_list(core, a),
         "set_reminder" => set_reminder(core, a),
-        "clear_reminder" => patch(core, a.need("id")?, json!({ "reminderAt": null, "reminderRepeat": null, "reminderDone": false }), "Lembrete tirado."),
+        "clear_reminder" => patch(
+            core,
+            a.need("id")?,
+            json!({ "reminderAt": null, "reminderRepeat": null, "reminderDone": false, "reminderDoing": false }),
+            "Lembrete tirado.",
+        ),
+        "set_reminder_status" => reminder_status(core, a),
         "complete_reminder" => complete(core, a),
         "snooze_reminder" => snooze(core, a),
         "list_categories" => core.with(|s| {
@@ -843,9 +868,11 @@ fn note_text(s: &Store, id: &str) -> Result<String> {
         if !rep.is_empty() {
             r.push_str(&format!(", {rep}"));
         }
-        if d.reminder_done {
-            r.push_str(", concluído");
-        }
+        r.push_str(match reminders::Status::of(d.reminder_done, d.reminder_doing) {
+            reminders::Status::Todo => ", a fazer",
+            reminders::Status::Doing => ", em andamento",
+            reminders::Status::Done => ", concluído",
+        });
         head.push(r);
     }
     if let Some(t) = d.trashed_at {
@@ -952,6 +979,7 @@ fn summary_json(s: &Store, n: &crate::store::NoteSummary, cats: &HashMap<String,
         if n.reminder_done {
             o.insert("reminderDone".into(), json!(true));
         }
+        o.insert("status".into(), json!(reminders::Status::of(n.reminder_done, n.reminder_doing).name()));
     }
     if n.image_count + n.file_count > 0 {
         o.insert("attachments".into(), json!(n.image_count + n.file_count));
@@ -1006,6 +1034,7 @@ fn create(core: &Core, a: &Args) -> Result<Out> {
             trashed_at: None,
             reminder_at,
             reminder_done: false,
+            reminder_doing: false,
             reminder_repeat: if reminder_at.is_some() { repeat_of(a)? } else { None },
             emoji: a.str("emoji").map(emoji_of).transpose()?.flatten(),
             tags: clean_tags(a.strings("tags").unwrap_or_default()),
@@ -1333,10 +1362,16 @@ fn reminders_list(core: &Core, a: &Args) -> Result<Out> {
     core.with(|s| {
         let now = crate::store::now();
         let cats = category_names(s)?;
-        let list = s.list_reminders(&Filter::default(), "", a.bool("include_done").unwrap_or(false))?;
+        let status = a.str("status").map(|v| reminders::Status::parse(v).ok_or("status: use todo, doing ou done")).transpose()?;
+        let from = a.str("from").map(|v| range_bound(v, false)).transpose()?;
+        let to = a.str("to").map(|v| range_bound(v, true)).transpose()?;
+        let include_done = a.bool("include_done").unwrap_or(false) || status == Some(reminders::Status::Done);
+        let list = s.list_reminders(&Filter::default(), "", include_done)?;
         let out: Vec<Value> = list
             .iter()
             .filter(|n| !a.bool("overdue_only").unwrap_or(false) || (n.reminder_at.is_some_and(|t| t < now) && !n.reminder_done))
+            .filter(|n| status.map_or(true, |st| reminders::Status::of(n.reminder_done, n.reminder_doing) == st))
+            .filter(|n| n.reminder_at.is_some_and(|t| from.map_or(true, |f| t >= f) && to.map_or(true, |e| t < e)))
             .map(|n| {
                 let mut v = summary_json(s, n, &cats)?;
                 if n.reminder_at.is_some_and(|t| t < now) && !n.reminder_done {
@@ -1346,6 +1381,37 @@ fn reminders_list(core: &Core, a: &Args) -> Result<Out> {
             })
             .collect::<Result<_>>()?;
         Ok(Out::Json(json!({ "agora": fmt_time(now), "reminders": out })))
+    })
+}
+
+/// Limite de um período: só a data vale o dia inteiro (from = 0h desse dia, to = 0h do dia seguinte).
+fn range_bound(v: &str, end: bool) -> Result<Millis> {
+    let v = v.trim();
+    match NaiveDate::parse_from_str(v, "%Y-%m-%d") {
+        Ok(d) => {
+            let day = if end { d.succ_opt().unwrap_or(d) } else { d };
+            day.and_hms_opt(0, 0, 0)
+                .and_then(|n| Local.from_local_datetime(&n).earliest())
+                .map(|t| t.timestamp_millis())
+                .ok_or_else(|| format!("{v}: data que não existe neste fuso"))
+        }
+        Err(_) => parse_time(v),
+    }
+}
+
+fn reminder_status(core: &Core, a: &Args) -> Result<Out> {
+    let status = reminders::Status::parse(a.need("status")?).ok_or("status: use todo, doing ou done")?;
+    core.with(|s| {
+        let id = existing(s, a.need("id")?)?;
+        let (_, repeat) = s.reminder_of(&id)?.ok_or("esta nota não tem lembrete")?;
+        reminders::set_status(s, &id, status, crate::store::now(), &Local)?;
+        s.log_external(Some(&id), false)?;
+        Ok(Out::Text(match (status, repeat, s.reminder_of(&id)?) {
+            (reminders::Status::Done, Some(_), Some((next, _))) => format!("Feito por esta vez; o próximo é {}.", fmt_time(next)),
+            (reminders::Status::Done, _, _) => "Lembrete concluído (verde).".into(),
+            (reminders::Status::Doing, _, _) => "Lembrete em andamento (amarelo).".into(),
+            (reminders::Status::Todo, _, _) => "Lembrete a fazer (vermelho).".into(),
+        }))
     })
 }
 

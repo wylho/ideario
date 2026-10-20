@@ -2,9 +2,10 @@
 // Visão (como ver) e filtro (o que ver) são independentes: trocar um nunca desfaz o outro.
 import { SvelteSet } from 'svelte/reactivity'
 import { api } from './api'
-import type { AttachmentRow, NoteSummary, Box, Category, FileGroup, FileSort, Filter, NoteSort, OrphanCounts, SharedIn, SyncState, TagCount, Tone, View, ViewCounts } from './types'
+import type { AttachmentRow, NoteSummary, Box, Category, FileGroup, FileSort, Filter, Millis, NoteSort, OrphanCounts, SharedIn, SyncState, TagCount, Tone, View, ViewCounts } from './types'
 import { NO_CATEGORY, NO_TAGS } from './types'
 import { uuidv7 } from './uuid'
+import { quickTimes } from './reminders'
 
 export interface NameDialog {
   kind: 'name'
@@ -56,7 +57,7 @@ export interface EditorTarget {
   id: string
   isNew: boolean
   /** Categoria e tags herdadas do filtro ativo ao criar pelo "+". */
-  defaults?: { categoryId: string | null; tags: string[] }
+  defaults?: { categoryId: string | null; tags: string[]; reminderAt?: Millis }
   /** Atalho do "+": a nota nova já abre gravando, com a câmera ou com os arquivos escolhidos. */
   start?: { record: true } | { camera: true } | { files: DroppedFile[] } | { shared: SharedIn }
   /** Abrir já imprimindo (PDF pelo menu do card). */
@@ -128,6 +129,9 @@ class AppState {
   moodArchived = $state(false)
   /** Lembretes: mostrar os concluídos no fim da lista. */
   showDone = $state(false)
+  /** Calendário: dia de referência (o mês ou a semana dele aparece) e mês/semana. */
+  calDate = $state(Date.now())
+  calMode = $state<'month' | 'week'>('month')
   /** Card sendo arrastado (para o resto da UI reagir). */
   dragId = $state<string | null>(null)
   /** Categoria da lateral sob o card arrastado (soltar ali muda a categoria da nota). */
@@ -388,7 +392,7 @@ class AppState {
   }
 
   /** Nota nova; sem `defaults`, herda a categoria e as tags do filtro ativo. */
-  openNew(defaults?: { categoryId: string | null; tags: string[] }, start?: EditorTarget['start']) {
+  openNew(defaults?: { categoryId: string | null; tags: string[]; reminderAt?: Millis }, start?: EditorTarget['start']) {
     this.editor = {
       id: uuidv7(),
       isNew: true,
@@ -396,9 +400,20 @@ class AppState {
       defaults: defaults ?? {
         categoryId: this.filter.categoryId === NO_CATEGORY ? null : this.filter.categoryId,
         tags: this.filter.tags.filter((t) => t !== NO_TAGS),
+        // no Calendário e no Kanban a nota nova já nasce lembrete (senão nem apareceria ali)
+        reminderAt: this.newReminderAt(),
       },
       start,
     }
+  }
+
+  /** Lembrete de uma nota nova criada no Calendário (no dia escolhido; hoje, à noite) ou no Kanban. */
+  newReminderAt(day?: Date): Millis | undefined {
+    if (this.view !== 'calendar' && this.view !== 'kanban' && !day) return undefined
+    const d = day ?? (this.view === 'calendar' ? new Date(this.calDate) : new Date())
+    const today = new Date()
+    if (d.toDateString() !== today.toDateString()) return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 9).getTime()
+    return quickTimes()[0][1]
   }
 
   openNote(id: string, opts: { print?: boolean } = {}) {

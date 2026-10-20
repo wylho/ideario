@@ -97,6 +97,7 @@ export const tauriApi: Api = {
   applyNoteUpdate: (id, update) => invoke<void>('apply_note_update', update, { headers: { 'x-id': id } }).then(changedSoon),
   settle: () => soon !== undefined && changed(),
   setReminderDone: (id, done) => write('set_reminder_done', { id, done }),
+  setReminderStatus: (id, status) => write('set_reminder_status', { id, status }),
   snoozeReminder: (id, until) => write('snooze_reminder', { id, until }),
   completeReminder: (id) => write('complete_reminder', { id }),
   trashCount: () => invoke('trash_count'),

@@ -359,3 +359,21 @@ fn the_short_id_shown_in_the_app_works_too() {
     assert!(tool(&core, "get_note", json!({ "id": id }), true).contains("Viagem de julho"));
     assert!(tool(&core, "get_note", json!({ "id": "#00000000" }), false).contains("não existe nota com o ID #00000000"));
 }
+
+#[test]
+fn reminder_status_is_what_the_kanban_and_calendar_show() {
+    let (core, _t) = setup();
+    let a = id_in(&tool(&core, "create_note", json!({ "title": "Pagar a luz", "reminder": "2030-03-10T09:00" }), true));
+    let b = id_in(&tool(&core, "create_note", json!({ "title": "Revisar texto", "reminder": "2030-03-12T15:00" }), true));
+    assert!(tool(&core, "set_reminder_status", json!({ "id": b, "status": "doing" }), true).contains("amarelo"));
+    let doing = tool(&core, "list_reminders", json!({ "status": "doing" }), true);
+    assert!(doing.contains("Revisar texto") && !doing.contains("Pagar a luz"));
+    assert!(tool(&core, "get_note", json!({ "id": b }), true).contains("em andamento"));
+    // calendário: um dia inteiro pela data
+    let day = tool(&core, "list_reminders", json!({ "from": "2030-03-10", "to": "2030-03-10" }), true);
+    assert!(day.contains("Pagar a luz") && !day.contains("Revisar texto"));
+    tool(&core, "set_reminder_status", json!({ "id": a, "status": "done" }), true);
+    let done = tool(&core, "list_reminders", json!({ "status": "done" }), true);
+    assert!(done.contains("Pagar a luz") && done.contains("\"status\": \"done\""));
+    assert!(tool(&core, "set_reminder_status", json!({ "id": a, "status": "talvez" }), false).contains("todo, doing ou done"));
+}

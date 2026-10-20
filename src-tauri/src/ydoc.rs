@@ -116,6 +116,7 @@ pub(crate) fn to_note(id: &str, state: &[u8]) -> Result<NoteInput> {
         trashed_at: ms("trashedAt"),
         reminder_at: ms("reminderAt"),
         reminder_done: b("reminderDone"),
+        reminder_doing: b("reminderDoing"),
         reminder_repeat: s("reminderRepeat"),
         emoji: s("emoji").as_deref().and_then(crate::store::clean_emoji),
         tags,
@@ -309,6 +310,11 @@ fn write_meta(meta: &MapRef, txn: &mut TransactionMut, n: &NoteInput, prev: Opti
     set("emoji", opt_str(&n.emoji), p.is_some_and(|p| p.emoji != n.emoji));
     let tags: Vec<Any> = n.tags.iter().map(|t| Any::from(t.as_str())).collect();
     set("tags", Any::Array(tags.into()), p.is_some_and(|p| p.tags != n.tags));
+    // Só entra num estado novo se estiver ligado: assim a mesma nota criada por versões diferentes (ver `from_note`)
+    // continua dando o mesmo estado.
+    if p.map_or(n.reminder_doing, |p| p.reminder_doing != n.reminder_doing) {
+        meta.insert(txn, "reminderDoing", Any::Bool(n.reminder_doing));
+    }
 }
 
 // ---------- corpo: JSON do TipTap → Y ----------
@@ -658,6 +664,7 @@ mod tests {
             trashed_at: None,
             reminder_at: Some(1_791_573_277_130),
             reminder_done: false,
+            reminder_doing: false,
             reminder_repeat: None,
             emoji: None,
             tags: vec!["casa".into()],
@@ -938,6 +945,7 @@ pub(crate) fn tests_note() -> NoteInput {
         trashed_at: None,
         reminder_at: None,
         reminder_done: false,
+        reminder_doing: false,
         reminder_repeat: None,
         emoji: None,
         tags: vec![],
@@ -1011,6 +1019,7 @@ mod props {
             trashed_at: when,
             reminder_at: when,
             reminder_done: false,
+            reminder_doing: false,
             reminder_repeat: None,
             emoji: None,
             tags,

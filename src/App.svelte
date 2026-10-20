@@ -10,6 +10,8 @@
   import FilterBar from './components/FilterBar.svelte'
   import NotesView from './components/NotesView.svelte'
   import RemindersView from './components/RemindersView.svelte'
+  import CalendarView from './components/CalendarView.svelte'
+  import KanbanView from './components/KanbanView.svelte'
   import FilesView from './components/FilesView.svelte'
   import MoodboardView from './components/MoodboardView.svelte'
   import Lightbox from './components/Lightbox.svelte'
@@ -82,6 +84,10 @@
         <NotesView />
       {:else if app.view === 'reminders'}
         <RemindersView />
+      {:else if app.view === 'calendar'}
+        <CalendarView />
+      {:else if app.view === 'kanban'}
+        <KanbanView />
       {:else if app.view === 'files'}
         <FilesView />
       {:else}

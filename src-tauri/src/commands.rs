@@ -82,6 +82,7 @@ fn welcome(store: &Store) -> Result<()> {
         trashed_at: None,
         reminder_at: None,
         reminder_done: false,
+        reminder_doing: false,
         reminder_repeat: None,
         emoji: None,
         tags: vec![],
@@ -309,6 +310,13 @@ pub fn snooze_reminder(core: Core_, id: String, until: crate::store::Millis) -> 
 #[tauri::command]
 pub fn complete_reminder(core: Core_, id: String) -> Result<()> {
     core.with(|s| crate::reminders::complete(s, &id, crate::store::now(), &chrono::Local))
+}
+
+/// Seletor de três cores: "todo" (vermelho), "doing" (amarelo) ou "done" (verde).
+#[tauri::command]
+pub fn set_reminder_status(core: Core_, id: String, status: String) -> Result<()> {
+    let status = crate::reminders::Status::parse(&status).ok_or("status desconhecido")?;
+    core.with(|s| crate::reminders::set_status(s, &id, status, crate::store::now(), &chrono::Local))
 }
 
 #[tauri::command]
@@ -567,6 +575,7 @@ impl Core {
                 trashed_at: n.is_trashed.then(crate::store::now),
                 reminder_at: None,
                 reminder_done: false,
+                reminder_doing: false,
                 reminder_repeat: None,
                 emoji: None,
                 tags,

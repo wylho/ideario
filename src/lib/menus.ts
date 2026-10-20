@@ -1,6 +1,6 @@
 // Menus de contexto de cada tipo de elemento. Um lugar só, para o mesmo item se comportar igual em todo o app.
 import {
-  ArrowDown, ArrowUp, Archive, Hash, ArchiveRestore, Bell, BellOff, Check, CircleCheck, Copy, Pencil, Download, ExternalLink, Files, Filter, FilterX, Image, Palette, Pin, PinOff, FileText, Play, Plus, RotateCcw, Tag, Trash2, AlarmClock, Eye, EyeOff, Lock, LockOpen, KeyRound,
+  ArrowDown, ArrowUp, Archive, Hash, ArchiveRestore, Bell, BellOff, CircleCheck, Copy, Pencil, Download, ExternalLink, Files, Filter, FilterX, Image, Palette, Pin, PinOff, FileText, Play, Plus, Tag, Trash2, AlarmClock, Eye, EyeOff, Lock, LockOpen, KeyRound,
 } from '@lucide/svelte'
 import { copyNoteId, shortId } from './noteid'
 import { api } from './api'
@@ -11,7 +11,8 @@ import { CATEGORY_COLORS, COLOR_NAMES, nextCategoryColor } from './colors'
 import { SEP, type MenuEntry } from './menu'
 import { quickTimes, snoozeTimes } from './reminders'
 import { reminderSet } from './notify.svelte'
-import type { AttachmentRow, Category, NoteColor, NotePatch, NoteSummary } from './types'
+import { statusOf, type AttachmentRow, type Category, type NoteColor, type NotePatch, type NoteSummary } from './types'
+import { STATUS, changeStatus } from './status'
 
 export const NOTE_COLORS: { id: NoteColor; label: string; css: string }[] = [
   { id: 'none', label: 'Padrão', css: 'var(--surface)' },
@@ -93,7 +94,7 @@ export function noteMenu(n: NoteSummary): MenuEntry[] {
       label: n.reminderAt != null ? 'Lembrete' : 'Lembrar', icon: Bell,
       sub: reminderEntries(n, (v) => {
         // Sem lembrete não há repetição (senão um lembrete marcado depois voltaria a se repetir sozinho).
-        change(n, v == null ? { reminderAt: null, reminderDone: false, reminderRepeat: null } : { reminderAt: v, reminderDone: false }, v == null ? 'Lembrete removido' : `Lembrete: ${fmtReminder(v)}`)
+        change(n, v == null ? { reminderAt: null, reminderDone: false, reminderDoing: false, reminderRepeat: null } : { reminderAt: v, reminderDone: false }, v == null ? 'Lembrete removido' : `Lembrete: ${fmtReminder(v)}`)
         if (v != null) void reminderSet()
       }),
     },
@@ -136,19 +137,14 @@ export function noteMenu(n: NoteSummary): MenuEntry[] {
 export function reminderMenu(n: NoteSummary): MenuEntry[] {
   return [
     { label: 'Abrir nota', icon: ExternalLink, onSelect: () => app.openNote(n.id) },
-    n.reminderDone
-      ? { label: 'Reabrir', icon: RotateCcw, onSelect: () => change(n, { reminderDone: false }, 'Lembrete reaberto') }
-      : n.reminderRepeat
-        ? {
-            // Lembrete que se repete: "feito" vale para esta vez; a série continua.
-            label: 'Feito por esta vez', icon: Check,
-            onSelect: () => {
-              const before = n.reminderAt
-              void api.completeReminder(n.id)
-              app.say('Feito por esta vez', { label: 'Desfazer', run: () => void api.updateNote(n.id, { reminderAt: before }) })
-            },
-          }
-        : { label: 'Concluir', icon: Check, onSelect: () => change(n, { reminderDone: true }, 'Lembrete concluído') },
+    // Status (o seletor de três cores): os dois que a nota não está.
+    ...(['todo', 'doing', 'done'] as const)
+      .filter((st) => st !== statusOf(n))
+      .map((st) => ({
+        label: st === 'done' ? (n.reminderRepeat ? 'Feito por esta vez' : 'Concluir') : st === 'doing' ? 'Em andamento' : n.reminderDone ? 'Reabrir' : 'A fazer',
+        swatch: STATUS[st].color,
+        onSelect: () => void changeStatus(n, st),
+      })),
     {
       label: 'Adiar', icon: AlarmClock,
       sub: snoozeTimes().map(([label, at]) => ({
@@ -162,7 +158,7 @@ export function reminderMenu(n: NoteSummary): MenuEntry[] {
       })),
     },
     SEP,
-    { label: 'Remover lembrete', icon: BellOff, danger: true, onSelect: () => change(n, { reminderAt: null, reminderDone: false, reminderRepeat: null }, 'Lembrete removido') },
+    { label: 'Remover lembrete', icon: BellOff, danger: true, onSelect: () => change(n, { reminderAt: null, reminderDone: false, reminderDoing: false, reminderRepeat: null }, 'Lembrete removido') },
   ]
 }
 

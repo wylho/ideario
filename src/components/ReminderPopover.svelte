@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Popover } from 'bits-ui'
-  import { Bell, Check, Clock, Repeat, RotateCcw, X } from '@lucide/svelte'
+  import { Bell, Clock, Repeat, X } from '@lucide/svelte'
   import { fmtReminder, isOverdue, toLocalInput } from '../lib/format'
   import { quickTimes } from '../lib/reminders'
   import type { Millis, RepeatKind } from '../lib/types'
@@ -8,13 +8,12 @@
 
   // O mesmo menu de lembrete abre pelo sino do topo do editor ('icon') e pela pílula do lembrete ('pill').
   let {
-    value, done = false, repeat = null, onchange, ondone, onrepeat, variant = 'icon',
+    value, done = false, repeat = null, onchange, onrepeat, variant = 'icon',
   }: {
     value: Millis | null
     done?: boolean
     repeat?: RepeatKind | null
     onchange: (v: Millis | null) => void
-    ondone?: (done: boolean) => void
     /** Sem isso, não mostra a escolha de repetir. */
     onrepeat?: (r: RepeatKind | null) => void
     variant?: 'icon' | 'pill'
@@ -69,11 +68,6 @@
       {/if}
       {#if value != null}
         <div class="pop-actions">
-          {#if ondone && !repeat}
-            <button class="btn ghost" onclick={() => { ondone(!done); open = false }}>
-              {#if done}<RotateCcw size={15} />Reabrir{:else}<Check size={15} />Concluir{/if}
-            </button>
-          {/if}
           <button class="btn ghost" onclick={() => pick(null)}>Remover</button>
         </div>
       {/if}

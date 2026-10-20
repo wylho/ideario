@@ -134,13 +134,13 @@ test('lembretes: grupos, concluir pela lista e ponto de atrasados', async ({ pag
   await expect(page.locator('.tabbar .tab-n.late')).toHaveCount(1)
   await tab(page, 'Lembretes')
   await expect(page.locator('.section-label')).toHaveText([/Atrasados/, /Hoje/, /Amanhã/, /Próximos/])
-  await page.locator('.r-item', { hasText: 'Comprar pilha' }).getByLabel('Concluir lembrete').click()
+  await page.locator('.r-item', { hasText: 'Comprar pilha' }).getByRole('radio', { name: 'Concluído' }).click()
   await expect(page.locator('.toast span')).toHaveText('Lembrete concluído')
   // concluiu sem querer: o aviso desfaz
   await page.locator('.toast').getByRole('button', { name: 'Desfazer' }).click()
   await expect(page.locator('.r-item:not(.done)', { hasText: 'Comprar pilha' })).toHaveCount(1)
-  await page.locator('.r-item', { hasText: 'Comprar pilha' }).getByLabel('Concluir lembrete').click()
-  await page.locator('.r-item', { hasText: 'Rótulos' }).getByLabel('Concluir lembrete').click()
+  await page.locator('.r-item', { hasText: 'Comprar pilha' }).getByRole('radio', { name: 'Concluído' }).click()
+  await page.locator('.r-item', { hasText: 'Rótulos' }).getByRole('radio', { name: 'Concluído' }).click()
   await expect(page.locator('.r-item', { hasText: 'Comprar pilha' })).toHaveCount(0)
   await expect(page.locator('.tabbar .tab-n.late')).toHaveCount(0)
   // concluídos: botão no menu dinâmico da visão
@@ -149,7 +149,7 @@ test('lembretes: grupos, concluir pela lista e ponto de atrasados', async ({ pag
   await doneToggle.click()
   await expect(page.locator('.section-label', { hasText: 'Concluídos' })).toContainText('4')
   await expect(page.locator('.r-item.done', { hasText: 'Comprar pilha' })).toHaveCount(1)
-  await page.locator('.r-item.done', { hasText: 'Comprar pilha' }).getByLabel('Reabrir lembrete').click()
+  await page.locator('.r-item.done', { hasText: 'Comprar pilha' }).getByRole('radio', { name: 'A fazer' }).click()
   await expect(page.locator('.section-label', { hasText: 'Atrasados' })).toHaveCount(1)
 })
 
@@ -525,7 +525,11 @@ test('clicar na pílula do lembrete abre o menu do lembrete; o X remove', async 
   await cards(page).filter({ hasText: 'Comprar pilha' }).click()
   await page.getByRole('button', { name: /Alterar lembrete/ }).click()
   await expect(page.locator('.pop-title')).toHaveText('Lembrar de mim')
-  await page.getByRole('button', { name: 'Concluir' }).click()
+  await page.keyboard.press('Escape')
+  // status pelo seletor de três cores ao lado da pílula
+  await page.locator('.editor').getByRole('radio', { name: 'Em andamento' }).click()
+  await expect(page.locator('.editor').getByRole('radio', { name: 'Em andamento' })).toHaveAttribute('aria-checked', 'true')
+  await page.locator('.editor').getByRole('radio', { name: 'Concluído' }).click()
   await expect(page.locator('.rem-pill.done')).toHaveCount(1)
   await page.getByLabel('Remover lembrete').click()
   await expect(page.locator('.rem-pill')).toHaveCount(0)
@@ -1430,7 +1434,7 @@ test.describe('mídia no editor', () => {
   test('arrastar arquivo com a nota aberta anexa nela (fora do texto vai para o fim)', async ({ page }) => {
     await newNote(page)
     await page.keyboard.type('Primeira linha')
-    await dropFiles(page, '.editor input[placeholder="Título"]', [{ name: 'planilha.csv', type: 'text/csv', text: 'a,b' }])
+    await dropFiles(page, '.editor textarea[placeholder="Título"]', [{ name: 'planilha.csv', type: 'text/csv', text: 'a,b' }])
     await expect(page.locator('#corpo .nf-card')).toContainText('planilha.csv')
     await expect(page.locator('#corpo > *').first()).toHaveText('Primeira linha')
   })
@@ -1549,7 +1553,7 @@ test('lembrete que se repete: marcar como feito vale para esta vez e a série co
   await tab(page, 'Lembretes')
   const item = page.locator('.r-item', { hasText: 'Referências tipográficas' })
   await expect(item.locator('.r-time')).toContainText('09:00')
-  await item.getByRole('button', { name: 'Feito por esta vez' }).click()
+  await item.getByRole('radio', { name: 'Concluído' }).click()
   await expect(page.locator('.toast span')).toHaveText('Feito por esta vez')
   // continua na lista, não concluído, no dia seguinte
   await expect(item).not.toHaveClass(/done/)
@@ -2343,5 +2347,68 @@ test.describe('Markdown no editor', () => {
     await expect(body.locator('ul li')).toHaveCount(2)
     await expect(body.locator('table th')).toHaveText(['Item', 'Qtd'])
     await expect(body).not.toContainText('|')
+  })
+})
+
+test.describe('Calendário e Kanban', () => {
+  test.use({ viewport: { width: 1280, height: 860 } })
+  const lens = (page: Page, name: string) => page.locator('.view-switch .lens', { hasText: name }).or(page.locator(`.view-switch .lens[title="${name}"]`)).first()
+  /** Arrasta com o mouse (pelo ponteiro, como no app) de um elemento até outro. */
+  const drag = async (page: Page, from: ReturnType<Page['locator']>, to: ReturnType<Page['locator']>) => {
+    const a = (await from.boundingBox())!
+    const b = (await to.boundingBox())!
+    await page.mouse.move(a.x + a.width / 2, a.y + a.height / 2)
+    await page.mouse.down()
+    await page.mouse.move(a.x + a.width / 2 + 10, a.y + a.height / 2 + 10, { steps: 3 })
+    await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2, { steps: 8 })
+    await page.mouse.up()
+  }
+
+  test('kanban: três colunas pelo status; o seletor de cores e o arrastar mudam o status', async ({ page }) => {
+    await lens(page, 'Kanban').click()
+    const col = (name: string) => page.locator('.kb-col', { hasText: name })
+    await expect(page.locator('.kb-head')).toHaveText([/A fazer/, /Em andamento/, /Concluído/])
+    await expect(col('Em andamento').locator('.kb-card')).toHaveCount(2)
+    // seletor de cores: vermelho → amarelo
+    const card = () => page.locator('.kb-card', { hasText: 'Comprar pilha' })
+    await card().getByRole('radio', { name: 'Em andamento' }).click()
+    await expect(page.locator('.toast span')).toHaveText('Lembrete em andamento')
+    await expect(col('Em andamento').locator('.kb-card', { hasText: 'Comprar pilha' })).toHaveCount(1)
+    // arrastar para Concluído
+    await drag(page, card(), col('Concluído'))
+    await expect(col('Concluído').locator('.kb-card', { hasText: 'Comprar pilha' })).toHaveCount(1)
+    await expect(page.locator('.toast span')).toHaveText('Lembrete concluído')
+    // e aparece concluído em Lembretes
+    await lens(page, 'Lembretes').click()
+    await expect(page.locator('.r-item', { hasText: 'Comprar pilha' })).toHaveCount(0)
+    // clicar no card abre a nota
+    await lens(page, 'Kanban').click()
+    await page.locator('.kb-card', { hasText: 'Mercado da semana' }).click()
+    await expect(page.locator('#titulo')).toHaveValue('Mercado da semana')
+  })
+
+  test('calendário: lembretes no dia, arrastar muda o dia, + cria lembrete no dia, semana', async ({ page }) => {
+    await lens(page, 'Calendário').click()
+    const today = page.locator('.cal-day.today')
+    await expect(today.locator('.cal-chip', { hasText: '1:1 com o time' })).toHaveCount(1)
+    const next = page.locator('.cal-day.today + .cal-day')
+    // arrastar para o dia seguinte: mesma hora
+    await drag(page, today.locator('.cal-chip', { hasText: '1:1 com o time' }), next)
+    await expect(page.locator('.toast span')).toHaveText(/Lembrete: Amanhã, 15:00/)
+    await expect(next.locator('.cal-chip', { hasText: '1:1 com o time' })).toHaveCount(1)
+    // + do dia: nota nova já com lembrete nesse dia
+    await next.hover()
+    await next.getByRole('button', { name: 'Novo lembrete neste dia' }).click()
+    await expect(page.locator('.rem-pill')).toContainText('Amanhã, 09:00')
+    await page.locator('#titulo').fill('Ligar para a gráfica')
+    await back(page)
+    await expect(next.locator('.cal-chip', { hasText: 'Ligar para a gráfica' })).toHaveCount(1)
+    // semana: sete dias
+    await page.getByRole('radio', { name: 'Semana' }).click()
+    await expect(page.locator('.cal-day')).toHaveCount(7)
+    await page.getByRole('button', { name: 'Próxima semana' }).click()
+    await expect(page.locator('.cal-day.today')).toHaveCount(0)
+    await page.getByRole('button', { name: 'Hoje' }).click()
+    await expect(page.locator('.cal-day.today')).toHaveCount(1)
   })
 })

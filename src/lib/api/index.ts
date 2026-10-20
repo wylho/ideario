@@ -1,7 +1,7 @@
 // Camada de dados da UI. No app, os comandos Tauri (`invoke`) do núcleo Rust (SQLite local, Fase 1);
 // no navegador (`npm run dev`, prévia) e nos testes e2e, um mock em memória com dados de exemplo.
 import type {
-  Attachment, AttachmentKind, AttachmentRow, KeepReport, ExportReport, LinkPreview, BackupManifest, BackupReport, BackupStatus, RestoreReport, Box, McpInfo, OrphanCounts, Millis, Category, Filter, NoteDetail, NoteInput, NotePatch, NoteSort, NoteSummary, Settings, SyncState, SyncStatus, TagCount, Tone, UpdateInfo, SharedIn, ViewCounts,
+  Attachment, AttachmentKind, AttachmentRow, KeepReport, ExportReport, LinkPreview, BackupManifest, BackupReport, BackupStatus, RestoreReport, Box, McpInfo, OrphanCounts, Millis, Category, Filter, NoteDetail, NoteInput, NotePatch, NoteSort, NoteSummary, Settings, SyncState, SyncStatus, TagCount, Tone, UpdateInfo, SharedIn, ViewCounts, ReminderStatus,
 } from '../types'
 import { invoke, isTauri } from '@tauri-apps/api/core'
 import { mockApi } from './mock'
@@ -46,6 +46,8 @@ export interface Api {
   /** Atualização Yjs do editor; cria a nota se ela ainda não existe. A lista e a busca se atualizam. */
   applyNoteUpdate(id: string, update: Uint8Array): Promise<void>
   setReminderDone(id: string, done: boolean): Promise<void>
+  /** Seletor de três cores. Verde num lembrete que se repete pula para a próxima vez (e volta ao vermelho). */
+  setReminderStatus(id: string, status: ReminderStatus): Promise<void>
   /** Adiar até `until`. O que se repete avisa de novo nessa hora sem mudar o horário da série. */
   snoozeReminder(id: string, until: Millis): Promise<void>
   /** Concluir. O que se repete pula para a próxima vez (a série continua). */

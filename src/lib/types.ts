@@ -74,6 +74,8 @@ export interface NoteSummary {
   trashedAt: Millis | null
   reminderAt: Millis | null
   reminderDone: boolean
+  /** Em andamento (amarelo). Status: concluído = verde, em andamento = amarelo, senão vermelho. */
+  reminderDoing: boolean
   reminderRepeat: RepeatKind | null
   /** Emoji grande de capa (null = sem). */
   emoji: string | null
@@ -128,6 +130,8 @@ export interface NoteDetail {
   trashedAt: Millis | null
   reminderAt: Millis | null
   reminderDone: boolean
+  /** Em andamento (amarelo). Status: concluído = verde, em andamento = amarelo, senão vermelho. */
+  reminderDoing: boolean
   reminderRepeat: RepeatKind | null
   /** Emoji grande de capa (null = sem). */
   emoji: string | null
@@ -142,7 +146,7 @@ export interface NoteDetail {
 }
 
 /** Campos que os menus de contexto mudam sem abrir o editor. */
-export type NotePatch = Partial<Pick<NoteInput, 'pinned' | 'color' | 'categoryId' | 'archived' | 'trashedAt' | 'reminderAt' | 'reminderDone' | 'reminderRepeat' | 'emoji'>>
+export type NotePatch = Partial<Pick<NoteInput, 'pinned' | 'color' | 'categoryId' | 'archived' | 'trashedAt' | 'reminderAt' | 'reminderDone' | 'reminderDoing' | 'reminderRepeat' | 'emoji'>>
 
 export interface NoteInput {
   id: string
@@ -155,6 +159,8 @@ export interface NoteInput {
   trashedAt: Millis | null
   reminderAt: Millis | null
   reminderDone: boolean
+  /** Em andamento (amarelo). Status: concluído = verde, em andamento = amarelo, senão vermelho. */
+  reminderDoing: boolean
   reminderRepeat: RepeatKind | null
   /** Emoji grande de capa (null = sem). */
   emoji: string | null
@@ -187,6 +193,12 @@ export interface OrphanCounts {
 export type Box = 'active' | 'archive' | 'trash'
 
 /** Quantos itens cada visão tem para o filtro atual, para mostrar antes do clique. */
+/** Status do lembrete, o seletor de três cores: vermelho, amarelo, verde. */
+export type ReminderStatus = 'todo' | 'doing' | 'done'
+
+export const statusOf = (n: { reminderDone: boolean; reminderDoing: boolean }): ReminderStatus =>
+  n.reminderDone ? 'done' : n.reminderDoing ? 'doing' : 'todo'
+
 export interface ViewCounts {
   notes: number
   /** Lembretes pendentes. */
@@ -196,7 +208,7 @@ export interface ViewCounts {
   moodboard: number
 }
 
-export type View = 'notes' | 'reminders' | 'files' | 'moodboard'
+export type View = 'notes' | 'reminders' | 'calendar' | 'kanban' | 'files' | 'moodboard'
 
 /** Ordem das notas. 'custom' é a ordem livre, montada arrastando os cards. */
 export type NoteSort = 'custom' | 'updated' | 'created' | 'category' | 'title'

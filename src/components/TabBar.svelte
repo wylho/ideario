@@ -7,7 +7,7 @@
 
 <nav class="tabbar" aria-label="Visão">
   {#each VIEWS as { id, label, Icon } (id)}
-    {@const n = app.counts[id]}
+    {@const n = id === 'reminders' ? app.counts.reminders : 0}
     <button class:on={app.view === id} aria-current={app.view === id ? 'page' : undefined} onclick={() => app.setView(id)}>
       <span class="tab-ico">
         <Icon size={20} />

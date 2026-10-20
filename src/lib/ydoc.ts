@@ -11,7 +11,7 @@ export type NoteMeta = Omit<NoteInput, 'id' | 'body'>
 export const META = 'meta'
 export const BODY = 'body'
 
-const KEYS = ['title', 'categoryId', 'color', 'pinned', 'archived', 'trashedAt', 'reminderAt', 'reminderDone', 'reminderRepeat', 'emoji', 'tags'] as const
+const KEYS = ['title', 'categoryId', 'color', 'pinned', 'archived', 'trashedAt', 'reminderAt', 'reminderDone', 'reminderDoing', 'reminderRepeat', 'emoji', 'tags'] as const
 
 export function readMeta(doc: Y.Doc): NoteMeta {
   const m = doc.getMap<unknown>(META)
@@ -27,6 +27,7 @@ export function readMeta(doc: Y.Doc): NoteMeta {
     trashedAt: num('trashedAt'),
     reminderAt: num('reminderAt'),
     reminderDone: m.get('reminderDone') === true,
+    reminderDoing: m.get('reminderDoing') === true,
     reminderRepeat: (['day', 'week', 'month', 'year'] as const).find((r) => r === m.get('reminderRepeat')) ?? null,
     emoji: cleanEmoji(str('emoji') ?? ''),
     tags: Array.isArray(tags) ? tags.filter((t): t is string => typeof t === 'string') : [],
@@ -42,6 +43,8 @@ export function writeMeta(doc: Y.Doc, meta: NoteMeta, origin?: unknown) {
     for (const k of KEYS) {
       const v = meta[k]
       const same = Array.isArray(v) ? JSON.stringify(v) === JSON.stringify(prev[k]) : v === prev[k]
+      // reminderDoing só entra num estado novo se estiver ligado (como no núcleo, ydoc.rs)
+      if (fresh && k === 'reminderDoing' && !v) continue
       if (fresh || !same) m.set(k, Array.isArray(v) ? [...v] : v)
     }
   }, origin)

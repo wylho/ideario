@@ -41,6 +41,7 @@ export interface SeedNote {
   pinned: boolean
   reminderAt: number | null
   reminderDone?: boolean
+  reminderDoing?: boolean
   reminderRepeat?: import('../../types').RepeatKind
   emoji?: string
   archived?: boolean
@@ -124,7 +125,7 @@ export function seedNotes(): SeedNote[] {
   return [
     {
       id: 'n1', title: 'Ideias de campanha Q4', categoryId: 'cat-lumen', tags: ['campanha', 'ideia'], color: 'sky', pinned: true,
-      reminderAt: at(6, 10), updatedAt: hoursAgo(3),
+      reminderAt: at(6, 10), reminderDoing: true, updatedAt: hoursAgo(3),
       body: doc(
         p('Fio condutor: ', bold('o café que acorda o bairro'), '. Testar três ângulos antes da reunião.'),
         img('img-campanha'),
@@ -205,7 +206,7 @@ export function seedNotes(): SeedNote[] {
     },
     {
       id: 'n14', title: 'Post de lançamento do app', categoryId: 'cat-lumen', tags: ['campanha', 'copy'], color: 'none', pinned: false,
-      reminderAt: at(2, 11), updatedAt: hoursAgo(8),
+      reminderAt: at(2, 11), reminderDoing: true, updatedAt: hoursAgo(8),
       body: doc(p('Abrir com a dor: ', bold('a primeira xícara do dia'), '. Mostrar o app de pedidos em 3 telas e fechar com o convite para a lista de espera.'), img('img-mockup')),
     },
     {

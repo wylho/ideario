@@ -119,10 +119,64 @@ pub fn complete<Tz: TimeZone>(store: &Store, id: &str, now: Millis, tz: &Tz) -> 
             let Some(next) = next_occurrence(at, &repeat, now.max(at), tz) else { return Ok(()) };
             let mut patch = Map::new();
             patch.insert("reminderAt".into(), Value::from(next));
+            // A próxima vez começa do zero (vermelho).
+            patch.insert("reminderDoing".into(), Value::Bool(false));
             store.reschedule(id, &patch).map(|_| ())
         }
         Some((_, None)) => store.set_reminder_done(id, true).map(|_| ()),
         None => Ok(()),
+    }
+}
+
+/// Status do lembrete, o seletor de três cores: vermelho (a fazer), amarelo (em andamento), verde (concluído).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Status {
+    Todo,
+    Doing,
+    Done,
+}
+
+impl Status {
+    pub fn parse(s: &str) -> Option<Status> {
+        match s {
+            "todo" => Some(Status::Todo),
+            "doing" => Some(Status::Doing),
+            "done" => Some(Status::Done),
+            _ => None,
+        }
+    }
+
+    pub fn of(done: bool, doing: bool) -> Status {
+        match (done, doing) {
+            (true, _) => Status::Done,
+            (false, true) => Status::Doing,
+            (false, false) => Status::Todo,
+        }
+    }
+
+    pub fn name(self) -> &'static str {
+        match self {
+            Status::Todo => "todo",
+            Status::Doing => "doing",
+            Status::Done => "done",
+        }
+    }
+}
+
+/// Muda o status. Verde é concluir (o que se repete pula para a próxima vez e volta ao vermelho); nenhum dos três
+/// conta como edição da nota.
+pub fn set_status<Tz: TimeZone>(store: &Store, id: &str, status: Status, now: Millis, tz: &Tz) -> Result<()> {
+    if store.reminder_of(id)?.is_none() {
+        return Ok(());
+    }
+    match status {
+        Status::Done => complete(store, id, now, tz),
+        Status::Doing | Status::Todo => {
+            let mut patch = Map::new();
+            patch.insert("reminderDone".into(), Value::Bool(false));
+            patch.insert("reminderDoing".into(), Value::Bool(status == Status::Doing));
+            store.reschedule(id, &patch).map(|_| ())
+        }
     }
 }
 
@@ -316,6 +370,7 @@ mod tests {
             trashed_at: None,
             reminder_at: reminder,
             reminder_done: false,
+            reminder_doing: false,
             reminder_repeat: repeat.map(str::to_string),
             emoji: None,
             tags: vec![],
@@ -508,6 +563,7 @@ mod snooze_tests {
             trashed_at: None,
             reminder_at: Some(reminder),
             reminder_done: false,
+            reminder_doing: false,
             reminder_repeat: repeat.map(str::to_string),
             emoji: None,
             tags: vec![],
@@ -556,6 +612,53 @@ mod snooze_tests {
         s.save_note(&note("n2", at(10, 9, 0), None)).unwrap();
         complete(&s, "n2", at(10, 8, 0), &tz()).unwrap();
         assert_eq!(reminder_at(&s, "n2"), (Some(at(10, 9, 0)), true));
+    }
+
+    fn status(s: &Store, id: &str) -> Status {
+        let n = s.get_note(id).unwrap().unwrap();
+        Status::of(n.reminder_done, n.reminder_doing)
+    }
+
+    #[test]
+    fn status_goes_red_yellow_green_and_back_without_editing_the_note() {
+        let s = Store::memory();
+        s.save_note(&note("n1", at(10, 9, 0), None)).unwrap();
+        let edited = s.get_note("n1").unwrap().unwrap().updated_at;
+        assert_eq!(status(&s, "n1"), Status::Todo);
+        set_status(&s, "n1", Status::Doing, at(10, 8, 0), &tz()).unwrap();
+        assert_eq!(status(&s, "n1"), Status::Doing);
+        set_status(&s, "n1", Status::Done, at(10, 8, 0), &tz()).unwrap();
+        assert_eq!(status(&s, "n1"), Status::Done);
+        assert!(!s.get_note("n1").unwrap().unwrap().reminder_doing, "verde não guarda o amarelo junto");
+        set_status(&s, "n1", Status::Doing, at(10, 8, 0), &tz()).unwrap();
+        assert_eq!(status(&s, "n1"), Status::Doing, "do verde dá para voltar ao amarelo");
+        set_status(&s, "n1", Status::Todo, at(10, 8, 0), &tz()).unwrap();
+        assert_eq!(status(&s, "n1"), Status::Todo);
+        assert_eq!(s.get_note("n1").unwrap().unwrap().updated_at, edited, "mudar o status não é editar a nota");
+        // o amarelo vai junto no Y.Doc (sync e outros aparelhos)
+        set_status(&s, "n1", Status::Doing, at(10, 8, 0), &tz()).unwrap();
+        let state = s.ydoc("n1").unwrap().unwrap();
+        assert!(crate::ydoc::to_note("n1", &state).unwrap().reminder_doing);
+    }
+
+    #[test]
+    fn green_on_a_repeating_reminder_moves_on_and_starts_red() {
+        let s = Store::memory();
+        s.save_note(&note("n1", at(10, 9, 0), Some("day"))).unwrap();
+        set_status(&s, "n1", Status::Doing, at(10, 8, 0), &tz()).unwrap();
+        set_status(&s, "n1", Status::Done, at(10, 8, 0), &tz()).unwrap();
+        assert_eq!(reminder_at(&s, "n1"), (Some(at(11, 9, 0)), false));
+        assert_eq!(status(&s, "n1"), Status::Todo);
+    }
+
+    #[test]
+    fn notes_without_a_reminder_have_no_status() {
+        let s = Store::memory();
+        let mut n = note("n1", at(10, 9, 0), None);
+        n.reminder_at = None;
+        s.save_note(&n).unwrap();
+        set_status(&s, "n1", Status::Doing, at(10, 8, 0), &tz()).unwrap();
+        assert_eq!(status(&s, "n1"), Status::Todo);
     }
 
     #[test]

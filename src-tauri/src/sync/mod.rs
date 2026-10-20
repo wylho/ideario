@@ -48,6 +48,13 @@ const EAGER_LIMIT: i64 = 8 * 1024 * 1024;
 /// mostra o que chegou, sem esperar o ciclo inteiro (a primeira vez num aparelho novo são centenas de notas).
 const BATCH: usize = 24;
 
+/// Envio de um arquivo: `file` já existe no Drive (atualiza o conteúdo e o `appProperties`) ou é criado a partir de
+/// `new`. Se o arquivo sumiu do Drive enquanto havia mudança aqui, é criado de novo (a edição não se perde).
+pub(crate) struct Upload<'a> {
+    pub file: Option<String>,
+    pub new: NewFile<'a>,
+}
+
 /// Um arquivo no Drive, como o sync precisa.
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct RemoteFile {
@@ -131,7 +138,35 @@ pub(crate) trait Remote {
     }
     fn create(&mut self, file: &NewFile) -> SResult<RemoteFile>;
     fn update(&mut self, id: &str, props: &Props, bytes: &[u8]) -> SResult<RemoteFile>;
+    /// Vários envios, um resultado por item, na mesma ordem. O Drive de verdade faz em paralelo. Sem rede ou sem
+    /// login, o resto nem tenta.
+    fn upload_many(&mut self, ups: &[Upload]) -> Vec<SResult<RemoteFile>> {
+        let mut give_up: Option<SyncError> = None;
+        ups.iter()
+            .map(|u| {
+                if let Some(e) = &give_up {
+                    return Err(e.clone());
+                }
+                let res = upload_one(self, u);
+                if let Err(e @ (SyncError::Offline(_) | SyncError::Unauthorized | SyncError::Stopped)) = &res {
+                    give_up = Some(e.clone());
+                }
+                res
+            })
+            .collect()
+    }
     fn delete(&mut self, id: &str) -> SResult<()>;
+}
+
+/// Um envio pelo caminho normal (um por vez).
+pub(crate) fn upload_one<R: Remote + ?Sized>(remote: &mut R, u: &Upload) -> SResult<RemoteFile> {
+    match &u.file {
+        Some(f) => match remote.update(f, &u.new.props, u.new.bytes) {
+            Err(SyncError::NotFound) => remote.create(&u.new),
+            other => other,
+        },
+        None => remote.create(&u.new),
+    }
 }
 
 /// Este aparelho: o banco (a trava só é pega para ler e gravar, nunca durante a rede) e a pasta de dados.
@@ -384,35 +419,45 @@ fn adopt_categories_file(s: &Store, f: &RemoteFile, content: &[u8]) -> crate::st
 
 pub(crate) fn push(dev: &Device, remote: &mut dyn Remote, report: &mut Report) -> SResult<()> {
     push_attachments(dev, remote)?;
-    for (id, file) in dev.with(|s| s.dirty_notes())? {
-        let (state, (created, updated)) = dev.with(|s| Ok((s.ydoc(&id)?, s.note_times(&id)?)))?;
-        let Some(state) = state else { continue };
-        let props = Props::from([
-            (KIND.into(), NOTE.into()),
-            ("noteId".into(), id.clone()),
-            ("created".into(), created.to_string()),
-            ("updated".into(), updated.to_string()),
-        ]);
-        let new = || NewFile {
-            name: format!("note-{id}.ydoc"),
-            props: props.clone(),
-            description: None,
-            mime: "application/octet-stream",
-            bytes: &state,
-        };
-        let sent = match file {
-            Some(f) => match remote.update(&f, &props, &state) {
-                // Apagado no Drive enquanto havia mudança aqui: a nota volta (a edição não se perde).
-                Err(SyncError::NotFound) => remote.create(&new())?,
-                other => other?,
-            },
-            None => remote.create(&new())?,
-        };
-        // Excluída enquanto subia: o arquivo que acabou de nascer sai também (senão a nota volta nos outros).
-        if !dev.with(|s| s.mark_uploaded(&id, &state, &sent.id, &sent.rev))? {
-            dev.with(|s| s.add_pending_delete(&sent.id))?;
+    // Em lotes, cada lote em paralelo. Um envio que falha não desfaz os outros: eles ficam marcados e o erro volta no
+    // fim do lote (o ciclo seguinte tenta só o que faltou).
+    let dirty = dev.with(|s| s.dirty_notes())?;
+    for batch in dirty.chunks(BATCH) {
+        let mut notes = Vec::new();
+        for (id, file) in batch {
+            let (state, (created, updated)) = dev.with(|s| Ok((s.ydoc(id)?, s.note_times(id)?)))?;
+            let Some(state) = state else { continue };
+            let props = Props::from([
+                (KIND.into(), NOTE.into()),
+                ("noteId".into(), id.clone()),
+                ("created".into(), created.to_string()),
+                ("updated".into(), updated.to_string()),
+            ]);
+            notes.push((id.clone(), file.clone(), state, props));
         }
-        report.sent += 1;
+        let ups: Vec<Upload> = notes
+            .iter()
+            .map(|(id, file, state, props)| Upload {
+                file: file.clone(),
+                new: NewFile { name: format!("note-{id}.ydoc"), props: props.clone(), description: None, mime: "application/octet-stream", bytes: state },
+            })
+            .collect();
+        let mut failed = None;
+        for ((id, _, state, _), res) in notes.iter().zip(remote.upload_many(&ups)) {
+            match res {
+                Ok(sent) => {
+                    // Excluída enquanto subia: o arquivo que acabou de nascer sai também (senão a nota volta nos outros).
+                    if !dev.with(|s| s.mark_uploaded(id, state, &sent.id, &sent.rev))? {
+                        dev.with(|s| s.add_pending_delete(&sent.id))?;
+                    }
+                    report.sent += 1;
+                }
+                Err(e) => failed = failed.or(Some(e)),
+            }
+        }
+        if let Some(e) = failed {
+            return Err(e);
+        }
     }
     push_categories(dev, remote)?;
     for file in dev.with(|s| s.pending_deletes())? {
@@ -425,21 +470,41 @@ pub(crate) fn push(dev: &Device, remote: &mut dyn Remote, report: &mut Report) -
 }
 
 fn push_attachments(dev: &Device, remote: &mut dyn Remote) -> SResult<()> {
-    for a in dev.with(|s| s.attachments_to_upload())? {
-        // Só o que está aqui. Sumiu do disco: fica marcado como ausente (não é trabalho pendente para sempre).
-        let Ok(bytes) = std::fs::read(attachments::dir(dev.data).join(&a.hash)) else {
-            dev.with(|s| s.set_attachment_missing(&a.hash))?;
-            continue;
-        };
-        let description = serde_json::to_string(&a).map_err(|e| SyncError::Other(e.to_string()))?;
-        let f = remote.create(&NewFile {
-            name: format!("att-{}", a.hash),
-            props: Props::from([(KIND.into(), ATTACHMENT.into()), ("hash".into(), a.hash.clone())]),
-            description: Some(description),
-            mime: &a.mime,
-            bytes: &bytes,
-        })?;
-        dev.with(|s| s.set_attachment_file(&a.hash, &f.id))?;
+    let todo = dev.with(|s| s.attachments_to_upload())?;
+    for batch in todo.chunks(BATCH) {
+        let mut files = Vec::new();
+        for a in batch {
+            // Só o que está aqui. Sumiu do disco: fica marcado como ausente (não é trabalho pendente para sempre).
+            let Ok(bytes) = std::fs::read(attachments::dir(dev.data).join(&a.hash)) else {
+                dev.with(|s| s.set_attachment_missing(&a.hash))?;
+                continue;
+            };
+            let description = serde_json::to_string(a).map_err(|e| SyncError::Other(e.to_string()))?;
+            files.push((a, bytes, description));
+        }
+        let ups: Vec<Upload> = files
+            .iter()
+            .map(|(a, bytes, description)| Upload {
+                file: None,
+                new: NewFile {
+                    name: format!("att-{}", a.hash),
+                    props: Props::from([(KIND.into(), ATTACHMENT.into()), ("hash".into(), a.hash.clone())]),
+                    description: Some(description.clone()),
+                    mime: &a.mime,
+                    bytes,
+                },
+            })
+            .collect();
+        let mut failed = None;
+        for ((a, ..), res) in files.iter().zip(remote.upload_many(&ups)) {
+            match res {
+                Ok(f) => dev.with(|s| s.set_attachment_file(&a.hash, &f.id))?,
+                Err(e) => failed = failed.or(Some(e)),
+            }
+        }
+        if let Some(e) = failed {
+            return Err(e);
+        }
     }
     Ok(())
 }
@@ -457,14 +522,10 @@ fn push_categories(dev: &Device, remote: &mut dyn Remote) -> SResult<()> {
         return Ok(());
     }
     let props = Props::from([(KIND.into(), CATEGORIES.into())]);
-    let new = || NewFile { name: "categories.ydoc".into(), props: props.clone(), description: None, mime: "application/octet-stream", bytes: &doc };
-    let sent = match file {
-        Some(f) => match remote.update(&f, &props, &doc) {
-            Err(SyncError::NotFound) => remote.create(&new())?,
-            other => other?,
-        },
-        None => remote.create(&new())?,
-    };
+    let sent = upload_one(
+        remote,
+        &Upload { file, new: NewFile { name: "categories.ydoc".into(), props, description: None, mime: "application/octet-stream", bytes: &doc } },
+    )?;
     dev.with(|s| adopt_categories_file(s, &sent, &doc))
 }
 

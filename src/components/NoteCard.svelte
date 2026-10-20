@@ -109,7 +109,7 @@
     {#if hasMeta}
       <div class="card-meta">
         {#if n.reminderAt != null}
-          <span class="pill" class:late={isOverdue(n)} class:done={n.reminderDone}><Bell size={11} />{fmtReminder(n.reminderAt)}{#if n.reminderRepeat}<Repeat size={11} aria-label="se repete" />{/if}</span>
+          <span class="pill" class:late={isOverdue(n)} class:done={n.reminderDone} class:doing={n.reminderDoing && !n.reminderDone}><Bell size={11} />{fmtReminder(n.reminderAt)}{#if n.reminderRepeat}<Repeat size={11} aria-label="se repete" />{/if}</span>
         {/if}
         {#if cat}
           <button class="pill cat" title="Filtrar por {cat.name}" onclick={(e) => { e.stopPropagation(); app.setCategory(cat.id) }}>

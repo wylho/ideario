@@ -33,9 +33,11 @@
   import { reminderSet } from '../lib/notify.svelte'
   import { ago, fmtBytes, hashTags } from '../lib/format'
   import ReminderPopover from './ReminderPopover.svelte'
+  import StatusToggle from './StatusToggle.svelte'
+  import { nextOccurrence } from '../lib/reminders'
   import TagInput from './TagInput.svelte'
   import EmojiPicker from './EmojiPicker.svelte'
-  import type { Attachment, NoteColor, NoteInput, RichDoc, RichNode, SharedIn } from '../lib/types'
+  import { statusOf, type Attachment, type NoteColor, type NoteInput, type ReminderStatus, type RichDoc, type RichNode, type SharedIn } from '../lib/types'
 
   let { target }: { target: EditorTarget } = $props()
 
@@ -138,7 +140,7 @@
   if (isNew) {
     meta = {
       title: '', categoryId: defaults?.categoryId ?? null, color: 'none', pinned: false, archived: false,
-      trashedAt: null, reminderAt: null, reminderDone: false, reminderRepeat: null, emoji: null, tags: defaults?.tags ?? [],
+      trashedAt: null, reminderAt: defaults?.reminderAt ?? null, reminderDone: false, reminderDoing: false, reminderRepeat: null, emoji: null, tags: defaults?.tags ?? [],
     }
   } else {
     Promise.all([api.getNoteState(id), api.getNote(id)]).then(([state, n]) => {
@@ -189,8 +191,18 @@
     if (!meta) return
     meta.reminderAt = v
     meta.reminderDone = false
-    if (v == null) meta.reminderRepeat = null
+    if (v == null) (meta.reminderRepeat = null), (meta.reminderDoing = false)
     else void reminderSet()
+  }
+  /** Seletor de três cores. Verde num lembrete que se repete vale por esta vez: pula para a próxima. */
+  function setStatus(to: ReminderStatus) {
+    if (!meta || meta.reminderAt == null) return
+    if (to === 'done' && meta.reminderRepeat) {
+      meta.reminderAt = nextOccurrence(meta.reminderAt, meta.reminderRepeat)
+      meta.reminderDone = false
+      app.say('Feito por esta vez')
+    } else meta.reminderDone = to === 'done'
+    meta.reminderDoing = to === 'doing'
   }
   const NEW_CATEGORY = '__new'
   /** Seletor de categoria; "Nova categoria…" cria e já põe a nota nela. */
@@ -403,6 +415,21 @@
   }
 
   // ---------- blocos ----------
+  /** Altura do título acompanha o texto (a WebKitGTK não tem `field-sizing`). */
+  function autosize(el: HTMLTextAreaElement, _title: string) {
+    let width = 0
+    const fit = () => {
+      el.style.height = 'auto'
+      el.style.height = `${el.scrollHeight}px`
+    }
+    const ro = new ResizeObserver(() => {
+      if (el.clientWidth !== width) (width = el.clientWidth), fit()
+    })
+    ro.observe(el)
+    fit()
+    return { update: () => queueMicrotask(fit), destroy: () => ro.disconnect() }
+  }
+
   let blockMenu: MenuAt | undefined = $state()
   let hover = $state.raw<BlockHit | null>(null)
   let blocksEl: HTMLElement | undefined = $state()
@@ -754,15 +781,19 @@
           </div>
           <Dialog.Title>
             {#snippet child({ props })}
-              <input
+              <!-- Título longo quebra em várias linhas (e não rola de lado); continua sendo uma linha só de texto. -->
+              <textarea
                 {...props}
                 id="titulo"
                 class="ed-title"
+                rows="1"
                 placeholder="Título"
                 autocomplete="off"
                 bind:value={meta!.title}
+                use:autosize={meta!.title}
+                oninput={(e) => /\n/.test(e.currentTarget.value) && meta && (meta.title = e.currentTarget.value.replace(/\s*\n\s*/g, ' '))}
                 onkeydown={(e) => e.key === 'Enter' && (e.preventDefault(), editor?.commands.focus('start'))}
-              />
+              ></textarea>
             {/snippet}
           </Dialog.Title>
           <!-- Blocos: com o mouse por cima, a alça ⋮⋮ à esquerda arrasta o bloco e abre o menu dele.
@@ -844,9 +875,9 @@
                 done={meta.reminderDone}
                 repeat={meta.reminderRepeat}
                 onchange={setReminder}
-                ondone={(d) => meta && (meta.reminderDone = d)}
                 onrepeat={(r) => meta && (meta.reminderRepeat = r)}
               />
+              <StatusToggle value={statusOf(meta)} onchange={setStatus} />
             {/if}
           </div>
 

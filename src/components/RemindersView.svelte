@@ -1,12 +1,14 @@
 <script lang="ts">
-  import { Check, Repeat } from '@lucide/svelte'
+  import { Repeat } from '@lucide/svelte'
   import { api } from '../lib/api'
+  import { changeStatus } from '../lib/status'
+  import StatusToggle from './StatusToggle.svelte'
   import { app, live } from '../lib/app.svelte'
   import { dayDiff, fmtShortDate, fmtTime, isOverdue } from '../lib/format'
   import ViewEmpty from './ViewEmpty.svelte'
   import ContextMenu from './ContextMenu.svelte'
   import { reminderMenu } from '../lib/menus'
-  import type { NoteSummary } from '../lib/types'
+  import { statusOf, type NoteSummary } from '../lib/types'
 
   const list = live(() => api.listReminders({ filter: $state.snapshot(app.filter), query: app.query, includeDone: true }), [] as NoteSummary[])
 
@@ -26,18 +28,6 @@
     ] as [string, NoteSummary[]][]).filter(([, g]) => g.length)
   })
 
-  async function toggle(n: NoteSummary) {
-    const was = n.reminderDone
-    if (n.reminderRepeat && !was) {
-      // Lembrete que se repete: "feito" vale para esta vez; a série continua.
-      const before = n.reminderAt
-      await api.completeReminder(n.id)
-      app.say('Feito por esta vez', { label: 'Desfazer', run: () => void api.updateNote(n.id, { reminderAt: before }) })
-      return
-    }
-    await api.setReminderDone(n.id, !was)
-    app.say(was ? 'Lembrete reaberto' : 'Lembrete concluído', { label: 'Desfazer', run: () => void api.setReminderDone(n.id, was) })
-  }
 </script>
 
 {#snippet item(n: NoteSummary)}
@@ -46,9 +36,7 @@
   <ContextMenu items={() => reminderMenu(n)}>
     {#snippet children(trigger)}
   <div {...trigger} class="r-item" class:done={n.reminderDone}>
-    <button class="r-check" aria-label={n.reminderDone ? 'Reabrir lembrete' : n.reminderRepeat ? 'Feito por esta vez' : 'Concluir lembrete'} onclick={() => toggle(n)}>
-      {#if n.reminderDone}<Check size={14} strokeWidth={3} />{/if}
-    </button>
+    <StatusToggle value={statusOf(n)} onchange={(s) => changeStatus(n, s)} />
     <button class="r-main" onclick={() => app.openNote(n.id)}>
       <span class="r-title">{#if n.emoji}{n.emoji} {/if}{n.label}</span>
       <span class="r-sub">

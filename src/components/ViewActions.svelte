@@ -1,11 +1,12 @@
 <script lang="ts">
-  import { Archive, CheckCheck, File as FileIcon, FileAudio, FileText, FileVideoCamera, Image, BrushCleaning } from '@lucide/svelte'
+  import { Archive, CheckCheck, ChevronLeft, ChevronRight, File as FileIcon, FileAudio, FileText, FileVideoCamera, Image, BrushCleaning } from '@lucide/svelte'
   import SortMenu from './SortMenu.svelte'
   import LayoutToggle from './LayoutToggle.svelte'
   import FilterGroup from './FilterGroup.svelte'
   import ConfirmDialog from './ConfirmDialog.svelte'
   import { api } from '../lib/api'
   import { app, live } from '../lib/app.svelte'
+  import { shift } from '../lib/calendar'
   import type { FileGroup, FileSort, NoteSort, Tone } from '../lib/types'
 
   // Menu dinâmico: as ações da visão atual, sempre no mesmo lugar e com os mesmos botões
@@ -66,11 +67,20 @@
   >
     <CheckCheck size={19} />
   </button>
+{:else if app.view === 'calendar'}
+  <button class="chip cal-today" onclick={() => (app.calDate = Date.now())}>Hoje</button>
+  <button class="icon-btn" aria-label={app.calMode === 'month' ? 'Mês anterior' : 'Semana anterior'} title={app.calMode === 'month' ? 'Mês anterior' : 'Semana anterior'} onclick={() => (app.calDate = shift(app.calDate, app.calMode, -1))}><ChevronLeft size={19} /></button>
+  <button class="icon-btn" aria-label={app.calMode === 'month' ? 'Próximo mês' : 'Próxima semana'} title={app.calMode === 'month' ? 'Próximo mês' : 'Próxima semana'} onclick={() => (app.calDate = shift(app.calDate, app.calMode, 1))}><ChevronRight size={19} /></button>
+  <div class="cal-mode" role="radiogroup" aria-label="Mostrar">
+    {#each [['month', 'Mês'], ['week', 'Semana']] as const as [m, label] (m)}
+      <button role="radio" aria-checked={app.calMode === m} class:on={app.calMode === m} onclick={() => (app.calMode = m)}>{label}</button>
+    {/each}
+  </div>
 {:else if app.view === 'files'}
   <FilterGroup label="Tipo de arquivo" all="Todos os tipos" options={KINDS} value={app.filesKind} onchange={(v) => (app.filesKind = v)} />
   <SortMenu heading="Ordenar arquivos" options={FILE_SORTS} value={app.filesSort} onchange={(v) => (app.filesSort = v)} />
   <LayoutToggle value={app.filesLayout} onchange={(v) => (app.filesLayout = v)} />
-{:else}
+{:else if app.view === 'moodboard'}
   <FilterGroup label="Tom das imagens" all="Todos os tons" options={TONES} value={app.moodTone} onchange={(v) => (app.moodTone = v)} />
   <button
     class="icon-btn"

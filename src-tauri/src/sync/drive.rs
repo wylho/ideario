@@ -9,7 +9,7 @@ use std::time::Duration;
 use serde::Deserialize;
 use serde_json::{json, Value};
 
-use super::{Change, NewFile, Props, RemoteFile, Remote, SResult, SyncError};
+use super::{Change, NewFile, Props, RemoteFile, Remote, SResult, SyncError, Upload};
 use crate::store::Millis;
 
 const FIELDS: &str = "id,version,modifiedTime,appProperties,description";
@@ -199,6 +199,15 @@ impl<T: Tokens> DriveApi<T> {
     }
 }
 
+/// Metadados de um arquivo novo na pasta oculta do app.
+fn create_meta(file: &NewFile) -> Value {
+    let mut meta = json!({ "name": file.name, "parents": ["appDataFolder"], "appProperties": file.props, "mimeType": file.mime });
+    if let Some(d) = &file.description {
+        meta["description"] = Value::from(d.as_str());
+    }
+    meta
+}
+
 /// Corpo `multipart/related` do Drive: metadados em JSON e depois o conteúdo.
 fn multipart(boundary: &str, meta: &Value, mime: &str, bytes: &[u8]) -> Vec<u8> {
     let mut body = format!("--{boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n{meta}\r\n--{boundary}\r\nContent-Type: {mime}\r\n\r\n")
@@ -294,15 +303,56 @@ impl<T: Tokens> Remote for DriveApi<T> {
     }
 
     fn create(&mut self, file: &NewFile) -> SResult<RemoteFile> {
-        let mut meta = json!({ "name": file.name, "parents": ["appDataFolder"], "appProperties": file.props, "mimeType": file.mime });
-        if let Some(d) = &file.description {
-            meta["description"] = Value::from(d.as_str());
-        }
-        self.upload("POST", None, meta, file.mime, file.bytes)
+        self.upload("POST", None, create_meta(file), file.mime, file.bytes)
     }
 
     fn update(&mut self, id: &str, props: &Props, bytes: &[u8]) -> SResult<RemoteFile> {
         self.upload("PATCH", Some(&encode(id)), json!({ "appProperties": props }), "application/octet-stream", bytes)
+    }
+
+    /// Em paralelo, com o mesmo token (só os que cabem numa requisição). O que não subir de primeira (token vencido,
+    /// limite de uso, arquivo que sumiu, rede) tenta de novo pelo caminho normal, um por um; sem rede ou sem login, o
+    /// resto do lote nem tenta.
+    fn upload_many(&mut self, ups: &[Upload]) -> Vec<SResult<RemoteFile>> {
+        let fast = match self.tokens.access(false) {
+            Ok(token) => {
+                let (agent, auth, base, limit) = (&self.agent, format!("Bearer {token}"), &self.base, self.multipart_limit);
+                super::par_map(ups, PARALLEL, |u| {
+                    if u.new.bytes.len() > limit {
+                        return None;
+                    }
+                    let (method, path, meta, mime) = match &u.file {
+                        Some(id) => ("PATCH", format!("/{}", encode(id)), json!({ "appProperties": u.new.props }), "application/octet-stream"),
+                        None => ("POST", String::new(), create_meta(&u.new), u.new.mime),
+                    };
+                    let boundary = format!("ideario-{}", uuid::Uuid::now_v7().simple());
+                    let body = multipart(&boundary, &meta, mime, u.new.bytes);
+                    let url = format!("{base}/upload/drive/v3/files{path}?uploadType=multipart&fields={FIELDS}");
+                    let res = agent
+                        .request(method, &url)
+                        .set("Authorization", &auth)
+                        .set("Content-Type", &format!("multipart/related; boundary={boundary}"))
+                        .send_bytes(&body);
+                    res.ok().and_then(|r| json_of::<FileJson>(r).ok()).map(|f| Ok(f.into_remote()))
+                })
+            }
+            Err(_) => vec![None; ups.len()],
+        };
+        let mut give_up: Option<SyncError> = None;
+        ups.iter()
+            .zip(fast)
+            .map(|(u, got)| match (got, &give_up) {
+                (Some(res), _) => res,
+                (None, Some(e)) => Err(e.clone()),
+                (None, None) => {
+                    let res = super::upload_one(self, u);
+                    if let Err(e @ (SyncError::Offline(_) | SyncError::Unauthorized)) = &res {
+                        give_up = Some(e.clone());
+                    }
+                    res
+                }
+            })
+            .collect()
     }
 
     fn delete(&mut self, id: &str) -> SResult<()> {
@@ -409,6 +459,28 @@ pub(crate) mod tests {
 
     fn file_json(id: &str) -> Value {
         json!({"id": id, "version": "7", "modifiedTime": "2026-10-10T12:00:00.500Z", "appProperties": {"kind": "note", "noteId": "n1"}})
+    }
+
+    #[test]
+    fn uploads_a_batch_in_order_and_recreates_files_gone_from_the_drive() {
+        // "gone" sumiu do Drive (404 no PATCH): volta como arquivo novo; o resto atualiza ou cria, em paralelo.
+        let (base, log) = serve(Box::new(|r: &Req| match (r.method.as_str(), r.path.as_str()) {
+            ("PATCH", p) if p.contains("/gone") => (404, vec![], vec![]),
+            ("PATCH", p) => ok(file_json(p.split('/').nth(5).unwrap_or("").split('?').next().unwrap_or(""))),
+            _ => ok(file_json("novo")),
+        }));
+        let mut d = DriveApi::local(&base, Fake::default(), MULTIPART_LIMIT);
+        let props = Props::from([("kind".to_string(), "note".to_string())]);
+        let up = |file: Option<&str>| Upload {
+            file: file.map(String::from),
+            new: NewFile { name: "n.ydoc".into(), props: props.clone(), description: None, mime: "application/octet-stream", bytes: &[1, 2] },
+        };
+        let ups = vec![up(Some("a")), up(None), up(Some("gone")), up(Some("b")), up(Some("c")), up(Some("d")), up(Some("e")), up(Some("f")), up(Some("g"))];
+        let got: Vec<String> = d.upload_many(&ups).into_iter().map(|r| r.unwrap().id).collect();
+        assert_eq!(got, ["a", "novo", "novo", "b", "c", "d", "e", "f", "g"]);
+        let log = log.lock().unwrap();
+        assert_eq!(log.iter().filter(|r| r.method == "PATCH").count(), 9, "o que sumiu tenta o PATCH duas vezes (lote e um por um)");
+        assert_eq!(log.iter().filter(|r| r.method == "POST").count(), 2);
     }
 
     #[test]

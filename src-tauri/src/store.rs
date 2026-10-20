@@ -125,6 +125,8 @@ pub struct NoteSummary {
     pub trashed_at: Option<Millis>,
     pub reminder_at: Option<Millis>,
     pub reminder_done: bool,
+    /// Lembrete em andamento (amarelo); vermelho = nem isso nem concluído, verde = concluído.
+    pub reminder_doing: bool,
     /// Repetição do lembrete: "day" | "week" | "month" | "year" (None = uma vez).
     pub reminder_repeat: Option<String>,
     /// Emoji grande de capa (None = sem).
@@ -174,6 +176,7 @@ pub struct NoteDetail {
     pub trashed_at: Option<Millis>,
     pub reminder_at: Option<Millis>,
     pub reminder_done: bool,
+    pub reminder_doing: bool,
     pub reminder_repeat: Option<String>,
     pub emoji: Option<String>,
     pub tags: Vec<String>,
@@ -196,6 +199,8 @@ pub struct NoteInput {
     pub trashed_at: Option<Millis>,
     pub reminder_at: Option<Millis>,
     pub reminder_done: bool,
+    #[serde(default)]
+    pub reminder_doing: bool,
     #[serde(default)]
     pub reminder_repeat: Option<String>,
     #[serde(default)]
@@ -397,6 +402,10 @@ const MIGRATIONS: &[&str] = &[
     r#"
     ALTER TABLE notes ADD COLUMN emoji TEXT;
     "#,
+    // 9 — lembrete em andamento (status amarelo; projeção do meta do Y.Doc).
+    r#"
+    ALTER TABLE notes ADD COLUMN reminder_doing INTEGER NOT NULL DEFAULT 0;
+    "#,
 ];
 
 /// SQL: a nota não está numa categoria oculta ou com PIN — a não ser a categoria escolhida (`?N`, ou NULL), que mostra
@@ -568,7 +577,7 @@ impl Store {
     }
 
     const SUMMARY_COLS: &'static str = "n.id, n.title, n.label, NULL, n.preview_json, n.cover_json, n.image_count, n.file_count, \
-        n.category_id, n.color, n.pinned, n.archived, n.trashed_at, n.reminder_at, n.reminder_done, n.created_at, n.updated_at, n.position, n.reminder_repeat, n.emoji";
+        n.category_id, n.color, n.pinned, n.archived, n.trashed_at, n.reminder_at, n.reminder_done, n.created_at, n.updated_at, n.position, n.reminder_repeat, n.emoji, n.reminder_doing";
 
     fn summaries(&self, sql: &str, args: &[rusqlite::types::Value]) -> Result<Vec<NoteSummary>> {
         let mut st = self.conn.prepare_cached(sql).map_err(err)?;
@@ -603,6 +612,7 @@ impl Store {
             trashed_at: r.get(12)?,
             reminder_at: r.get(13)?,
             reminder_done: r.get(14)?,
+            reminder_doing: r.get(20)?,
             reminder_repeat: r.get(18)?,
             emoji: r.get(19)?,
             tags: Vec::new(),
@@ -934,7 +944,7 @@ impl Store {
     pub fn note_input(&self, id: &str) -> Result<Option<NoteInput>> {
         self.conn
             .query_row(
-                "SELECT id, title, body_json, category_id, color, pinned, archived, trashed_at, reminder_at, reminder_done, reminder_repeat, emoji FROM notes WHERE id = ?1",
+                "SELECT id, title, body_json, category_id, color, pinned, archived, trashed_at, reminder_at, reminder_done, reminder_repeat, emoji, reminder_doing FROM notes WHERE id = ?1",
                 [id],
                 |r| {
                     Ok(NoteInput {
@@ -948,6 +958,7 @@ impl Store {
                         trashed_at: r.get(7)?,
                         reminder_at: r.get(8)?,
                         reminder_done: r.get(9)?,
+                        reminder_doing: r.get(12)?,
                         reminder_repeat: r.get(10)?,
                         emoji: r.get(11)?,
                         tags: Vec::new(),
@@ -989,6 +1000,7 @@ impl Store {
             trashed_at: n.trashed_at,
             reminder_at: n.reminder_at,
             reminder_done: n.reminder_done,
+            reminder_doing: n.reminder_doing,
             reminder_repeat: n.reminder_repeat,
             emoji: n.emoji,
             tags: n.tags,
@@ -1069,14 +1081,14 @@ impl Store {
         let tx = self.conn.unchecked_transaction().map_err(err)?;
         tx.execute(
             "INSERT INTO notes (id, body_json, title, label, label_fold, body_text, preview_json, cover_json, image_count, file_count, \
-             category_id, color, pinned, archived, trashed_at, reminder_at, reminder_done, position, created_at, updated_at, ydoc, reminder_repeat, emoji, dirty) \
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, 1) \
+             category_id, color, pinned, archived, trashed_at, reminder_at, reminder_done, position, created_at, updated_at, ydoc, reminder_repeat, emoji, reminder_doing, dirty) \
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, 1) \
              ON CONFLICT(id) DO UPDATE SET ydoc = excluded.ydoc, body_json = excluded.body_json, title = excluded.title, label = excluded.label, \
              label_fold = excluded.label_fold, body_text = excluded.body_text, preview_json = excluded.preview_json, \
              cover_json = excluded.cover_json, image_count = excluded.image_count, file_count = excluded.file_count, \
              category_id = excluded.category_id, color = excluded.color, pinned = excluded.pinned, archived = excluded.archived, \
              trashed_at = excluded.trashed_at, reminder_at = excluded.reminder_at, reminder_done = excluded.reminder_done, \
-             reminder_repeat = excluded.reminder_repeat, emoji = excluded.emoji, position = excluded.position, \
+             reminder_repeat = excluded.reminder_repeat, emoji = excluded.emoji, reminder_doing = excluded.reminder_doing, position = excluded.position, \
              updated_at = excluded.updated_at, dirty = 1",
             params![
                 n.id,
@@ -1102,6 +1114,7 @@ impl Store {
                 state,
                 n.reminder_repeat,
                 n.emoji,
+                n.reminder_doing,
             ],
         )
         .map_err(err)?;
@@ -1142,6 +1155,8 @@ impl Store {
     pub fn set_reminder_done(&self, id: &str, done: bool) -> Result<bool> {
         let mut patch = Map::new();
         patch.insert("reminderDone".into(), Value::Bool(done));
+        // Concluir ou reabrir tira o "em andamento": volta para o verde ou para o vermelho.
+        patch.insert("reminderDoing".into(), Value::Bool(false));
         // Concluir o lembrete não é editar a nota: a data fica.
         self.patch_note(id, &patch, false)
     }
@@ -1240,6 +1255,7 @@ impl Store {
                 "trashedAt" => n.trashed_at = v.as_i64(),
                 "reminderAt" => n.reminder_at = v.as_i64(),
                 "reminderDone" => n.reminder_done = v.as_bool().unwrap_or(n.reminder_done),
+                "reminderDoing" => n.reminder_doing = v.as_bool().unwrap_or(n.reminder_doing),
                 "reminderRepeat" => n.reminder_repeat = v.as_str().filter(|r| REPEATS.contains(r)).map(str::to_string),
                 "emoji" => n.emoji = v.as_str().and_then(clean_emoji),
                 _ => {}
@@ -1326,12 +1342,32 @@ impl Store {
         tx.commit().map_err(err)
     }
 
-    /// A ordem personalizada passa a ser igual à ordem `sort` (ao começar a arrastar numa ordem por data).
+    /// A ordem personalizada passa a ser igual à ordem `sort` (ao começar a arrastar numa ordem por data). Só as notas
+    /// fora do lugar ganham posição nova: cada uma que muda vai para o Drive e desce nos outros aparelhos.
     pub fn adopt_order(&self, sort: &str) -> Result<bool> {
         if sort == "custom" {
             return Ok(false);
         }
-        self.renumber(Self::order_by(sort))?;
+        let rows: Vec<(String, f64)> = {
+            let mut st = self.conn.prepare(&format!("SELECT n.id, n.position FROM notes n ORDER BY {}", Self::order_by(sort))).map_err(err)?;
+            let rows = st.query_map([], |r| Ok((r.get(0)?, r.get(1)?))).map_err(err)?;
+            rows.collect::<std::result::Result<_, _>>().map_err(err)?
+        };
+        let current: Vec<f64> = rows.iter().map(|(_, p)| *p).collect();
+        let Some(next) = keep_most_positions(&current) else {
+            self.renumber(Self::order_by(sort))?;
+            return Ok(true);
+        };
+        let tx = self.conn.unchecked_transaction().map_err(err)?;
+        let shared = self.flag(ORDER_SHARED)?;
+        for ((id, cur), pos) in rows.iter().zip(next) {
+            // A primeira vez que a ordem vale para todos, todas levam o seu lugar (como em `share_order`).
+            if pos != *cur || !shared {
+                self.put_position(id, pos)?;
+            }
+        }
+        self.set_flag(ORDER_SHARED)?;
+        tx.commit().map_err(err)?;
         Ok(true)
     }
 
@@ -1357,6 +1393,7 @@ impl Store {
         n.pinned = false;
         n.reminder_at = None;
         n.reminder_done = false;
+        n.reminder_doing = false;
         self.write_note(&n, true, &ydoc::from_note(&n))?;
         if self.flag(ORDER_SHARED)? {
             self.put_position(&n.id, pos - 1.0)?;
@@ -1921,9 +1958,67 @@ fn same_content(a: &NoteInput, b: &NoteInput) -> bool {
         && a.trashed_at == b.trashed_at
         && a.reminder_at == b.reminder_at
         && a.reminder_done == b.reminder_done
+        && a.reminder_doing == b.reminder_doing
         && a.reminder_repeat == b.reminder_repeat
         && a.emoji == b.emoji
         && a.tags == b.tags
+}
+
+/// Posições crescentes para itens já na ordem desejada, mexendo no menor número possível: os que já estão em ordem
+/// crescente (a maior subsequência crescente) ficam; os outros vão para o meio dos vizinhos. None se não houver espaço
+/// (aí renumera tudo).
+fn keep_most_positions(current: &[f64]) -> Option<Vec<f64>> {
+    let n = current.len();
+    // maior subsequência estritamente crescente, O(n log n)
+    let mut tails: Vec<usize> = Vec::new();
+    let mut prev = vec![usize::MAX; n];
+    for i in 0..n {
+        let k = tails.partition_point(|&t| current[t] < current[i]);
+        if k > 0 {
+            prev[i] = tails[k - 1];
+        }
+        if k == tails.len() {
+            tails.push(i);
+        } else {
+            tails[k] = i;
+        }
+    }
+    let mut keep = vec![false; n];
+    let mut i = tails.last().copied().unwrap_or(usize::MAX);
+    while i != usize::MAX {
+        keep[i] = true;
+        i = prev[i];
+    }
+    let mut out = current.to_vec();
+    let mut i = 0;
+    while i < n {
+        if keep[i] {
+            i += 1;
+            continue;
+        }
+        let start = i;
+        while i < n && !keep[i] {
+            i += 1;
+        }
+        let k = (i - start) as f64;
+        let lo = (start > 0).then(|| out[start - 1]);
+        let hi = (i < n).then(|| out[i]);
+        for (j, slot) in out[start..i].iter_mut().enumerate() {
+            let j = j as f64 + 1.0;
+            *slot = match (lo, hi) {
+                (Some(a), Some(b)) => a + (b - a) * j / (k + 1.0),
+                (Some(a), None) => a + STEP * j,
+                (None, Some(b)) => b - STEP * (k + 1.0 - j),
+                (None, None) => STEP * j,
+            };
+        }
+        if let (Some(a), Some(b)) = (lo, hi) {
+            if (b - a) / (k + 1.0) < 1e-6 {
+                return None;
+            }
+        }
+    }
+    Some(out)
 }
 
 /// Busca como o SPEC pede: sem acento, todos os termos, por prefixo. `#` é ignorado ("#casa" acha a tag casa).
@@ -2005,6 +2100,7 @@ mod tests {
             trashed_at: None,
             reminder_at: None,
             reminder_done: false,
+            reminder_doing: false,
             reminder_repeat: None,
             emoji: None,
             tags: vec![],
@@ -2186,6 +2282,38 @@ mod tests {
     }
 
     #[test]
+    fn adopting_an_order_only_moves_the_notes_out_of_place() {
+        let s = Store::memory();
+        for i in 0..40 {
+            let id = format!("n{i:02}");
+            s.save_note(&note(&id, &format!("T{i:02}"), "x")).unwrap();
+        }
+        let dirty = |s: &Store| s.conn.query_row("SELECT COUNT(*) FROM notes WHERE dirty = 1", [], |r| r.get::<_, i64>(0)).unwrap();
+        s.adopt_order("title").unwrap();
+        s.conn.execute("UPDATE notes SET dirty = 0", []).unwrap();
+        // uma nota sai do lugar; adotar a ordem por título de novo só mexe nela
+        s.move_note("n10", Some("n39"), None).unwrap();
+        s.conn.execute("UPDATE notes SET dirty = 0", []).unwrap();
+        s.adopt_order("title").unwrap();
+        assert_eq!(dirty(&s), 1, "só a nota fora do lugar vai para o Drive");
+        let want: Vec<String> = (0..40).map(|i| format!("T{i:02}")).collect();
+        assert_eq!(titles(&s.list_notes(&Filter::default(), "active", "", "custom").unwrap()), want);
+    }
+
+    proptest::proptest! {
+        #[test]
+        fn keeping_positions_gives_an_increasing_order(pos in proptest::collection::vec(-1e6f64..1e6, 0..60)) {
+            let out = keep_most_positions(&pos).unwrap();
+            proptest::prop_assert!(out.windows(2).all(|w| w[0] < w[1]), "{out:?}");
+            let mut sorted = pos.clone();
+            sorted.dedup();
+            if pos.windows(2).all(|w| w[0] < w[1]) {
+                proptest::prop_assert_eq!(out, pos);
+            }
+        }
+    }
+
+    #[test]
     fn android_starts_the_custom_order_by_date_once() {
         let s = Store::memory();
         for (i, id) in ["a", "b", "c"].iter().enumerate() {
@@ -2350,7 +2478,7 @@ mod tests {
                 .execute_batch(
                     "DROP INDEX notes_drive; ALTER TABLE notes DROP COLUMN ydoc; ALTER TABLE notes DROP COLUMN reminder_repeat; ALTER TABLE notes DROP COLUMN emoji; \
                      ALTER TABLE notes DROP COLUMN notified_at; ALTER TABLE notes DROP COLUMN drive_file_id; ALTER TABLE notes DROP COLUMN drive_rev; \
-                     ALTER TABLE notes DROP COLUMN snoozed_until; DROP TABLE external_changes; \
+                     ALTER TABLE notes DROP COLUMN snoozed_until; ALTER TABLE notes DROP COLUMN reminder_doing; DROP TABLE external_changes; \
                      ALTER TABLE categories DROP COLUMN hidden; ALTER TABLE categories DROP COLUMN pin_hash; PRAGMA user_version = 1",
                 )
                 .unwrap();
@@ -2390,6 +2518,7 @@ mod bench {
                 trashed_at: None,
                 reminder_at: None,
                 reminder_done: false,
+                reminder_doing: false,
                 reminder_repeat: None,
                 emoji: None,
                 tags: vec![],

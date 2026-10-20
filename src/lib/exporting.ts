@@ -57,7 +57,7 @@ export async function printNote() {
     addEventListener('keydown', done, { once: true })
   }, 500)
   try {
-    await api.printWindow(document.querySelector<HTMLInputElement>('#titulo')?.value || undefined)
+    await api.printWindow(document.querySelector<HTMLTextAreaElement>('#titulo')?.value || undefined)
   } catch (e) {
     done()
     app.say(`Não foi possível imprimir: ${e instanceof Error ? e.message : e}`)
