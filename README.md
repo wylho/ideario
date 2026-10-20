@@ -49,7 +49,7 @@ filtram qualquer visão.
 - **Sincronização mais rápida:** as notas sobem para o Drive em paralelo, e mudar a ordem só envia o que mudou.
 - Títulos longos quebram linha, e a busca fica sempre no mesmo lugar da barra.
 
-Na 0.4.3: ícone novo e a bolinha de seleção dos cards mais discreta. Na 0.4.2: **status em qualquer nota**. Com lembrete ele aparece sozinho; sem lembrete, é só escolher no menu Status, e a nota entra no Kanban. Na 0.4.1: o ícone sem a borda azul no macOS.
+Na 0.4.4: ícone sem placa no Linux e ajustes no celular (seleção e margens). Na 0.4.3: ícone novo e a bolinha de seleção dos cards mais discreta. Na 0.4.2: **status em qualquer nota**. Com lembrete ele aparece sozinho; sem lembrete, é só escolher no menu Status, e a nota entra no Kanban. Na 0.4.1: o ícone sem a borda azul no macOS.
 
 <details>
 <summary>Versões anteriores</summary>
