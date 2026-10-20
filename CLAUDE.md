@@ -180,7 +180,7 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
   Falta validar com uma conta Google real (precisa do cliente OAuth do usuário). Ficam para depois: cache LRU dos
   anexos e "só no Wi-Fi" (Android).
 - **MCP (concluído; guia em `docs/MCP.md`, SPEC §3.11).** `ideario --mcp` (`src-tauri/src/mcp/`) fala JSON-RPC por
-  stdin/stdout sobre o mesmo `Core`/banco, com 33 ferramentas. O corpo entra e sai em Markdown (`markdown.rs`; ida e volta
+  stdin/stdout sobre o mesmo `Core`/banco, com 34 ferramentas. O corpo entra e sai em Markdown (`markdown.rs`; ida e volta
   sem perda, proptest), com fotos e anexos como `ideario://att/<hash>`. A gravação no Y.Doc mexe só no que mudou
   (`ydoc::patch_children`), então o Claude marca um item com a nota aberta e as edições se juntam. Cada mudança vai para
   `external_changes` (migração 6); o app aberto olha o `PRAGMA data_version` (`mcp/watch.rs`) e emite os eventos do sync.
@@ -226,6 +226,12 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
   no celular, pontinhos, a lista do dia e arrastar o dedo para o lado muda o mês. Kanban (`KanbanView.svelte`): três
   colunas pelo status; o "+" de A fazer/Em andamento cria o lembrete já nesse status (`app.openNewInColumn`). Arrastar pelo ponteiro (`boarddrag.ts`, `data-drop`; toque: segurar 350 ms; perto da borda a área rola sozinha). MCP:
   `set_reminder_status`, `list_reminders` com `status`/`from`/`to`.
+- **Status em qualquer nota (pedido do usuário):** nota com lembrete sempre tem status; sem lembrete, ganha pelo menu
+  "Status" (card e ⋮ do editor) = `statusOn` no meta do Y.Doc → `notes.status_on` (migração 10; só entra num estado novo
+  se ligado). Cores nas mesmas colunas `reminder_done`/`reminder_doing`. "Sem status" (`reminders::clear_status`, só
+  para nota sem lembrete). Tirar o lembrete leva o status junto, a não ser que `statusOn` (`keepStatus`). Kanban =
+  `list_board` (lembrete OU `status_on`); o "+" dele cria nota com status, sem lembrete (`app.openNewInColumn`). Card
+  sem lembrete mostra a pílula do status. MCP: `set_reminder_status` vale para qualquer nota (+ `none`), `list_board`.
 - Sync (0.4): notas e anexos sobem em paralelo (`Remote::upload_many`; no Drive, lote em paralelo e o que falha tenta de
   novo um por um), como já desciam. `adopt_order` só reposiciona as notas fora do lugar (`keep_most_positions`, maior
   subsequência crescente): antes, começar a arrastar numa ordem por data subia todas as notas.

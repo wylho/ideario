@@ -12,7 +12,7 @@ import { SEP, type MenuEntry } from './menu'
 import { quickTimes, snoozeTimes } from './reminders'
 import { reminderSet } from './notify.svelte'
 import { statusOf, type AttachmentRow, type Category, type NoteColor, type NotePatch, type NoteSummary } from './types'
-import { STATUS, changeStatus } from './status'
+import { STATUS, changeStatus, keepStatus, statusMenu } from './status'
 
 export const NOTE_COLORS: { id: NoteColor; label: string; css: string }[] = [
   { id: 'none', label: 'Padrão', css: 'var(--surface)' },
@@ -94,10 +94,11 @@ export function noteMenu(n: NoteSummary): MenuEntry[] {
       label: n.reminderAt != null ? 'Lembrete' : 'Lembrar', icon: Bell,
       sub: reminderEntries(n, (v) => {
         // Sem lembrete não há repetição (senão um lembrete marcado depois voltaria a se repetir sozinho).
-        change(n, v == null ? { reminderAt: null, reminderDone: false, reminderDoing: false, reminderRepeat: null } : { reminderAt: v, reminderDone: false }, v == null ? 'Lembrete removido' : `Lembrete: ${fmtReminder(v)}`)
+        change(n, v == null ? { reminderAt: null, reminderRepeat: null, ...keepStatus(n) } : { reminderAt: v, reminderDone: false }, v == null ? 'Lembrete removido' : `Lembrete: ${fmtReminder(v)}`)
         if (v != null) void reminderSet()
       }),
     },
+    statusMenu(n),
     {
       label: 'Cor', icon: Palette,
       sub: NOTE_COLORS.map((c) => ({ label: c.label, swatch: c.css, checked: n.color === c.id, onSelect: () => change(n, { color: c.id }) })),
@@ -158,7 +159,7 @@ export function reminderMenu(n: NoteSummary): MenuEntry[] {
       })),
     },
     SEP,
-    { label: 'Remover lembrete', icon: BellOff, danger: true, onSelect: () => change(n, { reminderAt: null, reminderDone: false, reminderDoing: false, reminderRepeat: null }, 'Lembrete removido') },
+    { label: 'Remover lembrete', icon: BellOff, danger: true, onSelect: () => change(n, { reminderAt: null, reminderRepeat: null, ...keepStatus(n) }, 'Lembrete removido') },
   ]
 }
 

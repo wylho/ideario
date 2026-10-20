@@ -18,12 +18,12 @@
       <ContextMenu.Separator class="menu-sep" />
     {:else if 'sub' in e && narrow}
       <ContextMenu.Item class="menu-item" onSelect={(ev) => { ev.preventDefault(); stack = [...stack, { label: e.label, items: e.sub }] }}>
-        {#if e.icon}<e.icon size={16} />{/if}<span class="grow">{e.label}</span><span class="menu-chev"><ChevronRight size={15} /></span>
+        {#if e.swatch}<i class="menu-swatch" style:background={e.swatch}></i>{:else if e.icon}<e.icon size={16} />{/if}<span class="grow">{e.label}</span><span class="menu-chev"><ChevronRight size={15} /></span>
       </ContextMenu.Item>
     {:else if 'sub' in e}
       <ContextMenu.Sub>
         <ContextMenu.SubTrigger class="menu-item">
-          {#if e.icon}<e.icon size={16} />{/if}<span class="grow">{e.label}</span><span class="menu-chev"><ChevronRight size={15} /></span>
+          {#if e.swatch}<i class="menu-swatch" style:background={e.swatch}></i>{:else if e.icon}<e.icon size={16} />{/if}<span class="grow">{e.label}</span><span class="menu-chev"><ChevronRight size={15} /></span>
         </ContextMenu.SubTrigger>
         <ContextMenu.SubContent class="menu ctx" sideOffset={2}>{@render list(e.sub)}</ContextMenu.SubContent>
       </ContextMenu.Sub>

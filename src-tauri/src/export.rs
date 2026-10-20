@@ -448,6 +448,7 @@ mod tests {
             reminder_at: None,
             reminder_done: false,
             reminder_doing: false,
+            status_on: false,
             reminder_repeat: None,
             emoji: Some("🏖️".into()),
             tags: vec![],

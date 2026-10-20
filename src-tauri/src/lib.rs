@@ -199,6 +199,7 @@ pub fn run() {
             commands::apply_note_update,
             commands::set_reminder_done,
             commands::set_reminder_status,
+            commands::list_board,
             commands::snooze_reminder,
             commands::complete_reminder,
             commands::update_note,

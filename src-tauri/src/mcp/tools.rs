@@ -302,13 +302,24 @@ fn defs() -> Vec<Def> {
         },
         Def {
             name: "set_reminder_status",
-            title: "Status do lembrete",
-            description: "Muda o status do lembrete (o seletor de três cores e as colunas do Kanban): todo = a fazer (vermelho), \
-                          doing = em andamento (amarelo), done = concluído (verde; se ele se repete, pula para a próxima vez e \
-                          volta para todo).",
-            params: json!({ "id": s(ID), "status": one_of(&["todo", "doing", "done"], "novo status") }),
+            title: "Status da nota",
+            description: "Muda o status da nota (o seletor de três cores e as colunas do Kanban): todo = a fazer (vermelho), \
+                          doing = em andamento (amarelo), done = concluído (verde; num lembrete que se repete, pula para a \
+                          próxima vez e volta para todo). Nota com lembrete sempre tem status; nota sem lembrete passa a ter. \
+                          none = tira o status de uma nota sem lembrete.",
+            params: json!({ "id": s(ID), "status": one_of(&["todo", "doing", "done", "none"], "novo status") }),
             required: &["id", "status"],
             read_only: false,
+            destructive: false,
+        },
+        Def {
+            name: "list_board",
+            title: "Kanban",
+            description: "As notas com status, como no Kanban do app: as com lembrete e as que ganharam status sem lembrete. \
+                          Cada uma vem com status (todo, doing, done).",
+            params: json!({ "status": one_of(&["todo", "doing", "done"], "só este status") }),
+            required: &[],
+            read_only: true,
             destructive: false,
         },
         Def {
@@ -587,6 +598,7 @@ fn run(core: &Core, name: &str, a: &Args) -> Result<Out> {
             "Lembrete tirado.",
         ),
         "set_reminder_status" => reminder_status(core, a),
+        "list_board" => board(core, a),
         "complete_reminder" => complete(core, a),
         "snooze_reminder" => snooze(core, a),
         "list_categories" => core.with(|s| {
@@ -874,6 +886,15 @@ fn note_text(s: &Store, id: &str) -> Result<String> {
             reminders::Status::Done => ", concluído",
         });
         head.push(r);
+    } else if d.status_on {
+        head.push(
+            match reminders::Status::of(d.reminder_done, d.reminder_doing) {
+                reminders::Status::Todo => "status: a fazer",
+                reminders::Status::Doing => "status: em andamento",
+                reminders::Status::Done => "status: concluído",
+            }
+            .into(),
+        );
     }
     if let Some(t) = d.trashed_at {
         head.push(format!("na lixeira desde: {}", fmt_time(t)));
@@ -979,6 +1000,8 @@ fn summary_json(s: &Store, n: &crate::store::NoteSummary, cats: &HashMap<String,
         if n.reminder_done {
             o.insert("reminderDone".into(), json!(true));
         }
+    }
+    if n.reminder_at.is_some() || n.status_on {
         o.insert("status".into(), json!(reminders::Status::of(n.reminder_done, n.reminder_doing).name()));
     }
     if n.image_count + n.file_count > 0 {
@@ -1035,6 +1058,7 @@ fn create(core: &Core, a: &Args) -> Result<Out> {
             reminder_at,
             reminder_done: false,
             reminder_doing: false,
+            status_on: false,
             reminder_repeat: if reminder_at.is_some() { repeat_of(a)? } else { None },
             emoji: a.str("emoji").map(emoji_of).transpose()?.flatten(),
             tags: clean_tags(a.strings("tags").unwrap_or_default()),
@@ -1399,18 +1423,44 @@ fn range_bound(v: &str, end: bool) -> Result<Millis> {
     }
 }
 
+fn board(core: &Core, a: &Args) -> Result<Out> {
+    let status = a.str("status").map(|v| reminders::Status::parse(v).ok_or("status: use todo, doing ou done")).transpose()?;
+    core.with(|s| {
+        let cats = category_names(s)?;
+        let out: Vec<Value> = s
+            .list_board(&Filter::default(), "")?
+            .iter()
+            .filter(|n| status.map_or(true, |st| reminders::Status::of(n.reminder_done, n.reminder_doing) == st))
+            .map(|n| summary_json(s, n, &cats))
+            .collect::<Result<_>>()?;
+        Ok(Out::Json(json!({ "notes": out })))
+    })
+}
+
 fn reminder_status(core: &Core, a: &Args) -> Result<Out> {
-    let status = reminders::Status::parse(a.need("status")?).ok_or("status: use todo, doing ou done")?;
+    if a.need("status")? == "none" {
+        return core.with(|s| {
+            let id = existing(s, a.need("id")?)?;
+            reminders::clear_status(s, &id)?;
+            s.log_external(Some(&id), false)?;
+            Ok(Out::Text(if s.reminder_of(&id)?.is_some() {
+                "A nota tem lembrete: o status continua (vem do lembrete).".into()
+            } else {
+                "Status tirado.".into()
+            }))
+        });
+    }
+    let status = reminders::Status::parse(a.need("status")?).ok_or("status: use todo, doing, done ou none")?;
     core.with(|s| {
         let id = existing(s, a.need("id")?)?;
-        let (_, repeat) = s.reminder_of(&id)?.ok_or("esta nota não tem lembrete")?;
+        let repeat = s.reminder_of(&id)?.and_then(|(_, r)| r);
         reminders::set_status(s, &id, status, crate::store::now(), &Local)?;
         s.log_external(Some(&id), false)?;
         Ok(Out::Text(match (status, repeat, s.reminder_of(&id)?) {
             (reminders::Status::Done, Some(_), Some((next, _))) => format!("Feito por esta vez; o próximo é {}.", fmt_time(next)),
-            (reminders::Status::Done, _, _) => "Lembrete concluído (verde).".into(),
-            (reminders::Status::Doing, _, _) => "Lembrete em andamento (amarelo).".into(),
-            (reminders::Status::Todo, _, _) => "Lembrete a fazer (vermelho).".into(),
+            (reminders::Status::Done, _, _) => "Concluído (verde).".into(),
+            (reminders::Status::Doing, _, _) => "Em andamento (amarelo).".into(),
+            (reminders::Status::Todo, _, _) => "A fazer (vermelho).".into(),
         }))
     })
 }

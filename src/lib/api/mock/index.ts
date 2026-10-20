@@ -90,7 +90,7 @@ for (const s of seedNotes()) {
   notes.set(s.id, {
     id: s.id, title: s.title, body, categoryId: s.categoryId, color: s.color, pinned: s.pinned,
     archived: !!s.archived, trashedAt: s.trashedDaysAgo != null ? Date.now() - s.trashedDaysAgo * DAY : null,
-    reminderAt: s.reminderAt, reminderDone: !!s.reminderDone, reminderDoing: !!s.reminderDoing, reminderRepeat: s.reminderRepeat ?? null, emoji: s.emoji ?? null, tags: s.tags,
+    reminderAt: s.reminderAt, reminderDone: !!s.reminderDone, reminderDoing: !!s.reminderDoing, statusOn: !!s.statusOn, reminderRepeat: s.reminderRepeat ?? null, emoji: s.emoji ?? null, tags: s.tags,
     createdAt: s.updatedAt - 2 * DAY, updatedAt: s.updatedAt,
     files: [],
     position: 0,
@@ -243,7 +243,7 @@ function summarize(n: StoredNote): NoteSummary {
     id: n.id, title: n.title, label: labelOf(n), preview: p.preview,
     cover, imageCount: p.images.length, fileCount: n.files.length + p.files.length,
     categoryId: n.categoryId, color: n.color, pinned: n.pinned, archived: n.archived, trashedAt: n.trashedAt,
-    reminderAt: n.reminderAt, reminderDone: n.reminderDone, reminderDoing: n.reminderDoing, reminderRepeat: n.reminderRepeat, emoji: n.emoji, tags: tagsOf(n), createdAt: n.createdAt, updatedAt: n.updatedAt,
+    reminderAt: n.reminderAt, reminderDone: n.reminderDone, reminderDoing: n.reminderDoing, statusOn: n.statusOn, reminderRepeat: n.reminderRepeat, emoji: n.emoji, tags: tagsOf(n), createdAt: n.createdAt, updatedAt: n.updatedAt,
     position: n.position,
   }
 }
@@ -348,7 +348,7 @@ function purgeTrash() {
 }
 
 const INPUT_KEYS: (keyof NoteInput)[] = [
-  'title', 'body', 'categoryId', 'color', 'pinned', 'archived', 'trashedAt', 'reminderAt', 'reminderDone', 'reminderDoing', 'reminderRepeat', 'emoji', 'tags',
+  'title', 'body', 'categoryId', 'color', 'pinned', 'archived', 'trashedAt', 'reminderAt', 'reminderDone', 'reminderDoing', 'statusOn', 'reminderRepeat', 'emoji', 'tags',
 ]
 const sameContent = (a: NoteInput, b: NoteInput) => INPUT_KEYS.every((k) => JSON.stringify(a[k]) === JSON.stringify(b[k]))
 
@@ -638,9 +638,21 @@ export const mockApi: Api = {
 
   setReminderStatus(id, status) {
     const n = notes.get(id)
-    if (!n || n.reminderAt == null) return done(undefined)
-    if (status === 'done') return mockApi.completeReminder(id)
-    return mockApi.updateNote(id, { reminderDone: false, reminderDoing: status === 'doing' })
+    if (!n) return done(undefined)
+    const reminder = n.reminderAt != null
+    if (status === 'none') return mockApi.updateNote(id, reminder ? { statusOn: false } : { statusOn: false, reminderDone: false, reminderDoing: false })
+    if (status === 'done' && reminder) return mockApi.completeReminder(id)
+    return mockApi.updateNote(id, { reminderDone: status === 'done', reminderDoing: status === 'doing', ...(reminder ? {} : { statusOn: true }) })
+  },
+
+  listBoard({ filter, query }) {
+    return done(
+      notTrashed(filter)
+        .filter((n) => !n.archived || n.reminderAt != null)
+        .filter((n) => (n.reminderAt != null || n.statusOn) && matches(n, query))
+        .sort((a, b) => (a.reminderAt ?? Infinity) - (b.reminderAt ?? Infinity) || b.updatedAt - a.updatedAt)
+        .map(summarize),
+    )
   },
 
   snoozeReminder(id, until) {

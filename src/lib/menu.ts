@@ -13,7 +13,7 @@ export type MenuEntry =
       disabled?: boolean
       onSelect: () => void
     }
-  | { label: string; icon?: Component<{ size?: number }>; sub: MenuEntry[] }
+  | { label: string; icon?: Component<{ size?: number }>; swatch?: string; sub: MenuEntry[] }
   | { separator: true }
 
 export const SEP: MenuEntry = { separator: true }

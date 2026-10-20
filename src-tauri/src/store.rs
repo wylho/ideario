@@ -127,6 +127,8 @@ pub struct NoteSummary {
     pub reminder_done: bool,
     /// Lembrete em andamento (amarelo); vermelho = nem isso nem concluído, verde = concluído.
     pub reminder_doing: bool,
+    /// Nota com status mesmo sem lembrete (posto pelo menu). Com lembrete, o status existe sempre.
+    pub status_on: bool,
     /// Repetição do lembrete: "day" | "week" | "month" | "year" (None = uma vez).
     pub reminder_repeat: Option<String>,
     /// Emoji grande de capa (None = sem).
@@ -177,6 +179,7 @@ pub struct NoteDetail {
     pub reminder_at: Option<Millis>,
     pub reminder_done: bool,
     pub reminder_doing: bool,
+    pub status_on: bool,
     pub reminder_repeat: Option<String>,
     pub emoji: Option<String>,
     pub tags: Vec<String>,
@@ -201,6 +204,8 @@ pub struct NoteInput {
     pub reminder_done: bool,
     #[serde(default)]
     pub reminder_doing: bool,
+    #[serde(default)]
+    pub status_on: bool,
     #[serde(default)]
     pub reminder_repeat: Option<String>,
     #[serde(default)]
@@ -406,6 +411,10 @@ const MIGRATIONS: &[&str] = &[
     r#"
     ALTER TABLE notes ADD COLUMN reminder_doing INTEGER NOT NULL DEFAULT 0;
     "#,
+    // 10 — status sem lembrete (posto pelo menu da nota; projeção do meta do Y.Doc).
+    r#"
+    ALTER TABLE notes ADD COLUMN status_on INTEGER NOT NULL DEFAULT 0;
+    "#,
 ];
 
 /// SQL: a nota não está numa categoria oculta ou com PIN — a não ser a categoria escolhida (`?N`, ou NULL), que mostra
@@ -577,7 +586,7 @@ impl Store {
     }
 
     const SUMMARY_COLS: &'static str = "n.id, n.title, n.label, NULL, n.preview_json, n.cover_json, n.image_count, n.file_count, \
-        n.category_id, n.color, n.pinned, n.archived, n.trashed_at, n.reminder_at, n.reminder_done, n.created_at, n.updated_at, n.position, n.reminder_repeat, n.emoji, n.reminder_doing";
+        n.category_id, n.color, n.pinned, n.archived, n.trashed_at, n.reminder_at, n.reminder_done, n.created_at, n.updated_at, n.position, n.reminder_repeat, n.emoji, n.reminder_doing, n.status_on";
 
     fn summaries(&self, sql: &str, args: &[rusqlite::types::Value]) -> Result<Vec<NoteSummary>> {
         let mut st = self.conn.prepare_cached(sql).map_err(err)?;
@@ -613,6 +622,7 @@ impl Store {
             reminder_at: r.get(13)?,
             reminder_done: r.get(14)?,
             reminder_doing: r.get(20)?,
+            status_on: r.get(21)?,
             reminder_repeat: r.get(18)?,
             emoji: r.get(19)?,
             tags: Vec::new(),
@@ -681,6 +691,17 @@ impl Store {
             w.push_str(" AND n.reminder_done = 0");
         }
         self.summaries(&format!("SELECT {} FROM notes n WHERE {w} ORDER BY n.reminder_at ASC", Self::SUMMARY_COLS), &args)
+    }
+
+    /// Kanban: notas com status (as com lembrete e as que ganharam status pelo menu), a fazer primeiro pela data.
+    pub fn list_board(&self, filter: &Filter, query: &str) -> Result<Vec<NoteSummary>> {
+        let mut args = Vec::new();
+        let mut w = Self::where_clause("live", filter, query, &mut args);
+        w.push_str(" AND (n.reminder_at IS NOT NULL OR n.status_on = 1)");
+        self.summaries(
+            &format!("SELECT {} FROM notes n WHERE {w} ORDER BY n.reminder_at IS NULL, n.reminder_at ASC, n.updated_at DESC", Self::SUMMARY_COLS),
+            &args,
+        )
     }
 
     fn summary(&self, id: &str) -> Result<NoteSummary> {
@@ -944,7 +965,7 @@ impl Store {
     pub fn note_input(&self, id: &str) -> Result<Option<NoteInput>> {
         self.conn
             .query_row(
-                "SELECT id, title, body_json, category_id, color, pinned, archived, trashed_at, reminder_at, reminder_done, reminder_repeat, emoji, reminder_doing FROM notes WHERE id = ?1",
+                "SELECT id, title, body_json, category_id, color, pinned, archived, trashed_at, reminder_at, reminder_done, reminder_repeat, emoji, reminder_doing, status_on FROM notes WHERE id = ?1",
                 [id],
                 |r| {
                     Ok(NoteInput {
@@ -959,6 +980,7 @@ impl Store {
                         reminder_at: r.get(8)?,
                         reminder_done: r.get(9)?,
                         reminder_doing: r.get(12)?,
+                        status_on: r.get(13)?,
                         reminder_repeat: r.get(10)?,
                         emoji: r.get(11)?,
                         tags: Vec::new(),
@@ -1001,6 +1023,7 @@ impl Store {
             reminder_at: n.reminder_at,
             reminder_done: n.reminder_done,
             reminder_doing: n.reminder_doing,
+            status_on: n.status_on,
             reminder_repeat: n.reminder_repeat,
             emoji: n.emoji,
             tags: n.tags,
@@ -1081,14 +1104,14 @@ impl Store {
         let tx = self.conn.unchecked_transaction().map_err(err)?;
         tx.execute(
             "INSERT INTO notes (id, body_json, title, label, label_fold, body_text, preview_json, cover_json, image_count, file_count, \
-             category_id, color, pinned, archived, trashed_at, reminder_at, reminder_done, position, created_at, updated_at, ydoc, reminder_repeat, emoji, reminder_doing, dirty) \
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, 1) \
+             category_id, color, pinned, archived, trashed_at, reminder_at, reminder_done, position, created_at, updated_at, ydoc, reminder_repeat, emoji, reminder_doing, status_on, dirty) \
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25, 1) \
              ON CONFLICT(id) DO UPDATE SET ydoc = excluded.ydoc, body_json = excluded.body_json, title = excluded.title, label = excluded.label, \
              label_fold = excluded.label_fold, body_text = excluded.body_text, preview_json = excluded.preview_json, \
              cover_json = excluded.cover_json, image_count = excluded.image_count, file_count = excluded.file_count, \
              category_id = excluded.category_id, color = excluded.color, pinned = excluded.pinned, archived = excluded.archived, \
              trashed_at = excluded.trashed_at, reminder_at = excluded.reminder_at, reminder_done = excluded.reminder_done, \
-             reminder_repeat = excluded.reminder_repeat, emoji = excluded.emoji, reminder_doing = excluded.reminder_doing, position = excluded.position, \
+             reminder_repeat = excluded.reminder_repeat, emoji = excluded.emoji, reminder_doing = excluded.reminder_doing, status_on = excluded.status_on, position = excluded.position, \
              updated_at = excluded.updated_at, dirty = 1",
             params![
                 n.id,
@@ -1115,6 +1138,7 @@ impl Store {
                 n.reminder_repeat,
                 n.emoji,
                 n.reminder_doing,
+                n.status_on,
             ],
         )
         .map_err(err)?;
@@ -1256,6 +1280,7 @@ impl Store {
                 "reminderAt" => n.reminder_at = v.as_i64(),
                 "reminderDone" => n.reminder_done = v.as_bool().unwrap_or(n.reminder_done),
                 "reminderDoing" => n.reminder_doing = v.as_bool().unwrap_or(n.reminder_doing),
+                "statusOn" => n.status_on = v.as_bool().unwrap_or(n.status_on),
                 "reminderRepeat" => n.reminder_repeat = v.as_str().filter(|r| REPEATS.contains(r)).map(str::to_string),
                 "emoji" => n.emoji = v.as_str().and_then(clean_emoji),
                 _ => {}
@@ -1959,6 +1984,7 @@ fn same_content(a: &NoteInput, b: &NoteInput) -> bool {
         && a.reminder_at == b.reminder_at
         && a.reminder_done == b.reminder_done
         && a.reminder_doing == b.reminder_doing
+        && a.status_on == b.status_on
         && a.reminder_repeat == b.reminder_repeat
         && a.emoji == b.emoji
         && a.tags == b.tags
@@ -2101,6 +2127,7 @@ mod tests {
             reminder_at: None,
             reminder_done: false,
             reminder_doing: false,
+            status_on: false,
             reminder_repeat: None,
             emoji: None,
             tags: vec![],
@@ -2478,7 +2505,7 @@ mod tests {
                 .execute_batch(
                     "DROP INDEX notes_drive; ALTER TABLE notes DROP COLUMN ydoc; ALTER TABLE notes DROP COLUMN reminder_repeat; ALTER TABLE notes DROP COLUMN emoji; \
                      ALTER TABLE notes DROP COLUMN notified_at; ALTER TABLE notes DROP COLUMN drive_file_id; ALTER TABLE notes DROP COLUMN drive_rev; \
-                     ALTER TABLE notes DROP COLUMN snoozed_until; ALTER TABLE notes DROP COLUMN reminder_doing; DROP TABLE external_changes; \
+                     ALTER TABLE notes DROP COLUMN snoozed_until; ALTER TABLE notes DROP COLUMN reminder_doing; ALTER TABLE notes DROP COLUMN status_on; DROP TABLE external_changes; \
                      ALTER TABLE categories DROP COLUMN hidden; ALTER TABLE categories DROP COLUMN pin_hash; PRAGMA user_version = 1",
                 )
                 .unwrap();
@@ -2519,6 +2546,7 @@ mod bench {
                 reminder_at: None,
                 reminder_done: false,
                 reminder_doing: false,
+                status_on: false,
                 reminder_repeat: None,
                 emoji: None,
                 tags: vec![],

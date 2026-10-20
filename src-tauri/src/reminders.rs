@@ -163,21 +163,31 @@ impl Status {
     }
 }
 
-/// Muda o status. Verde é concluir (o que se repete pula para a próxima vez e volta ao vermelho); nenhum dos três
-/// conta como edição da nota.
+/// Muda o status. Com lembrete, verde é concluir (o que se repete pula para a próxima vez e volta ao vermelho). Sem
+/// lembrete, a nota passa a ter status (`statusOn`), como pelo menu da nota. Nada disso conta como edição da nota.
 pub fn set_status<Tz: TimeZone>(store: &Store, id: &str, status: Status, now: Millis, tz: &Tz) -> Result<()> {
+    let has_reminder = store.reminder_of(id)?.is_some();
+    if has_reminder && status == Status::Done {
+        return complete(store, id, now, tz);
+    }
+    let mut patch = Map::new();
+    patch.insert("reminderDone".into(), Value::Bool(status == Status::Done));
+    patch.insert("reminderDoing".into(), Value::Bool(status == Status::Doing));
+    if !has_reminder {
+        patch.insert("statusOn".into(), Value::Bool(true));
+    }
+    store.reschedule(id, &patch).map(|_| ())
+}
+
+/// Tira o status posto pelo menu. Nota com lembrete continua com status (ele vem do lembrete).
+pub fn clear_status(store: &Store, id: &str) -> Result<()> {
+    let mut patch = Map::new();
+    patch.insert("statusOn".into(), Value::Bool(false));
     if store.reminder_of(id)?.is_none() {
-        return Ok(());
+        patch.insert("reminderDone".into(), Value::Bool(false));
+        patch.insert("reminderDoing".into(), Value::Bool(false));
     }
-    match status {
-        Status::Done => complete(store, id, now, tz),
-        Status::Doing | Status::Todo => {
-            let mut patch = Map::new();
-            patch.insert("reminderDone".into(), Value::Bool(false));
-            patch.insert("reminderDoing".into(), Value::Bool(status == Status::Doing));
-            store.reschedule(id, &patch).map(|_| ())
-        }
-    }
+    store.reschedule(id, &patch).map(|_| ())
 }
 
 /// Texto das notificações: até 3 avisos, um por nota; passou disso, os 2 primeiros e um resumo do resto.
@@ -371,6 +381,7 @@ mod tests {
             reminder_at: reminder,
             reminder_done: false,
             reminder_doing: false,
+            status_on: false,
             reminder_repeat: repeat.map(str::to_string),
             emoji: None,
             tags: vec![],
@@ -564,6 +575,7 @@ mod snooze_tests {
             reminder_at: Some(reminder),
             reminder_done: false,
             reminder_doing: false,
+            status_on: false,
             reminder_repeat: repeat.map(str::to_string),
             emoji: None,
             tags: vec![],
@@ -652,13 +664,40 @@ mod snooze_tests {
     }
 
     #[test]
-    fn notes_without_a_reminder_have_no_status() {
+    fn a_note_without_a_reminder_gets_a_status_from_the_menu_and_can_lose_it() {
         let s = Store::memory();
         let mut n = note("n1", at(10, 9, 0), None);
         n.reminder_at = None;
         s.save_note(&n).unwrap();
+        let on = |s: &Store| s.get_note("n1").unwrap().unwrap().status_on;
+        assert!(!on(&s));
+        assert!(s.list_board(&Filter::default(), "").unwrap().is_empty(), "sem lembrete e sem status, fora do Kanban");
         set_status(&s, "n1", Status::Doing, at(10, 8, 0), &tz()).unwrap();
+        assert!(on(&s));
+        assert_eq!(status(&s, "n1"), Status::Doing);
+        assert_eq!(s.list_board(&Filter::default(), "").unwrap().len(), 1);
+        // verde sem lembrete não reagenda nada: só fica concluída
+        set_status(&s, "n1", Status::Done, at(10, 8, 0), &tz()).unwrap();
+        assert_eq!(status(&s, "n1"), Status::Done);
+        assert_eq!(s.get_note("n1").unwrap().unwrap().reminder_at, None);
+        clear_status(&s, "n1").unwrap();
+        assert!(!on(&s));
         assert_eq!(status(&s, "n1"), Status::Todo);
+        assert!(s.list_board(&Filter::default(), "").unwrap().is_empty());
+        // vai junto no Y.Doc
+        set_status(&s, "n1", Status::Todo, at(10, 8, 0), &tz()).unwrap();
+        assert!(crate::ydoc::to_note("n1", &s.ydoc("n1").unwrap().unwrap()).unwrap().status_on);
+    }
+
+    #[test]
+    fn a_note_with_a_reminder_keeps_its_status_after_clear() {
+        let s = Store::memory();
+        s.save_note(&note("n1", at(10, 9, 0), None)).unwrap();
+        set_status(&s, "n1", Status::Doing, at(10, 8, 0), &tz()).unwrap();
+        assert!(!s.get_note("n1").unwrap().unwrap().status_on, "com lembrete o status vem dele");
+        clear_status(&s, "n1").unwrap();
+        assert_eq!(status(&s, "n1"), Status::Doing);
+        assert_eq!(s.list_board(&Filter::default(), "").unwrap().len(), 1);
     }
 
     #[test]

@@ -8,7 +8,8 @@
   import { watchClip } from '../lib/clip'
   import ContextMenu from './ContextMenu.svelte'
   import FilePreview from './FilePreview.svelte'
-  import type { NoteSummary } from '../lib/types'
+  import { statusOf, type NoteSummary } from '../lib/types'
+  import { STATUS } from '../lib/status'
 
   let { n }: { n: NoteSummary } = $props()
 
@@ -110,6 +111,9 @@
       <div class="card-meta">
         {#if n.reminderAt != null}
           <span class="pill" class:late={isOverdue(n)} class:done={n.reminderDone} class:doing={n.reminderDoing && !n.reminderDone}><Bell size={11} />{fmtReminder(n.reminderAt)}{#if n.reminderRepeat}<Repeat size={11} aria-label="se repete" />{/if}</span>
+        {:else if n.statusOn}
+          {@const st = statusOf(n)}
+          <span class="pill"><i class="dot" style:background={STATUS[st].color}></i>{STATUS[st].label}</span>
         {/if}
         {#if cat}
           <button class="pill cat" title="Filtrar por {cat.name}" onclick={(e) => { e.stopPropagation(); app.setCategory(cat.id) }}>

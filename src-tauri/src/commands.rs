@@ -83,6 +83,7 @@ fn welcome(store: &Store) -> Result<()> {
         reminder_at: None,
         reminder_done: false,
         reminder_doing: false,
+        status_on: false,
         reminder_repeat: None,
         emoji: None,
         tags: vec![],
@@ -312,11 +313,20 @@ pub fn complete_reminder(core: Core_, id: String) -> Result<()> {
     core.with(|s| crate::reminders::complete(s, &id, crate::store::now(), &chrono::Local))
 }
 
-/// Seletor de três cores: "todo" (vermelho), "doing" (amarelo) ou "done" (verde).
+/// Seletor de três cores: "todo" (vermelho), "doing" (amarelo), "done" (verde); "none" tira o status do menu.
 #[tauri::command]
 pub fn set_reminder_status(core: Core_, id: String, status: String) -> Result<()> {
+    if status == "none" {
+        return core.with(|s| crate::reminders::clear_status(s, &id));
+    }
     let status = crate::reminders::Status::parse(&status).ok_or("status desconhecido")?;
     core.with(|s| crate::reminders::set_status(s, &id, status, crate::store::now(), &chrono::Local))
+}
+
+/// Kanban: notas com status (com lembrete ou com status posto pelo menu).
+#[tauri::command]
+pub fn list_board(core: Core_, filter: Filter, query: String) -> Result<Vec<NoteSummary>> {
+    core.with(|s| s.list_board(&filter, &query))
 }
 
 #[tauri::command]
@@ -576,6 +586,7 @@ impl Core {
                 reminder_at: None,
                 reminder_done: false,
                 reminder_doing: false,
+                status_on: false,
                 reminder_repeat: None,
                 emoji: None,
                 tags,

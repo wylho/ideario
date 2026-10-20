@@ -117,6 +117,7 @@ pub(crate) fn to_note(id: &str, state: &[u8]) -> Result<NoteInput> {
         reminder_at: ms("reminderAt"),
         reminder_done: b("reminderDone"),
         reminder_doing: b("reminderDoing"),
+        status_on: b("statusOn"),
         reminder_repeat: s("reminderRepeat"),
         emoji: s("emoji").as_deref().and_then(crate::store::clean_emoji),
         tags,
@@ -314,6 +315,9 @@ fn write_meta(meta: &MapRef, txn: &mut TransactionMut, n: &NoteInput, prev: Opti
     // continua dando o mesmo estado.
     if p.map_or(n.reminder_doing, |p| p.reminder_doing != n.reminder_doing) {
         meta.insert(txn, "reminderDoing", Any::Bool(n.reminder_doing));
+    }
+    if p.map_or(n.status_on, |p| p.status_on != n.status_on) {
+        meta.insert(txn, "statusOn", Any::Bool(n.status_on));
     }
 }
 
@@ -665,6 +669,7 @@ mod tests {
             reminder_at: Some(1_791_573_277_130),
             reminder_done: false,
             reminder_doing: false,
+            status_on: false,
             reminder_repeat: None,
             emoji: None,
             tags: vec!["casa".into()],
@@ -946,6 +951,7 @@ pub(crate) fn tests_note() -> NoteInput {
         reminder_at: None,
         reminder_done: false,
         reminder_doing: false,
+        status_on: false,
         reminder_repeat: None,
         emoji: None,
         tags: vec![],
@@ -1020,6 +1026,7 @@ mod props {
             reminder_at: when,
             reminder_done: false,
             reminder_doing: false,
+            status_on: false,
             reminder_repeat: None,
             emoji: None,
             tags,

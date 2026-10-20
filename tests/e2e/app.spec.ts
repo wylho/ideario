@@ -2386,7 +2386,7 @@ test.describe('Calendário e Kanban', () => {
     await expect(page.locator('.r-item', { hasText: 'Comprar pilha' })).toHaveCount(0)
     // o + da coluna Em andamento cria o lembrete já amarelo
     await lens(page, 'Kanban').click()
-    await page.getByRole('button', { name: 'Novo lembrete em Em andamento' }).click()
+    await page.getByRole('button', { name: 'Nova nota em Em andamento' }).click()
     await expect(page.locator('.editor').getByRole('radio', { name: 'Em andamento' })).toHaveAttribute('aria-checked', 'true')
     await page.locator('#titulo').fill('Revisar orçamento')
     await back(page)
@@ -2439,5 +2439,42 @@ test.describe('Calendário e Kanban', () => {
     await expect(page.locator('.cal-day.today')).toHaveCount(0)
     await page.getByRole('button', { name: 'Hoje' }).click()
     await expect(page.locator('.cal-day.today')).toHaveCount(1)
+  })
+})
+
+test.describe('Status em qualquer nota', () => {
+  test.use({ viewport: { width: 1280, height: 860 } })
+
+  test('nota sem lembrete ganha status pelo menu, aparece no Kanban e perde com "Sem status"', async ({ page }) => {
+    const card = () => cards(page).filter({ hasText: 'Horários e estacionamento' })
+    await card().click({ button: 'right' })
+    await page.getByRole('menuitem', { name: 'Status' }).click()
+    await page.getByRole('menuitem', { name: 'Em andamento' }).click()
+    await expect(page.locator('.toast span')).toHaveText('Nota em andamento')
+    await expect(card().locator('.pill', { hasText: 'Em andamento' })).toHaveCount(1)
+    await page.locator('.view-switch .lens', { hasText: 'Kanban' }).or(page.locator('.view-switch .lens[title="Kanban"]')).first().click()
+    const kcard = page.locator('.kb-col', { hasText: 'Em andamento' }).locator('.kb-card', { hasText: 'Horários e estacionamento' })
+    await expect(kcard).toHaveCount(1)
+    // no editor, o seletor aparece mesmo sem lembrete
+    await kcard.click()
+    await expect(page.locator('.editor').getByRole('radio', { name: 'Em andamento' })).toHaveAttribute('aria-checked', 'true')
+    await page.locator('.editor').getByRole('radio', { name: 'Concluído' }).click()
+    await back(page)
+    await expect(page.locator('.kb-col', { hasText: 'Concluído' }).locator('.kb-card', { hasText: 'Horários e estacionamento' })).toHaveCount(1)
+    // Sem status: sai do Kanban
+    await page.locator('.kb-card', { hasText: 'Horários e estacionamento' }).click({ button: 'right' })
+    await page.getByRole('menuitem', { name: 'Status' }).click()
+    await page.getByRole('menuitem', { name: 'Sem status' }).click()
+    await expect(page.locator('.kb-card', { hasText: 'Horários e estacionamento' })).toHaveCount(0)
+  })
+
+  test('o + do Kanban cria uma nota com status, sem lembrete', async ({ page }) => {
+    await page.locator('.view-switch .lens', { hasText: 'Kanban' }).or(page.locator('.view-switch .lens[title="Kanban"]')).first().click()
+    await page.getByRole('button', { name: 'Nova nota em A fazer' }).click()
+    await expect(page.locator('.rem-pill')).toHaveCount(0)
+    await expect(page.locator('.editor').getByRole('radio', { name: 'A fazer' })).toHaveAttribute('aria-checked', 'true')
+    await page.locator('#titulo').fill('Planejar a mudança')
+    await back(page)
+    await expect(page.locator('.kb-col', { hasText: 'A fazer' }).locator('.kb-card', { hasText: 'Planejar a mudança' })).toHaveCount(1)
   })
 })

@@ -4,7 +4,7 @@
   import { NodeSelection } from '@tiptap/pm/state'
   import { Dialog, DropdownMenu, Popover, Select } from 'bits-ui'
   import {
-    Archive, ArchiveRestore, ArrowLeft, Bold, Camera, Check, ChevronDown, ChevronLeft, ChevronRight, Columns2, Heading, Image, Italic, List,
+    Archive, ArchiveRestore, ArrowLeft, Bold, Camera, Check, ChevronDown, ChevronLeft, ChevronRight, CircleDashed, Columns2, Heading, Image, Italic, List,
     ListChecks, Mic, MoreVertical, SquareCode, Palette, Table, TextQuote, Minus, BetweenHorizontalStart, BetweenVerticalStart, Paperclip, Pin, PinOff, Plus, Redo2, Rows2, Square, Tag, Trash2, Undo2, X,
     ArrowDown, ArrowUp, Copy, CopyPlus, Download, Eye, GripVertical, ListTodo, Pilcrow, Scissors, SquareCheck, SquareDashed, ExternalLink,
     ListIndentDecrease, ListIndentIncrease, BookOpen, Minimize2, FileDown, Link2, RefreshCw, SmilePlus,
@@ -34,10 +34,11 @@
   import { ago, fmtBytes, hashTags } from '../lib/format'
   import ReminderPopover from './ReminderPopover.svelte'
   import StatusToggle from './StatusToggle.svelte'
+  import { STATUS } from '../lib/status'
   import { nextOccurrence } from '../lib/reminders'
   import TagInput from './TagInput.svelte'
   import EmojiPicker from './EmojiPicker.svelte'
-  import { statusOf, type Attachment, type NoteColor, type NoteInput, type ReminderStatus, type RichDoc, type RichNode, type SharedIn } from '../lib/types'
+  import { hasStatus, statusOf, type Attachment, type NoteColor, type NoteInput, type ReminderStatus, type RichDoc, type RichNode, type SharedIn } from '../lib/types'
 
   let { target }: { target: EditorTarget } = $props()
 
@@ -140,7 +141,7 @@
   if (isNew) {
     meta = {
       title: '', categoryId: defaults?.categoryId ?? null, color: 'none', pinned: false, archived: false,
-      trashedAt: null, reminderAt: defaults?.reminderAt ?? null, reminderDone: false, reminderDoing: !!defaults?.reminderDoing, reminderRepeat: null, emoji: null, tags: defaults?.tags ?? [],
+      trashedAt: null, reminderAt: defaults?.reminderAt ?? null, reminderDone: false, reminderDoing: !!defaults?.reminderDoing, statusOn: !!defaults?.statusOn, reminderRepeat: null, emoji: null, tags: defaults?.tags ?? [],
     }
   } else {
     Promise.all([api.getNoteState(id), api.getNote(id)]).then(([state, n]) => {
@@ -190,14 +191,25 @@
   function setReminder(v: number | null) {
     if (!meta) return
     meta.reminderAt = v
-    meta.reminderDone = false
-    if (v == null) (meta.reminderRepeat = null), (meta.reminderDoing = false)
-    else void reminderSet()
+    if (v == null) {
+      meta.reminderRepeat = null
+      // o status vai junto, a não ser que tenha sido posto pelo menu
+      if (!meta.statusOn) (meta.reminderDone = false), (meta.reminderDoing = false)
+    } else {
+      meta.reminderDone = false
+      void reminderSet()
+    }
   }
   /** Seletor de três cores. Verde num lembrete que se repete vale por esta vez: pula para a próxima. */
-  function setStatus(to: ReminderStatus) {
-    if (!meta || meta.reminderAt == null) return
-    if (to === 'done' && meta.reminderRepeat) {
+  function setStatus(to: ReminderStatus | 'none') {
+    if (!meta) return
+    if (to === 'none') {
+      meta.statusOn = false
+      if (meta.reminderAt == null) (meta.reminderDone = false), (meta.reminderDoing = false)
+      return
+    }
+    if (meta.reminderAt == null) meta.statusOn = true
+    if (to === 'done' && meta.reminderAt != null && meta.reminderRepeat) {
       meta.reminderAt = nextOccurrence(meta.reminderAt, meta.reminderRepeat)
       meta.reminderDone = false
       app.say('Feito por esta vez')
@@ -762,6 +774,21 @@
                       {/each}
                     </DropdownMenu.SubContent>
                   </DropdownMenu.Sub>
+                  <DropdownMenu.Sub>
+                    <DropdownMenu.SubTrigger class="menu-item"><CircleDashed size={16} /><span class="grow">Status</span><ChevronRight size={16} /></DropdownMenu.SubTrigger>
+                    <DropdownMenu.SubContent class="menu" sideOffset={4}>
+                      {#each ['todo', 'doing', 'done'] as const as st (st)}
+                        <DropdownMenu.Item class="menu-item" onSelect={() => setStatus(st)}>
+                          <i class="menu-swatch" style:background={STATUS[st].color}></i><span class="grow">{STATUS[st].label}</span>
+                          {#if hasStatus(meta) && statusOf(meta) === st}<span class="menu-check"><Check size={15} /></span>{/if}
+                        </DropdownMenu.Item>
+                      {/each}
+                      {#if meta.statusOn && meta.reminderAt == null}
+                        <DropdownMenu.Separator class="menu-sep" />
+                        <DropdownMenu.Item class="menu-item" onSelect={() => setStatus('none')}><span class="grow">Sem status</span></DropdownMenu.Item>
+                      {/if}
+                    </DropdownMenu.SubContent>
+                  </DropdownMenu.Sub>
                   <DropdownMenu.Item class="menu-item" onSelect={() => (emojiOpen = true)}><SmilePlus size={16} />{meta.emoji ? 'Mudar emoji de capa' : 'Emoji de capa'}</DropdownMenu.Item>
                   <DropdownMenu.Separator class="menu-sep" />
                   <DropdownMenu.Item class="menu-item" onSelect={() => meta && close({ archived: !meta.archived }, meta.archived ? 'Nota desarquivada' : 'Nota arquivada')}>
@@ -877,6 +904,8 @@
                 onchange={setReminder}
                 onrepeat={(r) => meta && (meta.reminderRepeat = r)}
               />
+            {/if}
+            {#if hasStatus(meta)}
               <StatusToggle value={statusOf(meta)} onchange={setStatus} />
             {/if}
           </div>

@@ -58,7 +58,7 @@ export interface EditorTarget {
   id: string
   isNew: boolean
   /** Categoria e tags herdadas do filtro ativo ao criar pelo "+". */
-  defaults?: { categoryId: string | null; tags: string[]; reminderAt?: Millis; reminderDoing?: boolean }
+  defaults?: { categoryId: string | null; tags: string[]; reminderAt?: Millis; reminderDoing?: boolean; statusOn?: boolean }
   /** Atalho do "+": a nota nova já abre gravando, com a câmera ou com os arquivos escolhidos. */
   start?: { record: true } | { camera: true } | { files: DroppedFile[] } | { shared: SharedIn }
   /** Abrir já imprimindo (PDF pelo menu do card). */
@@ -401,22 +401,23 @@ class AppState {
       defaults: defaults ?? {
         categoryId: this.filter.categoryId === NO_CATEGORY ? null : this.filter.categoryId,
         tags: this.filter.tags.filter((t) => t !== NO_TAGS),
-        // no Calendário e no Kanban a nota nova já nasce lembrete (senão nem apareceria ali)
+        // no Calendário a nota nova já nasce lembrete, e no Kanban com status (senão nem apareceria ali)
         reminderAt: this.newReminderAt(),
+        statusOn: this.view === 'kanban' || undefined,
       },
       start,
     }
   }
 
-  /** Kanban: o "+" da coluna cria o lembrete já no status dela (a fazer ou em andamento). */
+  /** Kanban: o "+" da coluna (e o "+" da visão) cria uma nota com status, já no da coluna; sem lembrete. */
   openNewInColumn(doing: boolean) {
     this.openNew()
-    if (this.editor?.defaults) this.editor.defaults.reminderDoing = doing
+    if (this.editor?.defaults) Object.assign(this.editor.defaults, { reminderDoing: doing, statusOn: true })
   }
 
   /** Lembrete de uma nota nova criada no Calendário (no dia escolhido; hoje, à noite) ou no Kanban. */
   newReminderAt(day?: Date): Millis | undefined {
-    if (this.view !== 'calendar' && this.view !== 'kanban' && !day) return undefined
+    if (this.view !== 'calendar' && !day) return undefined
     const d = day ?? (this.view === 'calendar' ? fromKey(this.calDay) : new Date())
     const today = new Date()
     if (d.toDateString() !== today.toDateString()) return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 9).getTime()

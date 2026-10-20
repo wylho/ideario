@@ -42,6 +42,7 @@ export interface SeedNote {
   reminderAt: number | null
   reminderDone?: boolean
   reminderDoing?: boolean
+  statusOn?: boolean
   reminderRepeat?: import('../../types').RepeatKind
   emoji?: string
   archived?: boolean

@@ -96,6 +96,7 @@ fn input(id: &str, title: &str, text: &str) -> NoteInput {
         reminder_at: None,
         reminder_done: false,
         reminder_doing: false,
+        status_on: false,
         reminder_repeat: None,
         emoji: None,
         tags: vec![],

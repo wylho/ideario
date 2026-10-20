@@ -76,6 +76,8 @@ export interface NoteSummary {
   reminderDone: boolean
   /** Em andamento (amarelo). Status: concluído = verde, em andamento = amarelo, senão vermelho. */
   reminderDoing: boolean
+  /** Tem status mesmo sem lembrete (posto pelo menu da nota). Com lembrete, o status existe sempre. */
+  statusOn: boolean
   reminderRepeat: RepeatKind | null
   /** Emoji grande de capa (null = sem). */
   emoji: string | null
@@ -132,6 +134,8 @@ export interface NoteDetail {
   reminderDone: boolean
   /** Em andamento (amarelo). Status: concluído = verde, em andamento = amarelo, senão vermelho. */
   reminderDoing: boolean
+  /** Tem status mesmo sem lembrete (posto pelo menu da nota). Com lembrete, o status existe sempre. */
+  statusOn: boolean
   reminderRepeat: RepeatKind | null
   /** Emoji grande de capa (null = sem). */
   emoji: string | null
@@ -146,7 +150,7 @@ export interface NoteDetail {
 }
 
 /** Campos que os menus de contexto mudam sem abrir o editor. */
-export type NotePatch = Partial<Pick<NoteInput, 'pinned' | 'color' | 'categoryId' | 'archived' | 'trashedAt' | 'reminderAt' | 'reminderDone' | 'reminderDoing' | 'reminderRepeat' | 'emoji'>>
+export type NotePatch = Partial<Pick<NoteInput, 'pinned' | 'color' | 'categoryId' | 'archived' | 'trashedAt' | 'reminderAt' | 'reminderDone' | 'reminderDoing' | 'statusOn' | 'reminderRepeat' | 'emoji'>>
 
 export interface NoteInput {
   id: string
@@ -161,6 +165,8 @@ export interface NoteInput {
   reminderDone: boolean
   /** Em andamento (amarelo). Status: concluído = verde, em andamento = amarelo, senão vermelho. */
   reminderDoing: boolean
+  /** Tem status mesmo sem lembrete (posto pelo menu da nota). Com lembrete, o status existe sempre. */
+  statusOn: boolean
   reminderRepeat: RepeatKind | null
   /** Emoji grande de capa (null = sem). */
   emoji: string | null
@@ -198,6 +204,9 @@ export type ReminderStatus = 'todo' | 'doing' | 'done'
 
 export const statusOf = (n: { reminderDone: boolean; reminderDoing: boolean }): ReminderStatus =>
   n.reminderDone ? 'done' : n.reminderDoing ? 'doing' : 'todo'
+
+/** A nota tem status: toda nota com lembrete, e as que ganharam status pelo menu. */
+export const hasStatus = (n: { reminderAt: Millis | null; statusOn: boolean }) => n.reminderAt != null || n.statusOn
 
 export interface ViewCounts {
   notes: number

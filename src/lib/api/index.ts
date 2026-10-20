@@ -46,8 +46,11 @@ export interface Api {
   /** Atualização Yjs do editor; cria a nota se ela ainda não existe. A lista e a busca se atualizam. */
   applyNoteUpdate(id: string, update: Uint8Array): Promise<void>
   setReminderDone(id: string, done: boolean): Promise<void>
-  /** Seletor de três cores. Verde num lembrete que se repete pula para a próxima vez (e volta ao vermelho). */
-  setReminderStatus(id: string, status: ReminderStatus): Promise<void>
+  /** Seletor de três cores. Verde num lembrete que se repete pula para a próxima vez (e volta ao vermelho). Nota sem
+   *  lembrete passa a ter status; 'none' tira o status dela. */
+  setReminderStatus(id: string, status: ReminderStatus | 'none'): Promise<void>
+  /** Kanban: notas com status (com lembrete ou com status posto pelo menu). */
+  listBoard(p: { filter: Filter; query: string }): Promise<NoteSummary[]>
   /** Adiar até `until`. O que se repete avisa de novo nessa hora sem mudar o horário da série. */
   snoozeReminder(id: string, until: Millis): Promise<void>
   /** Concluir. O que se repete pula para a próxima vez (a série continua). */

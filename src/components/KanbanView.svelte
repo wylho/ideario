@@ -4,16 +4,16 @@
   import { app, live } from '../lib/app.svelte'
   import { boardDrag } from '../lib/boarddrag'
   import { fmtReminder, isOverdue } from '../lib/format'
-  import { reminderMenu } from '../lib/menus'
+  import { noteMenu, reminderMenu } from '../lib/menus'
   import { STATUS, changeStatus } from '../lib/status'
   import { statusOf, type NoteSummary, type ReminderStatus } from '../lib/types'
   import ContextMenu from './ContextMenu.svelte'
   import StatusToggle from './StatusToggle.svelte'
   import ViewEmpty from './ViewEmpty.svelte'
 
-  // Kanban: os lembretes (os mesmos de Lembretes) em três colunas pelo status: a fazer (vermelho), em andamento
-  // (amarelo) e concluído (verde). Arrastar entre colunas ou tocar no seletor de cores muda o status.
-  const list = live(() => api.listReminders({ filter: $state.snapshot(app.filter), query: app.query, includeDone: true }), [] as NoteSummary[])
+  // Kanban: as notas com status (toda nota com lembrete e as que ganharam status pelo menu) em três colunas: a fazer
+  // (vermelho), em andamento (amarelo) e concluído (verde). Arrastar entre colunas ou tocar no seletor muda o status.
+  const list = live(() => api.listBoard({ filter: $state.snapshot(app.filter), query: app.query }), [] as NoteSummary[])
 
   const DONE_SHOWN = 30
   let allDone = $state(false)
@@ -33,7 +33,7 @@
 </script>
 
 {#if list.ready && !list.current.length}
-  <ViewEmpty view="kanban" hint={app.filterLabel ? undefined : 'Toda nota com lembrete aparece aqui, na coluna do status dela.'} />
+  <ViewEmpty view="kanban" hint={app.filterLabel ? undefined : 'Toda nota com lembrete aparece aqui, e qualquer nota pelo menu Status.'} />
 {:else}
   <div class="kanban">
     {#each ['todo', 'doing', 'done'] as const as st (st)}
@@ -42,13 +42,13 @@
         <h2 class="kb-head">
           <i class="st-mark" aria-hidden="true"></i>{STATUS[st].label}<span class="count">{cols[st].length}</span>
           {#if st !== 'done'}
-            <button class="kb-add" aria-label="Novo lembrete em {STATUS[st].label}" title="Novo lembrete em {STATUS[st].label}" onclick={() => app.openNewInColumn(st === 'doing')}><Plus size={16} /></button>
+            <button class="kb-add" aria-label="Nova nota em {STATUS[st].label}" title="Nova nota em {STATUS[st].label}" onclick={() => app.openNewInColumn(st === 'doing')}><Plus size={16} /></button>
           {/if}
         </h2>
         <div class="kb-cards">
           {#each notes as n (n.id)}
             {@const cat = app.category(n.categoryId)}
-            <ContextMenu items={() => reminderMenu(n)}>
+            <ContextMenu items={() => (n.reminderAt != null ? reminderMenu(n) : noteMenu(n))}>
               {#snippet children(trigger)}
                 <div
                   {...trigger}
@@ -64,12 +64,14 @@
                     <StatusToggle value={st} onchange={(s) => changeStatus(n, s)} />
                   </div>
                   {#if excerpt(n)}<p>{excerpt(n)}</p>{/if}
-                  <div class="kb-meta">
-                    <span class="pill" class:late={isOverdue(n)} class:done={n.reminderDone}>
-                      {fmtReminder(n.reminderAt!)}{#if n.reminderRepeat}<Repeat size={11} aria-label="se repete" />{/if}
-                    </span>
+                  {#if n.reminderAt != null || cat}<div class="kb-meta">
+                    {#if n.reminderAt != null}
+                      <span class="pill" class:late={isOverdue(n)} class:done={n.reminderDone}>
+                        {fmtReminder(n.reminderAt)}{#if n.reminderRepeat}<Repeat size={11} aria-label="se repete" />{/if}
+                      </span>
+                    {/if}
                     {#if cat}<span class="pill"><i class="dot" style:background={cat.color}></i>{cat.name}</span>{/if}
-                  </div>
+                  </div>{/if}
                 </div>
               {/snippet}
             </ContextMenu>

@@ -375,5 +375,17 @@ fn reminder_status_is_what_the_kanban_and_calendar_show() {
     tool(&core, "set_reminder_status", json!({ "id": a, "status": "done" }), true);
     let done = tool(&core, "list_reminders", json!({ "status": "done" }), true);
     assert!(done.contains("Pagar a luz") && done.contains("\"status\": \"done\""));
-    assert!(tool(&core, "set_reminder_status", json!({ "id": a, "status": "talvez" }), false).contains("todo, doing ou done"));
+    assert!(tool(&core, "set_reminder_status", json!({ "id": a, "status": "talvez" }), false).contains("todo, doing, done ou none"));
+}
+
+#[test]
+fn a_note_without_a_reminder_can_have_a_status_and_shows_in_the_board() {
+    let (core, _t) = setup();
+    let id = id_in(&tool(&core, "create_note", json!({ "title": "Redesenhar o logo" }), true));
+    assert!(!tool(&core, "list_board", json!({}), true).contains("Redesenhar o logo"));
+    tool(&core, "set_reminder_status", json!({ "id": id, "status": "doing" }), true);
+    assert!(tool(&core, "list_board", json!({ "status": "doing" }), true).contains("Redesenhar o logo"));
+    assert!(tool(&core, "get_note", json!({ "id": id }), true).contains("status: em andamento"));
+    assert!(tool(&core, "set_reminder_status", json!({ "id": id, "status": "none" }), true).contains("Status tirado"));
+    assert!(!tool(&core, "list_board", json!({}), true).contains("Redesenhar o logo"));
 }

@@ -9,7 +9,7 @@ export function estimateCard(n: NoteSummary, w: number): number {
   const inner = Math.max(80, w - 26)
   const lines = (text: string, charPx: number, max = Infinity) => Math.min(max, Math.ceil(text.length / Math.max(8, inner / charPx)))
   const pillsHeight = (files = n.fileCount > 0) => {
-    const px = (n.reminderAt != null ? 120 : 0) + (n.categoryId ? 80 : 0) + (files ? 40 : 0) + n.tags.reduce((s, t) => s + t.length * 6.5 + 24, 0)
+    const px = (n.reminderAt != null ? 120 : n.statusOn ? 110 : 0) + (n.categoryId ? 80 : 0) + (files ? 40 : 0) + n.tags.reduce((s, t) => s + t.length * 6.5 + 24, 0)
     return px ? Math.ceil(px / inner) * 26 + 2 : 0
   }
   let h = 26 // padding do corpo
