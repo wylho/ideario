@@ -122,10 +122,10 @@ fn schedule(app: &AppHandle, scheduled: &mut Vec<crate::reminders::Planned>) {
             .title(&p.title)
             .body("Lembrete do Ideario")
             .extra("note", &p.note)
-            // Ícone pequeno da barra de status (res/drawable/ic_stat_ideario.xml). Vai em cada aviso: o plugin não
+            // Ícone pequeno da barra de status (res/drawable-*/ic_stat_ideario.png, de source/tray-png.py). Vai em cada aviso: o plugin não
             // aceita configuração em tauri.conf (com `plugins.notification` lá, o app nem abre).
             .icon("ic_stat_ideario")
-            .icon_color("#F08A24")
+            .icon_color("#0068FF")
             .auto_cancel()
             .schedule(Schedule::At { date, repeating: false, allow_while_idle: true })
             .show();

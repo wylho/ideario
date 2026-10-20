@@ -1,8 +1,8 @@
-<svg width="64" height="64" viewBox="128 128 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
-<!-- Ícone da bandeja / barra de menus: só o desenho de dentro, monocromático. Preto = template do macOS (o sistema pinta); claro/escuro no Linux. -->
-<rect x="128" y="128" width="112" height="112" rx="20" fill="black"/>
-<rect x="272" y="128" width="112" height="40" rx="20" fill="black"/>
-<rect x="272" y="200" width="112" height="40" rx="20" fill="black"/>
-<rect x="128" y="272" width="256" height="40" rx="20" fill="black"/>
-<rect x="128" y="344" width="256" height="40" rx="20" fill="black"/>
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+<!-- Bandeja e notificação do Android: os três quadrados numa cor só, cada um separado do de trás por um vão. -->
+<mask id="m1"><rect width="512" height="512" fill="white"/><rect x="128" y="129" width="255" height="255" rx="56" fill="black"/></mask>
+<mask id="m2"><rect width="512" height="512" fill="white"/><rect x="218" y="249" width="218" height="219" rx="52" fill="black"/></mask>
+<rect x="96" y="64" width="178" height="179" rx="32" fill="black" mask="url(#m1)"/>
+<rect x="148" y="149" width="215" height="215" rx="36" fill="black" mask="url(#m2)"/>
+<rect x="238" y="269" width="178" height="179" rx="32" fill="black"/>
 </svg>

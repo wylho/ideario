@@ -22,15 +22,17 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
 - **D1:** frontend em **Svelte 5 + Bits UI** (ícones `@lucide/svelte`, editor TipTap v3).
 - **D2:** desktop primeiro (Windows, macOS, Linux); Android depois.
 - **D4:** nome **Ideario** (sem acento).
-- **Ícone oficial:** quadrado arredondado com degradê amarelo→laranja (`src-tauri/icons/source/ideario.svg`; também
-  `BrandMark.svelte` e `public/favicon.svg`). Android: adaptativo (frente/fundo) e o quadrado sem arredondamento
-  (`ideario-full-bleed.svg`), que o sistema corta no formato dele; macOS: versão com margem da grade da Apple (`macos.svg`).
-  Bandeja/barra de menus: só o desenho de dentro, monocromático (`source/tray.svg` → `tray-dark.png`/`tray-light.png` por
-  `source/tray-png.py`): template no macOS, branco ou preto no Linux conforme o painel, colorido no Windows.
+- **Ícone oficial (desde a 0.4):** três quadrados sobrepostos (roxo, azul, amarelo) sobre branco, desenho do usuário.
+  `source/ideario.svg` (quadrado arredondado: Windows, Linux, favicon, `BrandMark.svelte`, `public/favicon.svg`,
+  `site/favicon.svg`); `ideario-full-bleed.svg` (quadrado inteiro); `macos.svg` (margem da grade da Apple).
+  Android adaptativo: fundo branco e, na frente (`android-foreground.svg`), o desenho da versão redonda do usuário
+  reduzido a 72/108, ou seja, o círculo do launcher mostra exatamente a versão redonda e nada é cortado.
+  Bandeja/barra de menus e notificação do Android: os três quadrados numa cor só, separados por um vão
+  (`source/tray.svg`; `source/tray-png.py` gera `tray-dark.png`/`tray-light.png` e `drawable-*/ic_stat_ideario.png`):
+  template no macOS, branco ou preto no Linux conforme o painel, colorido no Windows.
   Para regenerar: `npx tauri icon src-tauri/icons/source/icon-manifest.json` (e o `.icns` a partir de `macos.svg`),
-  depois `python3 src-tauri/icons/source/android-legacy.py` (os ícones antigos do Android; o do Tauri sai cortado).
-  Android adaptativo: o desenho da frente (`android-foreground.svg`) fica reduzido a 74% para caber no círculo seguro
-  (66 dp de 108): pedido do usuário, o launcher redondo cortava as quinas.
+  depois `python3 src-tauri/icons/source/android-legacy.py` (os ícones antigos do Android; o do Tauri sai cortado) e,
+  dentro de `src-tauri/icons`, `python3 source/tray-png.py`.
 - **Tipografia:** fonte do sistema em toda a UI, para parecer nativo (substitui Bricolage/Figtree/JetBrains Mono do protótipo).
   No Linux o núcleo lê a fonte do GNOME/KDE (`src-tauri/src/system_fonts.rs`); nos demais, `system-ui`.
 - **D5:** categorias só com cor (sem ícone).
