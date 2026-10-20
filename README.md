@@ -36,7 +36,7 @@ filtram qualquer visão.
 | **Notas** | Cards coloridos, fixados no topo, na ordem que você arrastar. |
 | **Lembretes** | O que vence hoje, amanhã e depois, com o que ficou atrasado em cima. |
 | **Calendário** | Cada lembrete no seu dia, por mês ou por semana. |
-| **Kanban** | A fazer, em andamento e concluído, em três colunas. |
+| **Kanban** | Toda nota com status, em três colunas: a fazer, em andamento e concluído. |
 | **Arquivos** | PDFs, áudios, vídeos e documentos de todas as notas, com leitor de PDF. |
 | **Moodboard** | Todas as fotos num mural, com a paleta de cores de cada uma. |
 
@@ -44,12 +44,12 @@ filtram qualquer visão.
 
 - **Calendário:** os lembretes no dia de cada um, por mês ou semana; arraste para mudar o dia.
 - **Kanban:** a fazer, em andamento e concluído; arraste o card entre as colunas.
-- **Status em três cores** em todo lembrete: vermelho, amarelo e verde, também pelo Claude.
+- **Status em três cores**: vermelho, amarelo e verde, em qualquer nota (com lembrete ele vem sozinho), também pelo Claude.
 - **Ícone novo.**
 - **Sincronização mais rápida:** as notas sobem para o Drive em paralelo, e mudar a ordem só envia o que mudou.
 - Títulos longos quebram linha, e a busca fica sempre no mesmo lugar da barra.
 
-Na 0.4.1: o ícone novo com as cores limpas (sem a borda azul que aparecia no macOS).
+Na 0.4.2: **status em qualquer nota**. Com lembrete ele aparece sozinho; sem lembrete, é só escolher no menu Status, e a nota entra no Kanban. Na 0.4.1: o ícone novo com as cores limpas.
 
 <details>
 <summary>Versões anteriores</summary>
