@@ -1139,7 +1139,7 @@ test('lateral: chevron mostra e oculta as tags e lembra a escolha', async ({ pag
   await expect(page.locator('.sidebar .tag-cloud')).toHaveCount(0)
 })
 
-test('desktop: visões logo depois do ☰ e ações à direita, paradas; busca e nuvem só ocupam a folga', async ({ page }) => {
+test('desktop: visões logo depois do ☰; busca fixa na ponta direita e as ações da visão à esquerda dela', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 })
   const box = async (sel: string) => (await page.locator(sel).first().boundingBox())!
   const same = (a: { x: number; width: number }, b: { x: number; width: number }) => {
@@ -1155,9 +1155,11 @@ test('desktop: visões logo depois do ☰ e ações à direita, paradas; busca e
   expect(actions.x + actions.width).toBeCloseTo(1280 - 14, 0)
   const sort = await box('.top-actions [aria-label^="Ordenar"]')
   const lupa = await box('.top-actions [aria-label="Buscar"]')
+  // A busca é o item fixo da ponta direita; as ações da visão ficam à esquerda dela (o campo aberto as empurra).
+  expect(lupa.x).toBeGreaterThan(sort.x)
   const still = async () => {
     same(await box('.view-switch'), views)
-    same(await box('.top-actions [aria-label^="Ordenar"]'), sort)
+    expect((await box('.top-actions [aria-label^="Ordenar"]')).x).toBeLessThan(sort.x)
   }
 
   await expect(page.locator('#busca')).toHaveCount(0)
@@ -1189,7 +1191,8 @@ test('desktop: visões logo depois do ☰ e ações à direita, paradas; busca e
   await page.keyboard.type('Sincroniza')
   await back(page)
   await expect(page.locator('.sync-ind')).toBeVisible({ timeout: 5000 })
-  await still()
+  same(await box('.view-switch'), views)
+  same(await box('.top-actions [aria-label^="Ordenar"]'), sort)
   same(await box('.top-actions [aria-label="Buscar"]'), lupa)
 })
 
