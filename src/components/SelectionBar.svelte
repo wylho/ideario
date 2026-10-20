@@ -35,7 +35,7 @@
 
 <div class="sel-left">
   <button class="icon-btn" aria-label="Limpar seleção" title="Limpar seleção (Esc)" onclick={() => app.clearSelection()}><X size={20} /></button>
-  <span class="sel-count" aria-live="polite">{count === 1 ? '1 selecionada' : `${count} selecionadas`}</span>
+  <span class="sel-count" aria-live="polite">{count}<span class="sel-word">{' '}{count === 1 ? 'selecionada' : 'selecionadas'}</span></span>
 </div>
 
 <div class="top-actions sel-actions" role="toolbar" aria-label="Ações nas notas selecionadas">

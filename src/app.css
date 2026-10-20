@@ -140,7 +140,8 @@ button { cursor: pointer; }
 .scope-pill button { display: grid; place-items: center; width: 20px; height: 20px; border-radius: 999px; }
 .scope-pill button:hover { background: rgb(0 0 0 / .08); }
 
-.content { flex: 1; overflow-y: auto; padding: 4px 12px 110px; display: flex; flex-direction: column; gap: 10px; }
+.content { flex: 1; overflow-y: auto; padding: 10px 12px 110px; display: flex; flex-direction: column; gap: 10px; }
+/* 10 px no alto: a bolinha de seleção sai 7 px do canto do card e a rolagem cortaria. */
 /* Sem isso, as fileiras com rolagem horizontal encolhem e cortam (bug herdado do protótipo). */
 .content > * { flex-shrink: 0; width: 100%; max-width: var(--content-max); margin-inline: auto; }
 @media (min-width: 640px) { .content { padding-inline: 16px; } }
@@ -205,6 +206,12 @@ button { cursor: pointer; }
 /* barra de ações em lote, no lugar da barra superior */
 .sel-left { display: flex; align-items: center; gap: 8px; min-width: 0; flex: none; }
 .sel-count { font-size: 17px; font-weight: 600; }
+/* celular: só o número, para as seis ações caberem com margem */
+@media (max-width: 639px) {
+  .sel-word { display: none; }
+  .sel-actions { gap: 0; }
+  .topbar.selecting { padding-right: 8px; }
+}
 .topbar.selecting { background: color-mix(in oklab, var(--accent) 8%, var(--bg)); }
 .topbar:not(.appbar) .sel-actions { margin-left: auto; }
 .swatch-dot { width: 16px; height: 16px; border-radius: 999px; box-shadow: inset 0 0 0 1px var(--line); flex: none; }
@@ -754,6 +761,8 @@ button { cursor: pointer; }
 .filter-bar { flex-wrap: wrap; }
 .shell.wide .filter-bar { padding: 18px 24px 10px; max-width: calc(var(--content-max) + 48px); gap: 8px; }
 .filter-row { overflow-x: auto; scrollbar-width: none; }
+/* abaixo da barra de seleção (que tem fundo), as pílulas não colam nela */
+.topbar.selecting ~ .filter-row, .topbar.selecting ~ .filter-bar { padding-top: 6px; }
 .filter-row .chip, .filter-bar .chip { flex: none; white-space: nowrap; }
 .chip svg { flex: none; }
 .chip .dot { margin-right: 1px; }
