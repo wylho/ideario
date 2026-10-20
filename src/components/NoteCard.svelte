@@ -52,7 +52,7 @@
     aria-label={selected ? 'Desmarcar nota' : 'Selecionar nota'}
     aria-pressed={selected}
     onclick={(e) => { e.stopPropagation(); app.toggleSelect(n.id, e.shiftKey) }}
-  ><Check size={14} strokeWidth={3} /></button>
+  ><Check size={11} strokeWidth={3.2} /></button>
   {#if n.trashedAt == null && !selecting}
     <button class="card-pin" aria-label={n.pinned ? 'Desafixar' : 'Fixar'} title={n.pinned ? 'Desafixar' : 'Fixar'} onclick={togglePin}>
       {#if n.pinned}<PinOff size={16} />{:else}<Pin size={16} />{/if}
