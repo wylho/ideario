@@ -1,0 +1,12 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+<!-- Placa arredondada sobre branco: Windows, favicon, marca no app. Desenho do Figma (Page 20, "nodo — placa arredondada"). -->
+<rect width="512" height="512" rx="115" fill="white"/>
+<rect x="86" y="156" width="220" height="200" rx="40" fill="url(#g0)"/>
+<rect x="266" y="76" width="160" height="160" rx="32" fill="url(#g1)"/>
+<rect x="266" y="276" width="160" height="160" rx="32" fill="url(#g2)"/>
+<defs>
+<linearGradient id="g0" x1="86" y1="356" x2="306" y2="156" gradientUnits="userSpaceOnUse"><stop stop-color="#00B278" stop-opacity="1"/><stop offset="1" stop-color="#00B278" stop-opacity="0.7"/></linearGradient>
+<linearGradient id="g1" x1="266" y1="236" x2="426" y2="76" gradientUnits="userSpaceOnUse"><stop stop-color="#0068FF" stop-opacity="0.7"/><stop offset="1" stop-color="#0068FF" stop-opacity="1"/></linearGradient>
+<linearGradient id="g2" x1="426" y1="436" x2="266" y2="276" gradientUnits="userSpaceOnUse"><stop stop-color="#FFD500" stop-opacity="1"/><stop offset="1" stop-color="#FFD500" stop-opacity="0.8"/></linearGradient>
+</defs>
+</svg>

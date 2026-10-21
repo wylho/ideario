@@ -154,6 +154,12 @@ code { font: .88em var(--mono); background: var(--raised); border: 1px solid var
 .card.wide .media.phone { justify-self: center; width: min(280px, 70%); }
 .card .media.phone img { height: 440px; object-fit: cover; object-position: top; border-radius: 26px 26px 0 0; }
 
+/* o outro app (Do mesmo autor) */
+.card.sibling .brand { font-size: 24px; }
+.card.sibling .brand img { width: 40px; height: 40px; }
+.card.sibling .btn { margin-top: 24px; }
+.card.sibling .btn svg { margin-left: 2px; }
+
 /* grade de caixas pequenas */
 .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
 .box { background: var(--surface); border-radius: 22px; box-shadow: 0 0 0 1px var(--edge); padding: 26px 28px; }
