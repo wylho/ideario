@@ -74,7 +74,7 @@
           <div class="menu-heading" aria-hidden="true">Mover para</div>
           <DropdownMenu.Item class="menu-item" onSelect={() => changeMany(notes, { categoryId: null }, 'Sem categoria')}>Sem categoria</DropdownMenu.Item>
           {#each app.categories as c (c.id)}
-            <DropdownMenu.Item class="menu-item" onSelect={() => changeMany(notes, { categoryId: c.id }, `Movidas para ${c.name}`)}>
+            <DropdownMenu.Item class="menu-item" onSelect={() => (notes.every((n) => n.categoryId === c.id) ? changeMany(notes, { categoryId: null }, 'Sem categoria') : changeMany(notes, { categoryId: c.id }, `Movidas para ${c.name}`))}>
               <i class="dot" style:background={c.color}></i>{c.name}
               {#if notes.every((n) => n.categoryId === c.id)}<span class="menu-check"><Check size={15} /></span>{/if}
             </DropdownMenu.Item>

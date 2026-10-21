@@ -110,7 +110,8 @@ export function noteMenu(n: NoteSummary): MenuEntry[] {
         SEP,
         ...app.categories.map((c) => ({
           label: c.name, swatch: c.color, checked: n.categoryId === c.id,
-          onSelect: () => change(n, { categoryId: c.id }, `Movida para ${c.name}`),
+          // clicar na que já está marcada tira a categoria
+          onSelect: () => (n.categoryId === c.id ? change(n, { categoryId: null }, 'Sem categoria') : change(n, { categoryId: c.id }, `Movida para ${c.name}`)),
         })),
         SEP,
         { label: 'Nova categoria…', icon: Plus, onSelect: () => newCategory((id, name) => change(n, { categoryId: id }, `Movida para ${name}`)) },

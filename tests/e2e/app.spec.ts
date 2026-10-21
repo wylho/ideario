@@ -569,6 +569,31 @@ test.describe('menus de contexto', () => {
     await expect(cards(page).filter({ hasText: 'Horários e estacionamento' })).toHaveCount(2)
   })
 
+  test('card: tirar a categoria ("Sem categoria" ou clicar de novo na marcada); no editor também', async ({ page }) => {
+    const card = () => cards(page).filter({ hasText: 'Horários e estacionamento' }).first()
+    const pill = () => card().locator('.pill.cat')
+    for (const how of ['Sem categoria', 'Lumen']) {
+      await card().click({ button: 'right' })
+      await item(page, 'Categoria').click()
+      await item(page, 'Lumen').click()
+      await expect(pill()).toContainText('Lumen')
+      await card().click({ button: 'right' })
+      await item(page, 'Categoria').click()
+      await item(page, how).click()
+      await expect(pill()).toHaveCount(0)
+    }
+    // editor: a marcada, clicada de novo, sai
+    await card().click({ button: 'right' })
+    await item(page, 'Categoria').click()
+    await item(page, 'Lumen').click()
+    await card().click()
+    await page.locator('#categoria').click()
+    await page.getByRole('option', { name: 'Lumen' }).click()
+    await expect(page.locator('#categoria')).toContainText('Sem categoria')
+    await page.keyboard.press('Escape')
+    await expect(pill()).toHaveCount(0)
+  })
+
   test('lembrete: adiar pelo menu', async ({ page }) => {
     await tab(page, 'Lembretes')
     await page.locator('.r-item', { hasText: 'Comprar pilha' }).click({ button: 'right' })
