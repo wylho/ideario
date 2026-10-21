@@ -1,52 +1,34 @@
 <script lang="ts">
-  import { mount, untrack, unmount } from 'svelte'
-  import { Editor as TipTap, type ChainedCommands } from '@tiptap/core'
-  import { NodeSelection } from '@tiptap/pm/state'
-  import { Dialog, DropdownMenu, Popover, Select } from 'bits-ui'
+  import { untrack } from 'svelte'
+  // A nota aberta no Ideario: a janela em volta do card do Atrio (`NoteEditor`, o mesmo card do Nodo), o Y.Doc com o
+  // salvamento contínuo e o sync, e o que só o Ideario tem (fixar, arquivar, lixeira, exportar, modo documento).
+  import { Editor as TipTap } from '@tiptap/core'
+  import { Dialog, DropdownMenu } from 'bits-ui'
   import {
-    Archive, ArchiveRestore, ArrowLeft, Bold, Camera, Check, ChevronDown, ChevronLeft, ChevronRight, CircleDashed, Columns2, Heading, Image, Italic, List,
-    ListChecks, Mic, MoreVertical, SquareCode, Palette, Table, TextQuote, Minus, BetweenHorizontalStart, BetweenVerticalStart, Paperclip, Pin, PinOff, Plus, Redo2, Rows2, Square, Tag, Trash2, Undo2, X,
-    ArrowDown, ArrowUp, Copy, CopyPlus, Download, Eye, GripVertical, ListTodo, Pilcrow, Scissors, SquareCheck, SquareDashed, ExternalLink,
-    ListIndentDecrease, ListIndentIncrease, BookOpen, Minimize2, FileDown, Link2, RefreshCw, SmilePlus,
+    Archive, ArchiveRestore, ArrowLeft, Check, ChevronRight, CircleDashed, MoreVertical, Pin, PinOff, Trash2,
+    BookOpen, Minimize2, FileDown, SmilePlus,
   } from '@lucide/svelte'
   import { exportEntries, printNote } from '../lib/exporting'
-  import { bareUrl, fillPreview, insertLinkCard } from '@wylho/atrio/editor'
+  import { bareUrl, fillPreview, insertLinkCard, NoteEditor } from '@wylho/atrio/editor'
+  import { features, ReminderPopover, type CardHost } from '@wylho/atrio'
   import { isDocNote, setDocNote } from '../lib/docmode'
-  import {
-    blockAt, canIndent, canMove, checkAll, checkCount, clipNode, convertBlock, deleteChecked, deleteNode, duplicateNode, moveNode, shapeOf,
-    dropTargetAt, moveNodeTo, type BlockHit, type Shape,
-  } from '@wylho/atrio/editor'
-  import { SEP, type MenuEntry } from '../lib/menu'
-  import { MenuAt } from '@wylho/atrio'
-  import { imageActions, leaveRow, placeBeside } from '@wylho/atrio/editor'
-  import { canRecord, fmtSeconds, hasCamera, photoName, Recorder } from '@wylho/atrio/editor'
-  import { MediaBlock } from '@wylho/atrio'
-  import { CameraDialog } from '@wylho/atrio'
   import { api } from '../lib/api'
   import { download, newCategory } from '../lib/menus'
   import { app, type DroppedFile, type EditorTarget } from '../lib/app.svelte'
   import * as Y from 'yjs'
-  import { noteExtensions } from '@wylho/atrio/editor'
-  import { copyNoteId, shortId } from '../lib/noteid'
-  import { readMeta, writeMeta, type NoteMeta } from '../lib/ydoc'
+  import { BODY, readMeta, writeMeta, type NoteMeta } from '../lib/ydoc'
   import { makePreviews } from '../lib/previews.svelte'
   import { reminderSet } from '../lib/notify.svelte'
-  import { ago, fmtBytes, hashTags } from '../lib/format'
-  import { ReminderPopover } from '@wylho/atrio'
-  import { StatusToggle } from '@wylho/atrio'
+  import { ago } from '../lib/format'
   import { STATUS } from '../lib/status'
-  import { nextOccurrence } from '../lib/reminders'
-  import { TagInput } from '@wylho/atrio'
-  import { EmojiPicker } from '@wylho/atrio/emoji'
-  import { hasStatus, statusOf, type Attachment, type NoteColor, type NoteInput, type ReminderStatus, type RichDoc, type RichNode, type SharedIn } from '../lib/types'
+  import { copyNoteId, shortId } from '../lib/noteid'
+  import { hasStatus, statusOf, type Attachment, type SharedIn } from '../lib/types'
 
   let { target }: { target: EditorTarget } = $props()
 
-  const COLORS: { id: NoteColor; label: string }[] = [
-    { id: 'none', label: 'Padrão' }, { id: 'sand', label: 'Areia' }, { id: 'sage', label: 'Sálvia' }, { id: 'sky', label: 'Céu' },
-    { id: 'rose', label: 'Rosa' }, { id: 'lilac', label: 'Lilás' }, { id: 'butter', label: 'Manteiga' },
-  ]
   const SAVE_DELAY = 400
+  /** O card do Ideario: tudo ligado. */
+  const FEATURES = features()
 
   type Meta = NoteMeta
 
@@ -54,36 +36,37 @@
   const { id, isNew, defaults, start, print } = target
   // Modo documento: a nota em página inteira, coluna de leitura e letra maior. Lembrado por nota.
   let docMode = $state(isDocNote(id))
-  let emojiOpen = $state(false)
   function toggleDoc() {
     docMode = !docMode
     setDocNote(id, docMode)
   }
-  /** "+ Link…": pede o endereço e põe o cartão onde está o cursor (a prévia chega depois). */
-  function askLink() {
-    app.askName({
-      title: 'Inserir link',
-      label: 'Endereço (https://…)',
-      value: '',
-      confirm: 'Inserir',
-      submit: (text) => {
-        const url = bareUrl(text) ?? bareUrl(`https://${text}`)
-        if (!url || !editor) {
-          app.say('Isso não parece um endereço')
-          return
-        }
-        // numa linha vazia, o cartão toma o lugar dela; no meio do texto, entra logo abaixo do bloco
-        const at = editor.state.selection.$from
-        if (at.depth === 0) insertLinkCard(editor.view, url, at.pos, at.pos)
-        else {
-          const block = at.node(1)
-          const empty = block.type.name === 'paragraph' && block.content.size === 0
-          insertLinkCard(editor.view, url, empty ? at.before(1) : at.after(1), at.after(1))
-        }
-        fillPreview(editor.view, url, (u) => api.linkPreview(u))
-      },
-    })
+  let card: NoteEditor | undefined = $state()
+
+  /** O que o card do Atrio pede ao Ideario. */
+  const host: CardHost = {
+    tags: () => app.tags,
+    categories: () => app.categories,
+    mediaUrl: (h) => api.mediaUrl(h),
+    imageUrl: (h, size) => api.imageUrl(h, size),
+    importFile: (f, name) => api.importFile(f, name),
+    importPath: (p) => api.importPath(p),
+    attachments: (hs) => api.getAttachments(hs),
+    download: (a) => void download(a),
+    openAttachment: (a) => viewAttachment(a),
+    linkPreview: (u) => api.linkPreview(u),
+    openUrl: (u) => void api.openUrl(u),
+    markdownToDoc: (md) => api.markdownToDoc(md),
+    clipboardImage: () => api.clipboardImage(),
+    newCategory: (done) => newCategory(done),
+    // O diálogo de nome do Ideario; fechar sem confirmar só deixa a pergunta sem resposta (nada é inserido).
+    askText: (o) => new Promise((resolve) => app.askName({ ...o, value: '', submit: resolve })),
+    onReminderSet: () => void reminderSet(),
+    afterImport: (added) => {
+      // PDF e vídeo ganham prévia (primeira página, um quadro) em segundo plano.
+      if (added.some((a) => a.kind === 'pdf' || a.kind === 'video')) makePreviews()
+    },
   }
+
   /** Compartilhado por outro app (Android): o assunto vira o título; um link sozinho vira cartão; o texto, parágrafos;
    *  os arquivos entram depois, como os arrastados. */
   function shareIn(ed: TipTap, s: SharedIn) {
@@ -96,34 +79,14 @@
     } else if (text) {
       ed.commands.insertContent(text.split('\n').map((line) => ({ type: 'paragraph', content: line ? [{ type: 'text', text: line }] : [] })))
     }
-    if (s.files.length) void addFiles(s.files.map((path) => ({ path })))
+    if (s.files.length) void card?.addFiles(s.files.map((path) => ({ path })))
   }
 
-  /** A nota tem foto ou anexo (exportar vira .zip). */
-  function hasMedia() {
-    let found = false
-    editor?.state.doc.descendants((n) => {
-      if (n.type.name === 'noteImage' || n.type.name === 'noteFile') found = true
-      return !found
-    })
-    return found
-  }
   let meta = $state<Meta | null>(null)
   let files = $state.raw<Attachment[]>([])
+  let known = $state.raw<Attachment[]>([])
   let editedAt = $state<number | null>(null)
   let wasTrashed = $state(false)
-  let editor = $state.raw<TipTap | null>(null)
-  let tick = $state(0)
-  let bodyTags = $state<string[]>([])
-  /** Anexos usados no corpo, para desenhar fotos e players sem esperar. */
-  const media = new Map<string, Attachment>()
-  const recorder = new Recorder()
-  let cameraOpen = $state(false)
-  let cameraAvailable = $state(false)
-  hasCamera().then((v) => (cameraAvailable = v))
-  let photoInput: HTMLInputElement | undefined = $state()
-  let fileInput: HTMLInputElement | undefined = $state()
-
   // A nota é um Y.Doc (Fase 2): o TipTap edita o `body` dele e os metadados ficam no `meta`. Cada mudança vira uma
   // atualização Yjs pequena, juntada e enviada ao núcleo pelo salvamento contínuo.
   const doc = new Y.Doc()
@@ -148,7 +111,7 @@
       if (!n || !state.length) return void (app.editor = null)
       Y.applyUpdate(doc, state, LOADED)
       files = n.files
-      for (const a of n.media) media.set(a.hash, a)
+      known = n.media
       editedAt = n.updatedAt
       wasTrashed = n.trashedAt != null
       meta = readMeta(doc)
@@ -167,7 +130,7 @@
       } else {
         closed = true
         clearTimeout(timer)
-        recorder.cancel()
+        card?.cancelRecording()
         app.editor = null
         app.say('Esta nota foi excluída fora desta janela (em outro aparelho ou pelo Claude).')
       }
@@ -186,65 +149,15 @@
     }),
   )
 
-  const cat = $derived(app.category(meta?.categoryId))
-  /** Lembrete marcado (ou tirado): reabre, e sem lembrete não há repetição. */
-  function setReminder(v: number | null) {
-    if (!meta) return
-    meta.reminderAt = v
-    if (v == null) {
-      meta.reminderRepeat = null
-      // o status vai junto, a não ser que tenha sido posto pelo menu
-      if (!meta.statusOn) (meta.reminderDone = false), (meta.reminderDoing = false)
-    } else {
-      meta.reminderDone = false
-      void reminderSet()
-    }
-  }
-  /** Seletor de três cores. Verde num lembrete que se repete vale por esta vez: pula para a próxima. */
-  function setStatus(to: ReminderStatus | 'none') {
-    if (!meta) return
-    if (to === 'none') {
-      meta.statusOn = false
-      if (meta.reminderAt == null) (meta.reminderDone = false), (meta.reminderDoing = false)
-      return
-    }
-    if (meta.reminderAt == null) meta.statusOn = true
-    if (to === 'done' && meta.reminderAt != null && meta.reminderRepeat) {
-      meta.reminderAt = nextOccurrence(meta.reminderAt, meta.reminderRepeat)
-      meta.reminderDone = false
-      app.say('Feito por esta vez')
-    } else meta.reminderDone = to === 'done'
-    meta.reminderDoing = to === 'doing'
-  }
-  const NEW_CATEGORY = '__new'
-  /** Seletor de categoria; "Nova categoria…" cria e já põe a nota nela. */
-  function pickCategory(v: string) {
-    if (!meta) return
-    if (v === NEW_CATEGORY) newCategory((id) => meta && (meta.categoryId = id))
-    // "Sem categoria" ou clicar de novo na marcada (allowDeselect devolve '')
-    else meta.categoryId = v === 'none' || !v ? null : v
-  }
-  const extraTags = $derived([...new Set(bodyTags)].filter((t) => !meta?.tags.includes(t)))
-  const active = $derived.by(() => {
-    void tick
-    // Só destaca a formatação enquanto se escreve.
-    const e = editor?.isFocused ? editor : null
-    return {
-      bold: !!e?.isActive('bold'), italic: !!e?.isActive('italic'),
-      heading: ([1, 2, 3] as const).find((level) => e?.isActive('heading', { level })) ?? 0,
-      list: !!e?.isActive('bulletList'), check: !!e?.isActive('taskList'), code: !!e?.isActive('codeBlock'),
-      undo: !!editor?.can().undo(), redo: !!editor?.can().redo(),
-    }
-  })
 
   // ---------- salvamento contínuo ----------
-  const isEmpty = () => !meta?.title.trim() && !!editor?.isEmpty
+  const isEmpty = () => !!card?.isEmpty()
 
   /** Envia o que mudou. Se o núcleo recusar, nada se perde: volta para a fila e tenta de novo. Devolve se salvou. */
   async function save(): Promise<boolean> {
     clearTimeout(timer)
     timer = undefined
-    if (!editor || !meta) return true
+    if (!card?.getEditor() || !meta) return true
     if (!persisted && isEmpty()) return true // nota nova vazia não é criada
     // Nota nova: vai o estado inteiro; depois, só o que mudou desde o último envio.
     const wasPersisted = persisted
@@ -280,10 +193,8 @@
   async function close(patch?: Partial<Meta>, msg?: string) {
     if (closed) return
     closed = true
-    // Gravando: a gravação entra na nota (fechar não joga o áudio fora nem deixa o microfone ligado).
-    if (recorder.recording) await stopRecording()
-    // Arquivos ainda entrando (fotos grandes levam um instante): esperam para entrar na nota antes de salvar.
-    await Promise.allSettled([...imports])
+    // Gravando, a gravação entra na nota; arquivos ainda entrando esperam para entrar antes de salvar.
+    await card?.settle()
     // O que muda ao sair (arquivar, lixeira, restaurar) pode ser desfeito pelo aviso.
     const before = meta && patch ? (Object.fromEntries(Object.keys(patch).map((k) => [k, meta![k as keyof Meta]])) as Partial<Meta>) : null
     if (meta && patch) Object.assign(meta, patch)
@@ -310,7 +221,7 @@
       onconfirm: async () => {
         closed = true
         clearTimeout(timer)
-        recorder.cancel()
+        card?.cancelRecording()
         await api.deleteNote(id)
         app.editor = null
         app.say('Nota excluída')
@@ -318,708 +229,142 @@
     })
   }
 
-  // ---------- TipTap ----------
-  function mountEditor(el: HTMLElement) {
-    return untrack(() => {
-      const ed = new TipTap({
-        element: el,
-        extensions: noteExtensions({
-          media: (h) => ({ src: api.imageUrl(h, 'full'), width: media.get(h)?.width, height: media.get(h)?.height }),
-          load: async (h) => {
-            const a = media.get(h) ?? (await loadMedia(h))
-            return a ? { src: api.imageUrl(h, 'full'), width: a.width, height: a.height } : null
-          },
-          renderFile: (h, dom) => {
-            let c: ReturnType<typeof mount> | null = null
-            let gone = false
-            const show = (a: Attachment) => !gone && (c = mount(MediaBlock, { target: dom, props: { a, src: api.mediaUrl(a.hash), onopen: () => viewAttachment(a), ondownload: () => void download(a) } }))
-            const known = media.get(h)
-            // Colado de outra nota: busca os dados do anexo e desenha quando chegarem.
-            if (known) show(known)
-            else void loadMedia(h).then((a) => a && show(a))
-            return () => {
-              gone = true
-              if (c) void unmount(c)
-            }
-          },
-          onFiles: (list, pos) => void addFiles(list, pos),
-          onMenu: (pos, e) => openNodeMenu(pos, e.clientX, e.clientY, e.target as Element),
-          clipboardImage: () => api.clipboardImage().catch(() => null),
-          markdown: (md) => api.markdownToDoc(md).catch(() => null),
-          placeholder: 'Escreva… use #tag para marcar',
-          ydoc: doc,
-          link: { preview: (u) => api.linkPreview(u), open: (u) => void api.openUrl(u) },
-        }),
-        editorProps: {
-          attributes: { id: 'corpo', role: 'textbox', 'aria-multiline': 'true', 'aria-label': 'Texto da nota', spellcheck: 'true' },
-        },
-        onTransaction: () => tick++,
-        onSelectionUpdate: () => handleAtCaret(),
-        onFocus: () => handleAtCaret(),
-        // O salvamento segue as atualizações do Y.Doc (doc.on('update')).
-        onUpdate: ({ editor }) => (bodyTags = hashTags(editor.getText())),
-      })
-      bodyTags = hashTags(ed.getText())
-      editor = ed
-      // Nota nova: cursor no corpo já na montagem, para não perder as primeiras teclas.
-      if (isNew) ed.commands.focus('end', { scrollIntoView: false })
-      // Atalhos do "+": já abre gravando, com a câmera ou com os arquivos escolhidos.
-      if (start && 'files' in start) void addFiles(start.files)
-      else if (start && 'shared' in start) shareIn(ed, start.shared)
-      else if (start && 'record' in start) void recorder.start()
-      // A câmera é outro diálogo: abrir no mesmo instante em que o editor nasce a deixava "aberta" e invisível
-      // (e os cliques seguintes não faziam nada). Abre depois que o editor terminou de abrir.
-      else if (start && 'camera' in start) setTimeout(() => (cameraOpen = true), 0)
-      // PDF pelo menu do card: abre e já imprime (as fotos têm um instante para carregar).
-      if (print) setTimeout(() => void printNote(), 400)
-      // Soltos no texto entram no ponto; fora dele (título, margens, fundo), no fim da nota.
-      const drop = (files: DroppedFile[], at?: { x: number; y: number }) => {
-        const inside = at && ed.view.dom.contains(document.elementFromPoint(at.x, at.y))
-        const pos = inside ? ed.view.posAtCoords({ left: at.x, top: at.y })?.pos : undefined
-        void addFiles(files, pos ?? ed.state.doc.content.size)
-      }
-      app.dropIntoEditor = drop
-      // Arquivo solto enquanto a nota ainda abria: entra agora.
-      const early = app.pendingDrop
-      if (early) {
-        app.pendingDrop = null
-        drop(early.files, early.at)
-      }
-      return () => {
-        if (recorder.recording) recorder.cancel()
-        if (app.dropIntoEditor === drop) app.dropIntoEditor = null
-        if (!closed) save()
-        clearTimeout(timer)
-        ed.destroy()
-      }
-    })
+
+  // O texto do card nasceu: o que veio junto entra agora.
+  function onReady(ed: TipTap) {
+    // Atalhos do "+": já abre gravando, com a câmera ou com os arquivos escolhidos.
+    if (start && 'files' in start) void card?.addFiles(start.files)
+    else if (start && 'shared' in start) shareIn(ed, start.shared)
+    else if (start && 'record' in start) card?.startRecording()
+    // A câmera é outro diálogo: abrir no mesmo instante em que o editor nasce a deixava "aberta" e invisível
+    // (e os cliques seguintes não faziam nada). Abre depois que o editor terminou de abrir.
+    else if (start && 'camera' in start) setTimeout(() => card?.openCamera(), 0)
+    // PDF pelo menu do card: abre e já imprime (as fotos têm um instante para carregar).
+    if (print) setTimeout(() => void printNote(), 400)
+    // Soltos no texto entram no ponto; fora dele (título, margens, fundo), no fim da nota.
+    const drop = (list: DroppedFile[], at?: { x: number; y: number }) => {
+      const inside = at && ed.view.dom.contains(document.elementFromPoint(at.x, at.y))
+      const pos = inside ? ed.view.posAtCoords({ left: at.x, top: at.y })?.pos : undefined
+      void card?.addFiles(list, pos ?? ed.state.doc.content.size)
+    }
+    app.dropIntoEditor = drop
+    // Arquivo solto enquanto a nota ainda abria: entra agora.
+    const early = app.pendingDrop
+    if (early) {
+      app.pendingDrop = null
+      drop(early.files, early.at)
+    }
+    dropFn = drop
   }
+  let dropFn: ((list: DroppedFile[], at?: { x: number; y: number }) => void) | null = null
 
-  const run = (fn: (c: ReturnType<TipTap['chain']>) => ReturnType<TipTap['chain']>) => editor && fn(editor.chain().focus()).run()
-
-  // ---------- mídia ----------
-  async function loadMedia(h: string) {
-    const [a] = await api.getAttachments([h])
-    if (a) media.set(h, a)
-    return a
+  // O texto do card vai sumir: salva o que faltar.
+  function onDestroy() {
+    if (app.dropIntoEditor === dropFn) app.dropIntoEditor = null
+    if (!closed) save()
+    clearTimeout(timer)
   }
 
   /** Abre o anexo no visualizador: foto, vídeo, áudio e PDF; outros documentos mostram a ficha com Baixar. */
   function viewAttachment(a: Attachment) {
     app.lightbox = { ...a, noteId: id, noteTitle: meta?.title ?? '', categoryId: meta?.categoryId ?? null }
   }
-
-  async function copyImage(h: string) {
-    try {
-      const img = new globalThis.Image()
-      img.src = api.imageUrl(h, 'full')
-      await img.decode()
-      const c = document.createElement('canvas')
-      c.width = img.naturalWidth
-      c.height = img.naturalHeight
-      c.getContext('2d')!.drawImage(img, 0, 0)
-      const blob = await new Promise<Blob | null>((r) => c.toBlob(r, 'image/png'))
-      if (!blob) throw new Error('png')
-      await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })])
-      app.say('Imagem copiada')
-    } catch {
-      app.say('Não foi possível copiar a imagem')
-    }
-  }
-
-  // ---------- blocos ----------
-  /** Altura do título acompanha o texto (a WebKitGTK não tem `field-sizing`). */
-  function autosize(el: HTMLTextAreaElement, _title: string) {
-    let width = 0
-    const fit = () => {
-      el.style.height = 'auto'
-      el.style.height = `${el.scrollHeight}px`
-    }
-    const ro = new ResizeObserver(() => {
-      if (el.clientWidth !== width) (width = el.clientWidth), fit()
-    })
-    ro.observe(el)
-    fit()
-    return { update: () => queueMicrotask(fit), destroy: () => ro.disconnect() }
-  }
-
-  let blockMenu: MenuAt | undefined = $state()
-  let hover = $state.raw<BlockHit | null>(null)
-  let blocksEl: HTMLElement | undefined = $state()
-  let handleDragging = false
-
-  /** Toque: sem "passar o mouse", a alça fica no bloco (ou item) onde está o cursor. */
-  const touchOnly = matchMedia('(hover: none)').matches
-  function handleAtCaret() {
-    if (!editor || !touchOnly || handleDragging) return
-    const view = editor.view
-    if (!view.hasFocus()) return
-    try {
-      const c = view.coordsAtPos(view.state.selection.from)
-      hover = blockAt(view, (c.top + c.bottom) / 2, c.left)
-    } catch {
-      hover = null
-    }
-  }
-
-  function onBodyMove(e: PointerEvent) {
-    if (!editor || e.pointerType !== 'mouse' || handleDragging || e.buttons) return
-    if ((e.target as Element).closest('.blk-handle')) return
-    hover = blockAt(editor.view, e.clientY, e.clientX)
-  }
-  const topOf = (dom: HTMLElement) => (blocksEl ? dom.getBoundingClientRect().top - blocksEl.getBoundingClientRect().top : 0)
-  /** Logo à esquerda do começo do bloco ou item (a caixinha do checklist, o marcador da lista). */
-  function handleLeft(dom: HTMLElement, isItem: boolean) {
-    if (!blocksEl) return 8
-    const marker = isItem && dom.parentElement?.getAttribute('data-type') !== 'taskList' ? parseFloat(getComputedStyle(dom.parentElement!).paddingLeft) || 0 : 0
-    return Math.max(4, dom.getBoundingClientRect().left - blocksEl.getBoundingClientRect().left - marker - 26)
-  }
-
-  /** Linha que mostra onde o bloco ou item arrastado vai cair (relativa à área dos blocos). */
-  let dropLine = $state.raw<{ top: number; left: number; width: number } | null>(null)
-  let justDragged = false
-
-  /** Arrastar pela alça com o ponteiro: apertar, mover (a linha mostra onde cai) e soltar. Sem mover, é clique (menu).
-   *  Não usa o arrastar do HTML: no macOS e no Windows a janela do Tauri fica com ele para receber arquivos. */
-  function handleDown(e: PointerEvent, pos: number) {
-    if (!editor || e.button !== 0) return
-    const view = editor.view
-    const [x0, y0] = [e.clientX, e.clientY]
-    const scroller = blocksEl?.closest('.ed-scroll') as HTMLElement | null
-    let started = false
-    let target: number | null = null
-    const move = (ev: PointerEvent) => {
-      if (!started) {
-        if (Math.hypot(ev.clientX - x0, ev.clientY - y0) < 4) return
-        started = handleDragging = true
-        document.body.classList.add('blk-grabbing')
-      }
-      ev.preventDefault()
-      if (scroller) {
-        const r = scroller.getBoundingClientRect()
-        if (ev.clientY < r.top + 40) scroller.scrollTop -= 14
-        else if (ev.clientY > r.bottom - 40) scroller.scrollTop += 14
-      }
-      const t = dropTargetAt(view, pos, ev.clientY)
-      target = t?.pos ?? null
-      const base = blocksEl?.getBoundingClientRect()
-      dropLine = t && base ? { top: t.line.top - base.top, left: t.line.left - base.left, width: t.line.width } : null
-    }
-    const up = () => {
-      window.removeEventListener('pointermove', move)
-      window.removeEventListener('pointerup', up)
-      window.removeEventListener('pointercancel', up)
-      document.body.classList.remove('blk-grabbing')
-      if (started) {
-        justDragged = true
-        setTimeout(() => (justDragged = false), 0)
-        if (target != null) moveNodeTo(view, pos, target)
-        hover = null
-        if (touchOnly) setTimeout(handleAtCaret)
-      }
-      handleDragging = false
-      dropLine = null
-    }
-    window.addEventListener('pointermove', move)
-    window.addEventListener('pointerup', up)
-    window.addEventListener('pointercancel', up)
-  }
-
-  const TEXTISH = new Set(['paragraph', 'heading', 'bulletList', 'orderedList', 'taskList', 'codeBlock'])
-  function transform(pos: number, to: Shape) {
-    if (editor) convertBlock(editor.view, pos, to)
-  }
-
-  /** Menu de um bloco (ou de um item de lista), com as ações gerais e as do tipo. */
-  function nodeEntries(pos: number, clicked?: Element): MenuEntry[] {
-    const view = editor?.view
-    const node = view?.state.doc.nodeAt(pos)
-    if (!view || !node) return []
-    const name = node.type.name
-    const isItem = name === 'taskItem' || name === 'listItem'
-    const out: MenuEntry[] = []
-    // foto clicada (sozinha ou dentro de uma linha)
-    const imgEl = clicked?.closest('img[data-hash]')
-    const imgHash = imgEl?.getAttribute('data-hash') ?? (name === 'noteImage' ? node.attrs.hash : null)
-    if (imgHash) {
-      const a = media.get(imgHash)
-      out.push(
-        { label: 'Ver', icon: Eye, onSelect: () => a && viewAttachment(a) },
-        { label: 'Baixar', icon: Download, onSelect: () => a && void download(a) },
-        { label: 'Copiar imagem', icon: Copy, onSelect: () => void copyImage(imgHash) },
-        SEP,
-      )
-    }
-    if (name === 'linkCard') {
-      const url: string = node.attrs.url
-      out.push(
-        { label: 'Abrir link', icon: ExternalLink, onSelect: () => void api.openUrl(url) },
-        { label: 'Copiar endereço', icon: Copy, onSelect: () => void navigator.clipboard.writeText(url).then(() => app.say('Endereço copiado')) },
-        {
-          label: 'Atualizar prévia', icon: RefreshCw,
-          onSelect: () => {
-            view.dispatch(view.state.tr.setNodeMarkup(pos, undefined, { ...node.attrs, title: null }))
-            fillPreview(view, url, (u) => api.linkPreview(u))
-          },
-        },
-        SEP,
-      )
-    }
-    if (name === 'noteFile') {
-      const a = media.get(node.attrs.hash)
-      out.push(
-        { label: 'Abrir', icon: ExternalLink, onSelect: () => a && viewAttachment(a) },
-        { label: 'Baixar', icon: Download, onSelect: () => a && void download(a) },
-        { label: 'Copiar nome', icon: Copy, onSelect: () => a && void navigator.clipboard.writeText(a.name).then(() => app.say('Nome copiado')) },
-        SEP,
-      )
-    }
-    if (isItem) {
-      // Subitens: recuar vira subitem do item de cima; voltar sobe um nível (Tab e Shift+Tab fazem o mesmo).
-      out.push(
-        { label: 'Aumentar recuo', icon: ListIndentIncrease, hint: 'Tab', disabled: !canIndent(view, pos, 1), onSelect: () => indent(pos, 1) },
-        { label: 'Diminuir recuo', icon: ListIndentDecrease, hint: '⇧ Tab', disabled: !canIndent(view, pos, -1), onSelect: () => indent(pos, -1) },
-        SEP,
-      )
-    }
-    if (name === 'taskList') {
-      const [checked, total] = checkCount(node)
-      out.push(
-        { label: 'Marcar todos', icon: SquareCheck, disabled: checked === total, onSelect: () => checkAll(view, pos, true) },
-        { label: 'Desmarcar todos', icon: SquareDashed, disabled: checked === 0, onSelect: () => checkAll(view, pos, false) },
-        { label: 'Apagar itens marcados', icon: Trash2, disabled: checked === 0, onSelect: () => deleteChecked(view, pos) },
-        SEP,
-      )
-    }
-    out.push(
-      { label: 'Copiar', icon: Copy, onSelect: () => clipNode(view, pos, 'copy') },
-      { label: 'Recortar', icon: Scissors, onSelect: () => clipNode(view, pos, 'cut') },
-      { label: 'Duplicar', icon: CopyPlus, onSelect: () => duplicateNode(view, pos) },
-      SEP,
-      { label: 'Mover para cima', icon: ArrowUp, disabled: !canMove(view, pos, -1), onSelect: () => moveNode(view, pos, -1) },
-      { label: 'Mover para baixo', icon: ArrowDown, disabled: !canMove(view, pos, 1), onSelect: () => moveNode(view, pos, 1) },
-    )
-    if (name === 'table') {
-      // Na linha/coluna do cursor, se ele está nesta tabela; senão, na primeira célula.
-      const at = (fn: (c: ChainedCommands) => ChainedCommands) => () => {
-        if (!editor) return
-        const { from } = editor.state.selection
-        const inside = from > pos && from < pos + node.nodeSize
-        const chain = editor.chain().focus()
-        fn(inside ? chain : chain.setTextSelection(pos + 4)).run()
-      }
-      out.push(
-        SEP,
-        { label: 'Linha abaixo', icon: BetweenHorizontalStart, onSelect: at((c) => c.addRowAfter()) },
-        { label: 'Coluna à direita', icon: BetweenVerticalStart, onSelect: at((c) => c.addColumnAfter()) },
-        { label: 'Apagar linha', icon: Minus, onSelect: at((c) => c.deleteRow()) },
-        { label: 'Apagar coluna', icon: Minus, onSelect: at((c) => c.deleteColumn()) },
-      )
-    }
-    if (TEXTISH.has(name)) {
-      const cur = shapeOf(name)
-      const opt = (label: string, icon: typeof Pilcrow, to: Shape): MenuEntry => ({ label, icon, checked: cur === to, onSelect: () => transform(pos, to) })
-      out.push({
-        label: 'Transformar em', icon: Pilcrow,
-        sub: [opt('Texto', Pilcrow, 'paragraph'), opt('Título', Heading, 'heading'), opt('Lista', List, 'bullet'), opt('Checklist', ListTodo, 'task'), opt('Código', SquareCode, 'code')],
-      })
-    }
-    if (isItem) {
-      // A lista ou checklist inteira (marcar todos, mover, transformar…) fica num submenu do item.
-      const listPos = view.state.doc.resolve(pos).before()
-      const list = view.state.doc.nodeAt(listPos)
-      if (list) out.push(SEP, { label: list.type.name === 'taskList' ? 'Checklist inteira' : 'Lista inteira', icon: list.type.name === 'taskList' ? ListTodo : List, sub: nodeEntries(listPos) })
-    }
-    out.push(SEP, { label: isItem ? 'Apagar item' : 'Apagar', icon: Trash2, danger: true, onSelect: () => deleteNode(view, pos) })
-    return out
-  }
-
-  /** Recua (vira subitem do item de cima) ou volta um nível. */
-  function indent(pos: number, dir: 1 | -1) {
-    const node = editor?.state.doc.nodeAt(pos)
-    if (!editor || !node) return
-    editor.chain().focus().setTextSelection(pos + 2).run()
-    if (dir > 0) editor.commands.sinkListItem(node.type.name)
-    else editor.commands.liftListItem(node.type.name)
-  }
-
-  function openNodeMenu(pos: number, x: number, y: number, clicked?: Element) {
-    blockMenu?.openAt(x, y, nodeEntries(pos, clicked))
-  }
-
-  /** Importações em andamento: fechar a nota espera por elas. */
-  const imports = new Set<Promise<unknown>>()
-
-  /** Importa arquivos (do computador, arrastados, colados, da câmera ou do gravador) e põe no texto. */
-  function addFiles(list: (DroppedFile | { blob: Blob; name: string })[], pos?: number) {
-    const job = importFiles(list, pos)
-    imports.add(job)
-    return job.finally(() => imports.delete(job))
-  }
-
-  async function importFiles(list: (DroppedFile | { blob: Blob; name: string })[], pos?: number) {
-    if (!editor || !list.length) return
-    // Até 3 de uma vez (cada foto passa pelo pipeline no núcleo), na ordem em que vieram.
-    const results: (Attachment | null)[] = new Array(list.length).fill(null)
-    let next = 0
-    const worker = async () => {
-      while (next < list.length) {
-        const i = next++
-        const f = list[i]
-        try {
-          results[i] = f instanceof File ? await api.importFile(f, f.name) : 'path' in f ? await api.importPath(f.path) : await api.importFile(f.blob, f.name)
-        } catch (e) {
-          app.say(`Não foi possível anexar: ${e}`)
-        }
-      }
-    }
-    await Promise.all(Array.from({ length: Math.min(3, list.length) }, worker))
-    if (!editor || editor.isDestroyed) return
-    const added = results.filter((a): a is Attachment => !!a)
-    for (const a of added) media.set(a.hash, a)
-    if (!added.length) return
-    // PDF e vídeo ganham prévia (primeira página, um quadro) em segundo plano.
-    if (added.some((a) => a.kind === 'pdf' || a.kind === 'video')) makePreviews()
-    // Várias fotos de uma vez entram lado a lado (até 4 por linha); o resto, um bloco cada.
-    const photos = added.filter((a) => a.kind === 'image')
-    const nodes: RichNode[] = []
-    for (let i = 0; i < photos.length; i += 4) {
-      const row = photos.slice(i, i + 4).map((a) => ({ type: 'noteImage', attrs: { hash: a.hash } }))
-      nodes.push(row.length > 1 ? { type: 'imageRow', content: row } : row[0])
-    }
-    for (const a of added) if (a.kind !== 'image') nodes.push({ type: 'noteFile', attrs: { hash: a.hash } })
-    nodes.push({ type: 'paragraph' })
-    const chain = editor.chain().focus()
-    ;(pos == null ? chain : chain.setTextSelection(pos)).insertContent(nodes).run()
-  }
-
-  function pick(input: HTMLInputElement | undefined) {
-    if (!input) return
-    input.value = ''
-    input.click()
-  }
-
-  async function stopRecording() {
-    const rec = await recorder.stop()
-    if (rec) await addFiles([rec])
-  }
-
-  // Foto selecionada: botões para pôr ao lado da de cima, mover na linha e separar (toque e teclado).
-  const selectedImage = $derived.by(() => {
-    void tick
-    const sel = editor?.state.selection
-    // Só com o editor em foco: ao abrir uma nota que começa com foto, a seleção inicial cai nela sem ninguém clicar.
-    if (!editor?.isFocused || !(sel instanceof NodeSelection) || sel.node.type.name !== 'noteImage') return null
-    const dom = editor.view.nodeDOM(sel.from) as HTMLElement | null
-    const acts = imageActions(editor.state, sel.from)
-    if (!dom || !acts) return null
-    // Posição relativa ao editor (o diálogo é a referência dos botões), sem sair das bordas.
-    const box = dom.closest('.editor')?.getBoundingClientRect()
-    const r = dom.getBoundingClientRect()
-    if (!box) return null
-    const half = 110
-    const x = Math.min(Math.max(r.left + r.width / 2 - box.left, half + 8), box.width - half - 8)
-    return { pos: sel.from, ...acts, top: Math.max(r.top - box.top, 56), x }
-  })
-  function apply(tr: ReturnType<typeof placeBeside>) {
-    if (tr && editor) editor.view.dispatch(tr)
-    editor?.view.focus()
-  }
 </script>
+
 
 {#if meta}
   <Dialog.Root open onOpenChange={(o) => !o && close()}>
     <Dialog.Portal>
       <Dialog.Overlay class="overlay ed-overlay" />
       <Dialog.Content class="editor c-{meta.color}" data-doc={docMode && app.wide ? '' : undefined} aria-describedby={undefined} onOpenAutoFocus={(e) => e.preventDefault()}>
-        <div class="ed-top">
-          <button class="icon-btn" aria-label="Voltar e salvar" onclick={() => close()}><ArrowLeft size={20} /></button>
-          <span class="ed-saved">
-            {isNew ? 'Nova nota' : editedAt ? `Editada ${ago(editedAt)}` : ''}
-            <!-- ID curto: falar desta nota com o Claude ("na nota #a1b2c3d4"). Clicar copia. -->
-            {#if !isNew}<button class="ed-id" title="Copiar o ID da nota (para o Claude)" onclick={() => void copyNoteId(id, (m) => app.say(m))}>{shortId(id)}</button>{/if}
-          </span>
-          <!-- Modo documento só na janela larga: no celular e na estreita a nota já abre na tela toda. -->
-          {#if app.wide}<button
-            class="icon-btn"
-            aria-pressed={docMode}
-            aria-label={docMode ? 'Voltar ao card' : 'Abrir como documento'}
-            title={docMode ? 'Voltar ao card' : 'Abrir como documento (página inteira)'}
-            onclick={toggleDoc}
-          >
-            {#if docMode}<Minimize2 size={19} />{:else}<BookOpen size={19} />{/if}
-          </button>{/if}
-          <button class="icon-btn" aria-label={meta.pinned ? 'Desafixar' : 'Fixar'} aria-pressed={meta.pinned} onclick={() => meta && (meta.pinned = !meta.pinned)}>
-            {#if meta.pinned}<PinOff size={19} />{:else}<Pin size={19} />{/if}
-          </button>
-          <ReminderPopover
-            value={meta.reminderAt}
-            repeat={meta.reminderRepeat}
-            onchange={setReminder}
-            onrepeat={(r) => meta && (meta.reminderRepeat = r)}
-          />
-          <DropdownMenu.Root>
-            <DropdownMenu.Trigger class="icon-btn" aria-label="Mais opções"><MoreVertical size={19} /></DropdownMenu.Trigger>
-            <DropdownMenu.Portal>
-              <DropdownMenu.Content class="menu" align="end" sideOffset={6}>
-                {#if wasTrashed}
-                  <DropdownMenu.Item class="menu-item" onSelect={() => close({ trashedAt: null }, 'Nota restaurada')}><ArchiveRestore size={16} />Restaurar</DropdownMenu.Item>
-                  <DropdownMenu.Separator class="menu-sep" />
-                  <DropdownMenu.Item class="menu-item danger" onSelect={deleteForever}><Trash2 size={16} />Excluir para sempre</DropdownMenu.Item>
-                {:else}
-                  <DropdownMenu.Sub>
-                    <DropdownMenu.SubTrigger class="menu-item"><FileDown size={16} /><span class="grow">Exportar</span><ChevronRight size={16} /></DropdownMenu.SubTrigger>
-                    <DropdownMenu.SubContent class="menu" sideOffset={4}>
-                      {#each exportEntries(id, meta.title, hasMedia(), () => void printNote()) as e (e.label)}
-                        <DropdownMenu.Item class="menu-item" onSelect={e.onSelect}><e.icon size={16} />{e.label}</DropdownMenu.Item>
-                      {/each}
-                    </DropdownMenu.SubContent>
-                  </DropdownMenu.Sub>
-                  <DropdownMenu.Sub>
-                    <DropdownMenu.SubTrigger class="menu-item"><CircleDashed size={16} /><span class="grow">Status</span><ChevronRight size={16} /></DropdownMenu.SubTrigger>
-                    <DropdownMenu.SubContent class="menu" sideOffset={4}>
-                      {#each ['todo', 'doing', 'done'] as const as st (st)}
-                        <DropdownMenu.Item class="menu-item" onSelect={() => setStatus(st)}>
-                          <i class="menu-swatch" style:background={STATUS[st].color}></i><span class="grow">{STATUS[st].label}</span>
-                          {#if hasStatus(meta) && statusOf(meta) === st}<span class="menu-check"><Check size={15} /></span>{/if}
-                        </DropdownMenu.Item>
-                      {/each}
-                      {#if meta.statusOn && meta.reminderAt == null}
-                        <DropdownMenu.Separator class="menu-sep" />
-                        <DropdownMenu.Item class="menu-item" onSelect={() => setStatus('none')}><span class="grow">Sem status</span></DropdownMenu.Item>
-                      {/if}
-                    </DropdownMenu.SubContent>
-                  </DropdownMenu.Sub>
-                  <DropdownMenu.Item class="menu-item" onSelect={() => (emojiOpen = true)}><SmilePlus size={16} />{meta.emoji ? 'Mudar emoji de capa' : 'Emoji de capa'}</DropdownMenu.Item>
-                  <DropdownMenu.Separator class="menu-sep" />
-                  <DropdownMenu.Item class="menu-item" onSelect={() => meta && close({ archived: !meta.archived }, meta.archived ? 'Nota desarquivada' : 'Nota arquivada')}>
-                    {#if meta.archived}<ArchiveRestore size={16} />Desarquivar{:else}<Archive size={16} />Arquivar{/if}
-                  </DropdownMenu.Item>
-                  <DropdownMenu.Separator class="menu-sep" />
-                  <DropdownMenu.Item class="menu-item danger" onSelect={() => close({ trashedAt: Date.now() }, 'Nota movida para a lixeira')}><Trash2 size={16} />Mover para a lixeira</DropdownMenu.Item>
-                {/if}
-              </DropdownMenu.Content>
-            </DropdownMenu.Portal>
-          </DropdownMenu.Root>
-        </div>
-
-        <div class="ed-scroll" onscroll={() => tick++}>
-          <div class="ed-cover" class:has={!!meta.emoji}>
-            <EmojiPicker value={meta.emoji} onchange={(v) => meta && (meta.emoji = v)} bind:open={emojiOpen} />
-          </div>
-          <Dialog.Title>
-            {#snippet child({ props })}
-              <!-- Título longo quebra em várias linhas (e não rola de lado); continua sendo uma linha só de texto. -->
-              <textarea
-                {...props}
-                id="titulo"
-                class="ed-title"
-                rows="1"
-                placeholder="Título"
-                autocomplete="off"
-                bind:value={meta!.title}
-                use:autosize={meta!.title}
-                oninput={(e) => /\n/.test(e.currentTarget.value) && meta && (meta.title = e.currentTarget.value.replace(/\s*\n\s*/g, ' '))}
-                onkeydown={(e) => e.key === 'Enter' && (e.preventDefault(), editor?.commands.focus('start'))}
-              ></textarea>
-            {/snippet}
-          </Dialog.Title>
-          <!-- Blocos: com o mouse por cima, a alça ⋮⋮ à esquerda arrasta o bloco e abre o menu dele.
-               Em listas e checklists, cada item tem a própria alça (reordenar como no Keep). -->
-          <div
-            class="ed-blocks"
-            role="presentation"
-            bind:this={blocksEl}
-            onpointermove={onBodyMove}
-            onpointerleave={(e) => e.pointerType === 'mouse' && !handleDragging && (hover = null)}
-            onkeydowncapture={() => !touchOnly && (hover = null)}
-          >
-            <div class="ed-body prose" {@attach mountEditor}></div>
-            {#if hover}
-              <!-- Uma alça só: dentro de uma lista ou checklist ela é do item (a lista inteira fica no menu dele);
-                   fora, do bloco. Sempre logo à esquerda do que ela move, na altura da primeira linha. -->
-              {@const t = hover.item ?? hover.block}
-              {@const isItem = !!hover.item}
-              <button
-                class="blk-handle"
-                class:item={isItem}
-                style:top="{topOf(t.dom)}px"
-                style:left="{handleLeft(t.dom, isItem)}px"
-                aria-label={isItem ? 'Item: arraste para reordenar ou clique para o menu' : 'Bloco: arraste para mover ou clique para o menu'}
-                title={isItem ? 'Arraste para reordenar · clique para o menu' : 'Arraste para mover · clique para o menu'}
-                onpointerdown={(e) => handleDown(e, t.pos)}
-                onmousedown={(e) => touchOnly && e.preventDefault()}
-                onclick={(e) => !justDragged && openNodeMenu(t.pos, e.clientX, e.clientY)}
-              ><GripVertical size={16} /></button>
-            {/if}
-            {#if dropLine}
-              <div class="blk-drop" style:top="{dropLine.top - 1}px" style:left="{dropLine.left}px" style:width="{dropLine.width}px"></div>
-            {/if}
-          </div>
-          <MenuAt bind:this={blockMenu} />
-
-          {#if files.length}
-            <!-- Anexos antigos, fora do corpo: mesmo cartão dos anexos do texto. -->
-            <div class="ed-files">
-              {#each files as f (f.hash)}
-                <MediaBlock a={f} src={api.mediaUrl(f.hash)} onopen={() => viewAttachment(f)} ondownload={() => void download(f)} />
-              {/each}
-            </div>
-          {/if}
-
-          <div class="ed-meta">
-            <Select.Root
-              type="single"
-              allowDeselect
-              items={[{ value: 'none', label: 'Sem categoria' }, ...app.categories.map((c) => ({ value: c.id, label: c.name }))]}
-              bind:value={() => meta?.categoryId ?? 'none', pickCategory}
-            >
-              <Select.Trigger id="categoria" class="picker" aria-label="Categoria">
-                {#if cat}<i class="dot" style:background={cat.color}></i>{:else}<Tag size={14} />{/if}
-                <span>{cat?.name ?? 'Sem categoria'}</span>
-                <ChevronDown size={15} />
-              </Select.Trigger>
-              <Select.Portal>
-                <Select.Content class="menu menu-scroll" sideOffset={6} collisionPadding={8}>
-                  <Select.Viewport>
-                    <Select.Item value="none" label="Sem categoria" class="menu-item">Sem categoria</Select.Item>
-                    {#each app.categories as c (c.id)}
-                      <Select.Item value={c.id} label={c.name} class="menu-item">
-                        {#snippet children({ selected })}
-                          <i class="dot" style:background={c.color}></i>{c.name}
-                          {#if selected}<span class="menu-check"><Check size={15} /></span>{/if}
-                        {/snippet}
-                      </Select.Item>
-                    {/each}
-                    <div class="menu-sep" role="separator"></div>
-                    <Select.Item value={NEW_CATEGORY} label="Nova categoria" class="menu-item"><Plus size={16} />Nova categoria…</Select.Item>
-                  </Select.Viewport>
-                </Select.Content>
-              </Select.Portal>
-            </Select.Root>
-            {#if meta.reminderAt != null}
+        {@const m = meta}
+        <NoteEditor
+          bind:this={card}
+          {meta}
+          features={FEATURES}
+          {host}
+          ydoc={doc}
+          field={BODY}
+          {known}
+          {files}
+          autofocus={isNew}
+          dialogTitle
+          onready={onReady}
+          ondestroy={onDestroy}
+        >
+          {#snippet top()}
+            <div class="ed-top">
+              <button class="icon-btn" aria-label="Voltar e salvar" onclick={() => close()}><ArrowLeft size={20} /></button>
+              <span class="ed-saved">
+                {isNew ? 'Nova nota' : editedAt ? `Editada ${ago(editedAt)}` : ''}
+                <!-- ID curto: falar desta nota com o Claude ("na nota #a1b2c3d4"). Clicar copia. -->
+                {#if !isNew}<button class="ed-id" title="Copiar o ID da nota (para o Claude)" onclick={() => void copyNoteId(id, (m) => app.say(m))}>{shortId(id)}</button>{/if}
+              </span>
+              <!-- Modo documento só na janela larga: no celular e na estreita a nota já abre na tela toda. -->
+              {#if app.wide}<button
+                class="icon-btn"
+                aria-pressed={docMode}
+                aria-label={docMode ? 'Voltar ao card' : 'Abrir como documento'}
+                title={docMode ? 'Voltar ao card' : 'Abrir como documento (página inteira)'}
+                onclick={toggleDoc}
+              >
+                {#if docMode}<Minimize2 size={19} />{:else}<BookOpen size={19} />{/if}
+              </button>{/if}
+              <button class="icon-btn" aria-label={m.pinned ? 'Desafixar' : 'Fixar'} aria-pressed={m.pinned} onclick={() => m && (m.pinned = !m.pinned)}>
+                {#if m.pinned}<PinOff size={19} />{:else}<Pin size={19} />{/if}
+              </button>
               <ReminderPopover
-                variant="pill"
-                value={meta.reminderAt}
-                done={meta.reminderDone}
-                repeat={meta.reminderRepeat}
-                onchange={setReminder}
-                onrepeat={(r) => meta && (meta.reminderRepeat = r)}
+                value={m.reminderAt}
+                repeat={m.reminderRepeat}
+                onchange={(v) => card?.reminder(v)}
+                onrepeat={(r) => m && (m.reminderRepeat = r)}
               />
-            {/if}
-            {#if hasStatus(meta)}
-              <StatusToggle value={statusOf(meta)} onchange={setStatus} />
-            {/if}
-          </div>
-
-          <div class="ed-tags">
-            {#each meta.tags as t (t)}
-              <span class="pill tag">#{t}<button aria-label="Remover {t}" onclick={() => meta && (meta.tags = meta.tags.filter((x) => x !== t))}><X size={12} /></button></span>
-            {/each}
-            {#each extraTags as t (t)}
-              <span class="pill tag" title="Tag vinda do texto">#{t}</span>
-            {/each}
-            <TagInput exclude={[...meta.tags, ...extraTags]} known={app.tags} onpick={(t) => meta && !meta.tags.includes(t) && meta.tags.push(t)} />
-          </div>
-        </div>
-
-        {#if selectedImage}
-          <div class="img-tools" role="toolbar" aria-label="Foto" style:top="{selectedImage.top}px" style:left="{selectedImage.x}px">
-            {#if selectedImage.joinTarget != null}
-              <button onmousedown={(e) => e.preventDefault()} onclick={() => editor && apply(placeBeside(editor.state, selectedImage.pos, selectedImage.joinTarget!, 'right'))} aria-label="Pôr ao lado da foto de cima" title="Pôr ao lado da foto de cima"><Columns2 size={17} /></button>
-            {/if}
-            {#if selectedImage.left != null}
-              <button onmousedown={(e) => e.preventDefault()} onclick={() => editor && apply(placeBeside(editor.state, selectedImage.pos, selectedImage.left!, 'left'))} aria-label="Mover para a esquerda" title="Mover para a esquerda"><ChevronLeft size={17} /></button>
-            {/if}
-            {#if selectedImage.right != null}
-              <button onmousedown={(e) => e.preventDefault()} onclick={() => editor && apply(placeBeside(editor.state, selectedImage.pos, selectedImage.right!, 'right'))} aria-label="Mover para a direita" title="Mover para a direita"><ChevronRight size={17} /></button>
-            {/if}
-            {#if selectedImage.inRow}
-              <button onmousedown={(e) => e.preventDefault()} onclick={() => editor && apply(leaveRow(editor.state, selectedImage.pos))} aria-label="Tirar da linha" title="Tirar da linha"><Rows2 size={17} /></button>
-            {/if}
-            <button onmousedown={(e) => e.preventDefault()} onclick={() => run((c) => c.deleteSelection())} aria-label="Remover foto" title="Remover foto"><Trash2 size={17} /></button>
-          </div>
-        {/if}
-
-        <input bind:this={photoInput} type="file" accept="image/*" multiple hidden onchange={(e) => void addFiles([...(e.currentTarget.files ?? [])])} />
-        <input bind:this={fileInput} type="file" multiple hidden onchange={(e) => void addFiles([...(e.currentTarget.files ?? [])])} />
-        <CameraDialog bind:open={cameraOpen} oncapture={(b) => void addFiles([{ blob: b, name: photoName() }])} />
-
-        {#if recorder.recording}
-          <div class="ed-tools rec-bar" role="toolbar" aria-label="Gravação">
-            <span class="rec-dot" aria-hidden="true"></span>
-            <span class="rec-time" aria-live="polite">Gravando · {fmtSeconds(recorder.seconds)}</span>
-            <button class="btn ghost sm" onclick={() => recorder.cancel()}>Cancelar</button>
-            <button class="btn sm rec-stop" onclick={stopRecording}><Square size={13} fill="currentColor" />Parar</button>
-          </div>
-        {:else}
-        <div class="ed-tools" role="toolbar" aria-label="Formatação">
-          <DropdownMenu.Root>
-            <DropdownMenu.Trigger aria-label="Inserir" title="Inserir"><Plus size={19} /></DropdownMenu.Trigger>
-            <DropdownMenu.Portal>
-              <DropdownMenu.Content class="menu" side="top" align="start" sideOffset={10} onCloseAutoFocus={(e) => e.preventDefault()}>
-                <DropdownMenu.Item class="menu-item" onSelect={() => pick(photoInput)}><Image size={16} />Foto</DropdownMenu.Item>
-                {#if cameraAvailable}
-                  <DropdownMenu.Item class="menu-item" onSelect={() => (cameraOpen = true)}><Camera size={16} />Câmera</DropdownMenu.Item>
-                {/if}
-                <DropdownMenu.Item class="menu-item" onSelect={() => pick(fileInput)}><Paperclip size={16} />Arquivo</DropdownMenu.Item>
-                {#if canRecord()}
-                  <DropdownMenu.Item class="menu-item" onSelect={() => void recorder.start()}><Mic size={16} />Gravar áudio</DropdownMenu.Item>
-                {/if}
-                <DropdownMenu.Separator class="menu-sep" />
-                <DropdownMenu.Item class="menu-item" onSelect={askLink}><Link2 size={16} />Link…</DropdownMenu.Item>
-                <DropdownMenu.Item class="menu-item" onSelect={() => run((c) => c.toggleCodeBlock())}><SquareCode size={16} />Bloco de código</DropdownMenu.Item>
-                <DropdownMenu.Item class="menu-item" onSelect={() => run((c) => c.insertTable({ rows: 3, cols: 3, withHeaderRow: true }))}><Table size={16} />Tabela</DropdownMenu.Item>
-                <DropdownMenu.Item class="menu-item" onSelect={() => run((c) => c.toggleBlockquote())}><TextQuote size={16} />Citação</DropdownMenu.Item>
-                <DropdownMenu.Item class="menu-item" onSelect={() => run((c) => c.setHorizontalRule())}><Minus size={16} />Linha divisória</DropdownMenu.Item>
-              </DropdownMenu.Content>
-            </DropdownMenu.Portal>
-          </DropdownMenu.Root>
-          <span class="ed-tools-sep" aria-hidden="true"></span>
-          <button onmousedown={(e) => e.preventDefault()} onclick={() => run((c) => c.toggleBold())} aria-label="Negrito" aria-pressed={active.bold}><Bold size={18} /></button>
-          <button onmousedown={(e) => e.preventDefault()} onclick={() => run((c) => c.toggleItalic())} aria-label="Itálico" aria-pressed={active.italic}><Italic size={18} /></button>
-          <!-- Títulos como no Markdown: # grande, ## médio, ### pequeno. -->
-          <DropdownMenu.Root>
-            <DropdownMenu.Trigger aria-label="Título" title="Título" aria-pressed={!!active.heading} onmousedown={(e) => e.preventDefault()}><Heading size={18} /></DropdownMenu.Trigger>
-            <DropdownMenu.Portal>
-              <DropdownMenu.Content class="menu" side="top" align="start" sideOffset={10} onCloseAutoFocus={(e) => e.preventDefault()}>
-                {#each [[1, 'Título grande', '#'], [2, 'Título médio', '##'], [3, 'Título pequeno', '###']] as const as [level, label, md] (level)}
-                  <DropdownMenu.Item class="menu-item" onSelect={() => run((c) => c.toggleHeading({ level }))}>
-                    <span class="grow">{label}</span><small class="menu-hint">{md}</small>
-                    {#if active.heading === level}<span class="menu-check"><Check size={15} /></span>{/if}
-                  </DropdownMenu.Item>
-                {/each}
-              </DropdownMenu.Content>
-            </DropdownMenu.Portal>
-          </DropdownMenu.Root>
-          <button onmousedown={(e) => e.preventDefault()} onclick={() => run((c) => c.toggleBulletList())} aria-label="Lista" aria-pressed={active.list}><List size={18} /></button>
-          <button onmousedown={(e) => e.preventDefault()} onclick={() => run((c) => c.toggleTaskList())} aria-label="Checklist" aria-pressed={active.check}><ListChecks size={18} /></button>
-          <Popover.Root>
-            <Popover.Trigger aria-label="Cor da nota"><Palette size={18} /></Popover.Trigger>
-            <Popover.Portal>
-              <Popover.Content class="pop" side="top" sideOffset={10}>
-                <p class="pop-title">Cor da nota</p>
-                <div class="color-row">
-                  {#each COLORS as c (c.id)}
-                    <button
-                      class="swatch c-{c.id}"
-                      class:on={meta.color === c.id}
-                      aria-label={c.label}
-                      aria-pressed={meta.color === c.id}
-                      onclick={() => meta && (meta.color = c.id)}
-                    >
-                      {#if meta.color === c.id}<Check size={14} />{/if}
-                    </button>
-                  {/each}
-                </div>
-              </Popover.Content>
-            </Popover.Portal>
-          </Popover.Root>
-          <span class="ed-tools-sep" aria-hidden="true"></span>
-          <button onmousedown={(e) => e.preventDefault()} onclick={() => run((c) => c.undo())} aria-label="Desfazer" title="Desfazer (Ctrl+Z)" disabled={!active.undo}><Undo2 size={18} /></button>
-          <button onmousedown={(e) => e.preventDefault()} onclick={() => run((c) => c.redo())} aria-label="Refazer" title="Refazer (Ctrl+Shift+Z)" disabled={!active.redo}><Redo2 size={18} /></button>
-        </div>
-        {/if}
+              <DropdownMenu.Root>
+                <DropdownMenu.Trigger class="icon-btn" aria-label="Mais opções"><MoreVertical size={19} /></DropdownMenu.Trigger>
+                <DropdownMenu.Portal>
+                  <DropdownMenu.Content class="menu" align="end" sideOffset={6}>
+                    {#if wasTrashed}
+                      <DropdownMenu.Item class="menu-item" onSelect={() => close({ trashedAt: null }, 'Nota restaurada')}><ArchiveRestore size={16} />Restaurar</DropdownMenu.Item>
+                      <DropdownMenu.Separator class="menu-sep" />
+                      <DropdownMenu.Item class="menu-item danger" onSelect={deleteForever}><Trash2 size={16} />Excluir para sempre</DropdownMenu.Item>
+                    {:else}
+                      <DropdownMenu.Sub>
+                        <DropdownMenu.SubTrigger class="menu-item"><FileDown size={16} /><span class="grow">Exportar</span><ChevronRight size={16} /></DropdownMenu.SubTrigger>
+                        <DropdownMenu.SubContent class="menu" sideOffset={4}>
+                          {#each exportEntries(id, m.title, !!card?.hasMedia(), () => void printNote()) as e (e.label)}
+                            <DropdownMenu.Item class="menu-item" onSelect={e.onSelect}><e.icon size={16} />{e.label}</DropdownMenu.Item>
+                          {/each}
+                        </DropdownMenu.SubContent>
+                      </DropdownMenu.Sub>
+                      <DropdownMenu.Sub>
+                        <DropdownMenu.SubTrigger class="menu-item"><CircleDashed size={16} /><span class="grow">Status</span><ChevronRight size={16} /></DropdownMenu.SubTrigger>
+                        <DropdownMenu.SubContent class="menu" sideOffset={4}>
+                          {#each ['todo', 'doing', 'done'] as const as st (st)}
+                            <DropdownMenu.Item class="menu-item" onSelect={() => card?.status(st)}>
+                              <i class="menu-swatch" style:background={STATUS[st].color}></i><span class="grow">{STATUS[st].label}</span>
+                              {#if hasStatus(m) && statusOf(m) === st}<span class="menu-check"><Check size={15} /></span>{/if}
+                            </DropdownMenu.Item>
+                          {/each}
+                          {#if m.statusOn && m.reminderAt == null}
+                            <DropdownMenu.Separator class="menu-sep" />
+                            <DropdownMenu.Item class="menu-item" onSelect={() => card?.status('none')}><span class="grow">Sem status</span></DropdownMenu.Item>
+                          {/if}
+                        </DropdownMenu.SubContent>
+                      </DropdownMenu.Sub>
+                      <DropdownMenu.Item class="menu-item" onSelect={() => card?.chooseEmoji()}><SmilePlus size={16} />{m.emoji ? 'Mudar emoji de capa' : 'Emoji de capa'}</DropdownMenu.Item>
+                      <DropdownMenu.Separator class="menu-sep" />
+                      <DropdownMenu.Item class="menu-item" onSelect={() => m && close({ archived: !m.archived }, m.archived ? 'Nota desarquivada' : 'Nota arquivada')}>
+                        {#if m.archived}<ArchiveRestore size={16} />Desarquivar{:else}<Archive size={16} />Arquivar{/if}
+                      </DropdownMenu.Item>
+                      <DropdownMenu.Separator class="menu-sep" />
+                      <DropdownMenu.Item class="menu-item danger" onSelect={() => close({ trashedAt: Date.now() }, 'Nota movida para a lixeira')}><Trash2 size={16} />Mover para a lixeira</DropdownMenu.Item>
+                    {/if}
+                  </DropdownMenu.Content>
+                </DropdownMenu.Portal>
+              </DropdownMenu.Root>
+            </div>
+          {/snippet}
+        </NoteEditor>
       </Dialog.Content>
     </Dialog.Portal>
   </Dialog.Root>

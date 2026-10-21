@@ -62,6 +62,10 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
   `TagInput` (recebe `known={app.tags}`), `MediaBlock` (recebe `src` e `ondownload`), `AudioPlayer` e `CameraDialog`.
   `lib/format.ts`, `lib/reminders.ts`, `lib/menu.ts` e `lib/emoji.ts` só reexportam do Atrio; o toast do Atrio é o
   `app.say` (`setNotifier` em `main.ts`). Repetir todo mês a partir de 31/jan agora cai em 28/fev também na interface.
+  Desde a 0.5.0, **o card inteiro** vem do Atrio (`NoteEditor`): `components/Editor.svelte` é só a casca (janela,
+  Y.Doc e salvamento contínuo, sync, fixar, arquivar, lixeira, exportar, modo documento, barra do topo no snippet
+  `top`), com `features()` (tudo ligado) e um `CardHost` sobre o `api`. Mudança no card (blocos, anexos, gravador,
+  lembrete, status, etiquetas, cor, barra de formatação) se faz no Atrio.
 - **Backup local:** manual ("Fazer backup agora") + automático semanal numa pasta escolhida, guardando os 4 últimos.
   Restaurar **junta** com o que existe (como o sync), nada se perde.
 
