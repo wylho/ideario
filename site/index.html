@@ -23,10 +23,15 @@
 
 <main>
 <section class="hero">
-  <div class="tile t1" style="--img: url(/img/notas.webp); --img-dark: url(/img/notas-escuro.webp); --size: 330%; --pos: 40% 30%" aria-hidden="true"></div>
-  <div class="tile t2" style="--img: url(/img/calendario.webp); --size: 340%; --pos: 62% 42%" aria-hidden="true"></div>
-  <div class="tile t3" style="--img: url(/img/moodboard.webp); --size: 300%; --pos: 50% 40%" aria-hidden="true"></div>
-  <div class="tile t4" style="--img: url(/img/kanban.webp); --size: 300%; --pos: 45% 35%" aria-hidden="true"></div>
+  <div class="bits" aria-hidden="true">
+    <div class="bit b1 mini-note"><b>Mercado da semana</b>
+      <div class="chk done"><i><svg class="lucide" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></i>Arroz</div><div class="chk"><i></i>Café em grão</div><div class="chk"><i></i>Leite</div>
+      <div class="mini-chips"><span class="mini-chip"><svg class="lucide" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.268 21a2 2 0 0 0 3.464 0"/><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"/></svg>Hoje, 18:30</span><span class="mini-chip tag">#compras</span></div></div>
+    <div class="bit b2"><div class="bit-label">Status</div><div class="bit-row"><span class="status-toggle"><span class="st-dot st-todo"></span><span class="st-dot st-doing on"></span><span class="st-dot st-done"></span></span><span>Em andamento</span></div></div>
+    <div class="bit b3"><div class="bit-row"><span class="ico-sm"><svg class="lucide" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.268 21a2 2 0 0 0 3.464 0"/><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"/></svg></span><div><b>Prova de Composição</b><div class="sub">Amanhã, 08:00</div></div></div>
+      <div class="bit-row" style="margin-top: 10px; gap: 8px"><span class="btn soft sm">Adiar</span><span class="btn primary sm">Concluir</span></div></div>
+    <div class="bit b4"><div class="bit-label">Cor da nota</div><div class="swatches" style="grid-template-columns: repeat(6, 26px)"><span class="swatch" style="--c: var(--n-sand)"></span><span class="swatch" style="--c: var(--n-sage)"></span><span class="swatch" style="--c: var(--n-sky)"></span><span class="swatch" style="--c: var(--n-rose)"></span><span class="swatch" style="--c: var(--n-lilac)"></span><span class="swatch on" style="--c: var(--n-butter)"></span></div></div>
+  </div>
   <div class="hero-inner">
     <span class="chip">Windows · macOS · Linux · Android</span>
     <h1>Organize sua vida em notas.</h1>
