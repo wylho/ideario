@@ -14,6 +14,9 @@ export default defineConfig({
     hmr: host ? { protocol: 'ws', host, port: 1421 } : undefined,
     watch: { ignored: ['**/src-tauri/**'] },
   },
+  // O Atrio vem como código-fonte (Svelte e `.svelte.ts` em TypeScript): passa pelo plugin do Svelte, não pelo
+  // pré-empacotamento, que não tira os tipos dos `.svelte.ts`.
+  optimizeDeps: { exclude: ['@wylho/atrio'] },
   envPrefix: ['VITE_', 'TAURI_ENV_*'],
   build: {
     target: process.env.TAURI_ENV_PLATFORM === 'windows' ? 'chrome105' : 'safari15',
