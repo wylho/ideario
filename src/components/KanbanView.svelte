@@ -7,8 +7,8 @@
   import { noteMenu, reminderMenu } from '../lib/menus'
   import { STATUS, changeStatus } from '../lib/status'
   import { statusOf, type NoteSummary, type ReminderStatus } from '../lib/types'
-  import ContextMenu from './ContextMenu.svelte'
-  import StatusToggle from './StatusToggle.svelte'
+  import { ContextMenu } from '@wylho/atrio'
+  import { StatusToggle } from '@wylho/atrio'
   import ViewEmpty from './ViewEmpty.svelte'
 
   // Kanban: as notas com status (toda nota com lembrete e as que ganharam status pelo menu) em três colunas: a fazer

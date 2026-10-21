@@ -8,8 +8,8 @@
   import { reminderMenu } from '../lib/menus'
   import { changeStatus } from '../lib/status'
   import { statusOf, type NoteSummary } from '../lib/types'
-  import ContextMenu from './ContextMenu.svelte'
-  import StatusToggle from './StatusToggle.svelte'
+  import { ContextMenu } from '@wylho/atrio'
+  import { StatusToggle } from '@wylho/atrio'
 
   // Calendário: os lembretes (os mesmos de Lembretes) no dia deles, com o status em cor. Arrastar para outro dia muda
   // a data (a hora fica); o "+" do dia (ou dois cliques nele) cria uma nota com lembrete nele. Os que se repetem mostram

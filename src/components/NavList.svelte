@@ -3,7 +3,7 @@
   import { app } from '../lib/app.svelte'
   import { categoryMenu, newCategory, tagMenu } from '../lib/menus'
   import { NO_CATEGORY, NO_TAGS } from '../lib/types'
-  import ContextMenu from './ContextMenu.svelte'
+  import { ContextMenu } from '@wylho/atrio'
   import SortMenu from './SortMenu.svelte'
   import type { CategorySort } from '../lib/app.svelte'
 

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Camera, Image, Mic, Paperclip, PenLine, Plus } from '@lucide/svelte'
   import { app } from '../lib/app.svelte'
-  import { canRecord, hasCamera } from '../lib/capture.svelte'
+  import { canRecord, hasCamera } from '@wylho/atrio/editor'
 
   // "+" em leque para cima: atalhos que já abrem a nota nova fazendo a coisa (gravando, com a foto, a câmera…).
   // Ctrl+N continua abrindo a nota direto. Câmera e gravador só aparecem se o aparelho tiver.

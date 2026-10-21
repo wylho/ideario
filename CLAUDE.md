@@ -56,7 +56,12 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
   por dependência git numa tag (`github:wylho/atrio#vX.Y.Z`). Não é só estilo: o objetivo é o card inteiro (editor,
   etiquetas, data, status, anexos, gravações) virar componente lá, com chaves por app (no Nodo a categoria fica
   desligada). Hoje tem o `atrio.css` (era o `src/app.css`, que saiu daqui: mudança de visual se faz no Atrio e aqui
-  sobe a tag), o `CardBody` (miolo do `NoteCard`) e o card na área de transferência.
+  sobe a tag), o `CardBody` (miolo do `NoteCard`) e o card na área de transferência. Desde a 0.3.0, também as
+  extensões do editor (`@wylho/atrio/editor`: blocos, link, mídia, gravador), o seletor de emoji
+  (`@wylho/atrio/emoji`), menus (`MenuAt`, `MenuList`, `ContextMenu`), `Picker`, `StatusToggle`, `ReminderPopover`,
+  `TagInput` (recebe `known={app.tags}`), `MediaBlock` (recebe `src` e `ondownload`), `AudioPlayer` e `CameraDialog`.
+  `lib/format.ts`, `lib/reminders.ts`, `lib/menu.ts` e `lib/emoji.ts` só reexportam do Atrio; o toast do Atrio é o
+  `app.say` (`setNotifier` em `main.ts`). Repetir todo mês a partir de 31/jan agora cai em 28/fev também na interface.
 - **Backup local:** manual ("Fazer backup agora") + automático semanal numa pasta escolhida, guardando os 4 últimos.
   Restaurar **junta** com o que existe (como o sync), nada se perde.
 

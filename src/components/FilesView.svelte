@@ -6,7 +6,7 @@
   import { daysAgo, fmtBytes } from '../lib/format'
   import Empty from './Empty.svelte'
   import ViewEmpty from './ViewEmpty.svelte'
-  import ContextMenu from './ContextMenu.svelte'
+  import { ContextMenu } from '@wylho/atrio'
   import { attachmentMenu } from '../lib/menus'
   import { FILE_GROUPS, fileGroup, type AttachmentKind, type AttachmentRow } from '../lib/types'
 

@@ -5,7 +5,7 @@
   import Empty from './Empty.svelte'
   import Masonry from './Masonry.svelte'
   import ViewEmpty from './ViewEmpty.svelte'
-  import ContextMenu from './ContextMenu.svelte'
+  import { ContextMenu } from '@wylho/atrio'
   import { attachmentMenu } from '../lib/menus'
   import type { AttachmentRow } from '../lib/types'
 

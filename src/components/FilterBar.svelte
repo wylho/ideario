@@ -3,7 +3,7 @@
   import { EyeOff, Hash, Lock, X } from '@lucide/svelte'
   import { app } from '../lib/app.svelte'
   import { categoryMenu } from '../lib/menus'
-  import ContextMenu from './ContextMenu.svelte'
+  import { ContextMenu } from '@wylho/atrio'
   import { NO_CATEGORY, NO_TAGS } from '../lib/types'
 
   // O que está sendo visto. No desktop com a lateral aberta: título com a categoria e as tags ativas.

@@ -10,34 +10,34 @@
     ListIndentDecrease, ListIndentIncrease, BookOpen, Minimize2, FileDown, Link2, RefreshCw, SmilePlus,
   } from '@lucide/svelte'
   import { exportEntries, printNote } from '../lib/exporting'
-  import { bareUrl, fillPreview, insertLinkCard } from '../lib/editor/link'
+  import { bareUrl, fillPreview, insertLinkCard } from '@wylho/atrio/editor'
   import { isDocNote, setDocNote } from '../lib/docmode'
   import {
     blockAt, canIndent, canMove, checkAll, checkCount, clipNode, convertBlock, deleteChecked, deleteNode, duplicateNode, moveNode, shapeOf,
     dropTargetAt, moveNodeTo, type BlockHit, type Shape,
-  } from '../lib/editor/blocks'
+  } from '@wylho/atrio/editor'
   import { SEP, type MenuEntry } from '../lib/menu'
-  import MenuAt from './MenuAt.svelte'
-  import { imageActions, leaveRow, placeBeside } from '../lib/editor/media'
-  import { canRecord, fmtSeconds, hasCamera, photoName, Recorder } from '../lib/capture.svelte'
-  import MediaBlock from './MediaBlock.svelte'
-  import CameraDialog from './CameraDialog.svelte'
+  import { MenuAt } from '@wylho/atrio'
+  import { imageActions, leaveRow, placeBeside } from '@wylho/atrio/editor'
+  import { canRecord, fmtSeconds, hasCamera, photoName, Recorder } from '@wylho/atrio/editor'
+  import { MediaBlock } from '@wylho/atrio'
+  import { CameraDialog } from '@wylho/atrio'
   import { api } from '../lib/api'
   import { download, newCategory } from '../lib/menus'
   import { app, type DroppedFile, type EditorTarget } from '../lib/app.svelte'
   import * as Y from 'yjs'
-  import { noteExtensions } from '../lib/editor/extensions'
+  import { noteExtensions } from '@wylho/atrio/editor'
   import { copyNoteId, shortId } from '../lib/noteid'
   import { readMeta, writeMeta, type NoteMeta } from '../lib/ydoc'
   import { makePreviews } from '../lib/previews.svelte'
   import { reminderSet } from '../lib/notify.svelte'
   import { ago, fmtBytes, hashTags } from '../lib/format'
-  import ReminderPopover from './ReminderPopover.svelte'
-  import StatusToggle from './StatusToggle.svelte'
+  import { ReminderPopover } from '@wylho/atrio'
+  import { StatusToggle } from '@wylho/atrio'
   import { STATUS } from '../lib/status'
   import { nextOccurrence } from '../lib/reminders'
-  import TagInput from './TagInput.svelte'
-  import EmojiPicker from './EmojiPicker.svelte'
+  import { TagInput } from '@wylho/atrio'
+  import { EmojiPicker } from '@wylho/atrio/emoji'
   import { hasStatus, statusOf, type Attachment, type NoteColor, type NoteInput, type ReminderStatus, type RichDoc, type RichNode, type SharedIn } from '../lib/types'
 
   let { target }: { target: EditorTarget } = $props()
@@ -332,7 +332,7 @@
           renderFile: (h, dom) => {
             let c: ReturnType<typeof mount> | null = null
             let gone = false
-            const show = (a: Attachment) => !gone && (c = mount(MediaBlock, { target: dom, props: { a, onopen: () => viewAttachment(a) } }))
+            const show = (a: Attachment) => !gone && (c = mount(MediaBlock, { target: dom, props: { a, src: api.mediaUrl(a.hash), onopen: () => viewAttachment(a), ondownload: () => void download(a) } }))
             const known = media.get(h)
             // Colado de outra nota: busca os dados do anexo e desenha quando chegarem.
             if (known) show(known)
@@ -862,7 +862,7 @@
             <!-- Anexos antigos, fora do corpo: mesmo cartão dos anexos do texto. -->
             <div class="ed-files">
               {#each files as f (f.hash)}
-                <MediaBlock a={f} onopen={() => viewAttachment(f)} />
+                <MediaBlock a={f} src={api.mediaUrl(f.hash)} onopen={() => viewAttachment(f)} ondownload={() => void download(f)} />
               {/each}
             </div>
           {/if}
@@ -919,7 +919,7 @@
             {#each extraTags as t (t)}
               <span class="pill tag" title="Tag vinda do texto">#{t}</span>
             {/each}
-            <TagInput exclude={[...meta.tags, ...extraTags]} onpick={(t) => meta && !meta.tags.includes(t) && meta.tags.push(t)} />
+            <TagInput exclude={[...meta.tags, ...extraTags]} known={app.tags} onpick={(t) => meta && !meta.tags.includes(t) && meta.tags.push(t)} />
           </div>
         </div>
 

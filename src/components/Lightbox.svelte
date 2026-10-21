@@ -8,7 +8,7 @@
   import { app } from '../lib/app.svelte'
   import { fmtBytes } from '../lib/format'
   import { KIND_ICONS, KIND_LABELS } from '../lib/file-kinds'
-  import AudioPlayer from './AudioPlayer.svelte'
+  import { AudioPlayer } from '@wylho/atrio'
   import PdfViewer from './PdfViewer.svelte'
 
   const img = $derived(app.lightbox)

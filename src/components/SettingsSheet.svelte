@@ -12,7 +12,7 @@
   import { backupNow, pickBackupDir, restoreBackup } from '../lib/backup.svelte'
   import { isTauri } from '@tauri-apps/api/core'
   import { DESKTOPS, PALETTES, type DesktopId, type PaletteId } from '../lib/palettes'
-  import Picker from './Picker.svelte'
+  import { Picker } from '@wylho/atrio'
   import type { BackupStatus, McpInfo, PhotoQuality, Settings, SyncStatus } from '../lib/types'
 
   let settings = $state<Settings | null>(null)

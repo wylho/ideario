@@ -2,11 +2,11 @@
   import { Repeat } from '@lucide/svelte'
   import { api } from '../lib/api'
   import { changeStatus } from '../lib/status'
-  import StatusToggle from './StatusToggle.svelte'
+  import { StatusToggle } from '@wylho/atrio'
   import { app, live } from '../lib/app.svelte'
   import { dayDiff, fmtShortDate, fmtTime, isOverdue } from '../lib/format'
   import ViewEmpty from './ViewEmpty.svelte'
-  import ContextMenu from './ContextMenu.svelte'
+  import { ContextMenu } from '@wylho/atrio'
   import { reminderMenu } from '../lib/menus'
   import { statusOf, type NoteSummary } from '../lib/types'
 

@@ -6,7 +6,7 @@
   import { app } from '../lib/app.svelte'
   import { fmtReminder, isOverdue } from '../lib/format'
   import { noteMenu } from '../lib/menus'
-  import ContextMenu from './ContextMenu.svelte'
+  import { ContextMenu } from '@wylho/atrio'
   import FilePreview from './FilePreview.svelte'
   import { statusOf, type NoteSummary } from '../lib/types'
   import { STATUS } from '../lib/status'

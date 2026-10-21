@@ -2,12 +2,16 @@ import '@wylho/atrio/atrio.css'
 import { mount } from 'svelte'
 import App from './App.svelte'
 import { applySystemFonts } from './lib/system-fonts'
+import { setNotifier } from '@wylho/atrio'
+import { app } from './lib/app.svelte'
 import './lib/theme.svelte'
 import './lib/background.svelte'
 import './lib/share.svelte'
 import './lib/backbutton.svelte'
 
 applySystemFonts()
+// Os avisos das peças do Atrio (microfone, câmera…) aparecem no toast do Ideario.
+setNotifier((msg) => app.say(msg))
 
 // Um app, não um site: sem o menu do navegador (Voltar, Recarregar, Inspecionar).
 // Campos de texto e o editor mantêm o menu nativo (copiar, colar, corretor ortográfico).
