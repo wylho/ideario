@@ -221,7 +221,8 @@
   function pickCategory(v: string) {
     if (!meta) return
     if (v === NEW_CATEGORY) newCategory((id) => meta && (meta.categoryId = id))
-    else meta.categoryId = v === 'none' ? null : v
+    // "Sem categoria" ou clicar de novo na marcada (allowDeselect devolve '')
+    else meta.categoryId = v === 'none' || !v ? null : v
   }
   const extraTags = $derived([...new Set(bodyTags)].filter((t) => !meta?.tags.includes(t)))
   const active = $derived.by(() => {
@@ -869,6 +870,7 @@
           <div class="ed-meta">
             <Select.Root
               type="single"
+              allowDeselect
               items={[{ value: 'none', label: 'Sem categoria' }, ...app.categories.map((c) => ({ value: c.id, label: c.name }))]}
               bind:value={() => meta?.categoryId ?? 'none', pickCategory}
             >

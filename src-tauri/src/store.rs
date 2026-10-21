@@ -2265,6 +2265,40 @@ mod tests {
     }
 
     #[test]
+    fn a_note_can_lose_its_category() {
+        let s = Store::memory();
+        let mut a = note("a", "A", "x");
+        a.category_id = Some("casa".into());
+        s.save_note(&a).unwrap();
+        // pelo menu do card
+        let mut p = Map::new();
+        p.insert("categoryId".into(), Value::Null);
+        assert!(s.update_note("a", &p).unwrap());
+        assert_eq!(s.get_note("a").unwrap().unwrap().category_id, None);
+        // pelo editor (nota inteira salva sem categoria)
+        a.category_id = Some("casa".into());
+        s.save_note(&a).unwrap();
+        a.category_id = None;
+        s.save_note(&a).unwrap();
+        assert_eq!(s.get_note("a").unwrap().unwrap().category_id, None);
+        // pelo editor de verdade: atualização Yjs que põe null no meta
+        a.category_id = Some("casa".into());
+        s.save_note(&a).unwrap();
+        let state = s.ydoc("a").unwrap().unwrap();
+        let doc = yrs::Doc::new();
+        {
+            use yrs::{updates::decoder::Decode, Map as _, ReadTxn, Transact};
+            doc.transact_mut().apply_update(yrs::Update::decode_v1(&state).unwrap()).unwrap();
+            let before = doc.transact().state_vector();
+            let meta = doc.get_or_insert_map("meta");
+            meta.insert(&mut doc.transact_mut(), "categoryId", yrs::Any::Null);
+            let update = doc.transact().encode_diff_v1(&before);
+            s.apply_update("a", &update).unwrap();
+        }
+        assert_eq!(s.get_note("a").unwrap().unwrap().category_id, None);
+    }
+
+    #[test]
     fn boxes_patch_and_trash() {
         let s = Store::memory();
         s.save_note(&note("a", "A", "x")).unwrap();
