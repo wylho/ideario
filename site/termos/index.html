@@ -9,9 +9,16 @@
 <link rel="stylesheet" href="/style.css">
 </head>
 <body>
-<main>
-<header><img src="/favicon.svg" alt=""><a href="/">Ideario</a></header>
-<nav class="lang"><a href="#english">English version</a></nav>
+<header class="nav">
+  <div class="wrap">
+    <a class="brand" href="/"><img src="/favicon.svg" alt="">Ideario</a>
+    <nav class="nav-links"><a href="/#recursos">Recursos</a><a href="/#novidades">Novidades</a><a href="/#claude">Claude</a><a href="/#baixar">Baixar</a><a href="#english">English</a></nav>
+    <a class="icon-link" href="https://github.com/wylho/ideario" aria-label="Ideario no GitHub"><svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg></a>
+    <a class="btn primary sm" href="/#baixar"><svg class="lucide" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg>Baixar grátis</a>
+  </div>
+</header>
+<main class="doc">
+<span class="chip accent"><svg class="lucide" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v18"/><path d="m19 8 3 8a5 5 0 0 1-6 0zV7"/><path d="M3 7h1a17 17 0 0 0 8-2 17 17 0 0 0 8 2h1"/><path d="m5 8 3 8a5 5 0 0 1-6 0zV7"/><path d="M7 21h10"/></svg>Termos</span>
 
 <h1>Termos de Serviço</h1>
 <p class="muted">Última atualização: 13 de outubro de 2026</p>
@@ -52,7 +59,6 @@ usando o app depois de uma mudança significa aceitar a nova versão.</p>
 <h2>9. Contato</h2>
 <p>Dúvidas: <a href="mailto:wyli4m@gmail.com">wyli4m@gmail.com</a></p>
 
-<hr>
 
 <section id="english" lang="en">
 <h1>Terms of Service</h1>
@@ -94,7 +100,23 @@ to use the app after a change means accepting the new version.</p>
 <p>Questions: <a href="mailto:wyli4m@gmail.com">wyli4m@gmail.com</a></p>
 </section>
 
-<footer><a href="/">Ideario</a> · <a href="/privacidade/">Política de Privacidade</a></footer>
 </main>
+
+<footer class="footer">
+  <div class="wrap">
+    <div class="cols">
+      <div><a class="brand" href="/"><img src="/favicon.svg" alt="">Ideario</a><p>Organize sua vida em notas.</p></div>
+      <div><h4>Ideario</h4><a href="/#recursos">Recursos</a><a href="/#novidades">Novidades</a><a href="/#claude">Claude</a><a href="/#baixar">Baixar</a></div>
+      <div><h4>Projeto</h4><a href="https://github.com/wylho/ideario">GitHub</a><a href="https://github.com/wylho/ideario/releases">Versões</a><a href="https://github.com/sponsors/wylho">Apoiar</a></div>
+      <div><h4>Sobre</h4><a href="/privacidade/">Privacidade</a><a href="/termos/">Termos</a><a href="/#english">English</a><a href="mailto:wyli4m@gmail.com">Contato</a></div>
+    </div>
+    <p class="legal">Ideario · Contato: <a href="mailto:wyli4m@gmail.com">wyli4m@gmail.com</a> · Ícones <a href="https://lucide.dev">Lucide</a></p>
+  </div>
+</footer>
+<script>
+  const nav = document.querySelector('.nav')
+  const onScroll = () => nav.classList.toggle('scrolled', scrollY > 8)
+  addEventListener('scroll', onScroll, { passive: true }); onScroll()
+</script>
 </body>
 </html>
