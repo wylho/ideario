@@ -1,22 +1,21 @@
 <script lang="ts">
   import { KIND_ICONS } from '../lib/file-kinds'
-  import { CardBody } from '@wylho/atrio'
-  import { Bell, Check, Paperclip, Pin, PinOff, Repeat } from '@lucide/svelte'
+  import { CardBody, CardPills } from '@wylho/atrio'
+  import { Check, Pin, PinOff } from '@lucide/svelte'
   import { api } from '../lib/api'
   import { app } from '../lib/app.svelte'
-  import { fmtReminder, isOverdue } from '../lib/format'
   import { noteMenu } from '../lib/menus'
   import { ContextMenu } from '@wylho/atrio'
   import FilePreview from './FilePreview.svelte'
-  import { statusOf, type NoteSummary } from '../lib/types'
-  import { STATUS } from '../lib/status'
+  import type { NoteSummary } from '../lib/types'
+  import { changeStatus } from '../lib/status'
 
   let { n }: { n: NoteSummary } = $props()
 
   const cat = $derived(app.category(n.categoryId))
   // Nota que é só um anexo (um áudio, um PDF…): o card vira a miniatura quadrada do arquivo, como na visão Arquivos.
   const solo = $derived(!n.cover.length && n.preview.length === 1 && n.preview[0].kind === 'file' ? n.preview[0] : null)
-  const hasMeta = $derived(n.reminderAt != null || !!cat || n.tags.length > 0 || (n.fileCount > 0 && !solo))
+  const hasMeta = $derived(n.reminderAt != null || n.statusOn || !!cat || n.tags.length > 0 || (n.fileCount > 0 && !solo))
   const selected = $derived(app.selected.has(n.id))
   const selecting = $derived(app.selected.size > 0)
   // Com seleção ativa, tocar no card marca ou desmarca; Ctrl/⌘+clique e Shift+clique também selecionam, como numa pasta.
@@ -32,21 +31,19 @@
 
 
 {#snippet pills()}
-        {#if n.reminderAt != null}
-          <span class="pill" class:late={isOverdue(n)} class:done={n.reminderDone} class:doing={n.reminderDoing && !n.reminderDone}><Bell size={11} />{fmtReminder(n.reminderAt)}{#if n.reminderRepeat}<Repeat size={11} aria-label="se repete" />{/if}</span>
-        {:else if n.statusOn}
-          {@const st = statusOf(n)}
-          <span class="pill"><i class="dot" style:background={STATUS[st].color}></i>{STATUS[st].label}</span>
-        {/if}
-        {#if cat}
-          <button class="pill cat" title="Filtrar por {cat.name}" onclick={(e) => { e.stopPropagation(); app.setCategory(cat.id) }}>
-            <i class="dot" style:background={cat.color}></i>{cat.name.split(' ')[0]}
-          </button>
-        {/if}
-        {#if n.fileCount && !solo}<span class="pill"><Paperclip size={11} />{n.fileCount}</span>{/if}
-        {#each n.tags as t (t)}
-          <button class="pill tag" onclick={(e) => { e.stopPropagation(); app.toggleTag(t) }}>#{t}</button>
-        {/each}
+  <CardPills
+    reminderAt={n.reminderAt}
+    reminderRepeat={n.reminderRepeat}
+    reminderDone={n.reminderDone}
+    reminderDoing={n.reminderDoing}
+    statusOn={n.statusOn}
+    category={cat}
+    fileCount={solo ? 0 : n.fileCount}
+    tags={n.tags}
+    oncategory={() => cat && app.setCategory(cat.id)}
+    ontag={(t) => app.toggleTag(t)}
+    onstatus={n.trashedAt == null ? (s) => void changeStatus(n, s) : undefined}
+  />
 {/snippet}
 
 <ContextMenu items={() => noteMenu(n)}>
