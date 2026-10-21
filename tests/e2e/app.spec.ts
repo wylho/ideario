@@ -344,7 +344,7 @@ test('tema e aparência: escolher nas configurações e manter ao recarregar', a
   await openSettings(page)
   // padrão: Sistema (na prévia do navegador, imita o GNOME no Linux)
   await expect(page.getByRole('radio', { name: /^Sistema/ })).toHaveAttribute('aria-checked', 'true')
-  await page.getByRole('radio', { name: /^Ideario/ }).click()
+  await page.getByRole('radio', { name: /^Atrio/ }).click()
   await page.getByRole('radio', { name: 'Escuro' }).click()
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
   expect(await bg()).toBe('rgb(16, 21, 19)')
@@ -362,6 +362,13 @@ test('tema e aparência: escolher nas configurações e manter ao recarregar', a
   await page.locator('#sistema').click()
   await page.getByRole('option', { name: 'Windows' }).click()
   expect(await bg()).toBe('rgb(243, 243, 243)')
+})
+
+test('quem tinha escolhido a paleta Ideario continua nela, que agora se chama Atrio', async ({ page }) => {
+  await page.evaluate(() => localStorage.setItem('ideario.palette', 'ideario'))
+  await page.reload()
+  await openSettings(page)
+  await expect(page.getByRole('radio', { name: /^Atrio/ })).toHaveAttribute('aria-checked', 'true')
 })
 
 test.describe('visão × filtro', () => {

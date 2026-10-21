@@ -2,7 +2,7 @@
 // Ficam no aparelho (cada computador ou celular tem o seu) e são aplicados antes da primeira pintura.
 // Aplicar é só gravar ~25 variáveis CSS no <html>: nenhum componente muda, nada roda em segundo plano.
 import { isTauri } from '@tauri-apps/api/core'
-import { cssVars, DESKTOPS, fitAccent, mix, PALETTES, type Colors, type DesktopId, type Mode, type PaletteId } from './palettes'
+import { cssVars, DESKTOPS, fitAccent, mix, normalizePaletteId, PALETTES, type Colors, type DesktopId, type Mode, type PaletteId } from './palettes'
 
 /** Aparência: claro, escuro ou acompanhar o sistema. */
 export type ThemePref = 'system' | 'light' | 'dark'
@@ -46,8 +46,9 @@ const readMode = (): ThemePref => {
   return v === 'light' || v === 'dark' ? v : 'system'
 }
 const readPalette = (): PaletteId => {
+  // Sem escolha gravada, o tema Sistema; a escolha antiga "ideario" é a paleta Atrio de hoje.
   const v = load(PALETTE_KEY)
-  return v === 'system' || (v && v in PALETTES) ? (v as PaletteId) : 'system'
+  return v ? normalizePaletteId(v) : 'system'
 }
 
 /** No navegador (prévia), adivinha a área de trabalho pelo user agent; dá para trocar nas Configurações. */

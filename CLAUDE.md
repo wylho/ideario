@@ -103,8 +103,10 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
   Motivo: o `setTheme` não escurecia a barra de título no Mac.
 - Barra de título (macOS/Windows) e fundo da janela acompanham o claro/escuro do app (`theme.svelte.ts` → `setTheme`,
   `setBackgroundColor`); a escolha fica no núcleo (`set_window_look`) e a janela já nasce com ela (`lib.rs`).
-- Temas (`src/lib/palettes.ts`, `theme.svelte.ts`): Sistema (padrão; o núcleo lê destaque/esquema do GNOME, KDE, Windows,
-  macOS em `src-tauri/src/system_theme.rs`), Ideario, Papel, Grafite, Floresta; claro/escuro/automático à parte.
+- Temas (do Atrio desde a 0.4.0: `src/lib/palettes.ts` só reexporta; estado em `theme.svelte.ts`): Sistema (padrão; o
+  núcleo lê destaque/esquema do GNOME, KDE, Windows, macOS em `src-tauri/src/system_theme.rs`), **Atrio** (a paleta-base,
+  que se chamava Ideario; a escolha gravada `ideario` vira `atrio` por `normalizePaletteId`), Papel, Grafite, Floresta;
+  claro/escuro/automático à parte. Os mesmos do Nodo.
 - Mídia no editor (`src/lib/editor/media.ts`): fotos lado a lado (`imageRow`, 2–4, arrastar como no Gutenberg + botões na foto
   selecionada), anexos inline (`noteFile`: vídeo, áudio com player, documentos), gravador e câmera (`capture.svelte.ts`).
   A capa do card é a primeira foto ou a primeira linha de fotos. Arquivos arrastados do computador (`FileDrop.svelte`; no app
