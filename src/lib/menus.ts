@@ -12,6 +12,7 @@ import { SEP, type MenuEntry } from './menu'
 import { quickTimes, snoozeTimes } from './reminders'
 import { reminderSet } from './notify.svelte'
 import { statusOf, type AttachmentRow, type Category, type NoteColor, type NotePatch, type NoteSummary } from './types'
+import { writeCard } from '@wylho/atrio'
 import { STATUS, changeStatus, keepStatus, statusMenu } from './status'
 
 export const NOTE_COLORS: { id: NoteColor; label: string; css: string }[] = [
@@ -28,6 +29,16 @@ async function copy(text: string, what: string) {
   try {
     await navigator.clipboard.writeText(text)
     app.say(`${what} copiado`)
+  } catch {
+    app.say('Não foi possível copiar')
+  }
+}
+
+/** Copia a nota como card do Atrio: o Nodo cola como nó com a nota, e outra janela do Ideario como nota nova. */
+export async function copyCard(id: string) {
+  try {
+    await writeCard(await api.noteCard(id))
+    app.say('Copiado como card')
   } catch {
     app.say('Não foi possível copiar')
   }
@@ -119,6 +130,7 @@ export function noteMenu(n: NoteSummary): MenuEntry[] {
     },
     SEP,
     { label: 'Copiar texto', icon: Copy, onSelect: async () => copy(await api.noteText(n.id), 'Texto') },
+    { label: 'Copiar como card', icon: Copy, hint: 'cola no Nodo', onSelect: () => void copyCard(n.id) },
     { label: 'Copiar ID', icon: Hash, hint: shortId(n.id), onSelect: () => void copyNoteId(n.id, (m) => app.say(m)) },
     {
       label: 'Fazer uma cópia', icon: Files,

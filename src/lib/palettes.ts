@@ -1,4 +1,4 @@
-// Temas de cor. Um tema só troca as variáveis de cor de app.css; nada além disso muda.
+// Temas de cor. Um tema só troca as variáveis de cor do atrio.css (@wylho/atrio); nada além disso muda.
 // Cada tema tem a versão clara e a escura. O tema "Sistema" parte da paleta da área de trabalho
 // (GNOME, KDE, Windows, macOS) e usa a cor de destaque que o núcleo Rust lê do sistema.
 
@@ -181,7 +181,7 @@ export function fitAccent(accent: string, mode: Mode, surface: string) {
   return a
 }
 
-/** Variáveis CSS (as mesmas de app.css) para um conjunto de cores. */
+/** Variáveis CSS (as mesmas do atrio.css) para um conjunto de cores. */
 export function cssVars(c: Colors, mode: Mode): Record<string, string> {
   const dark = mode === 'dark'
   const shadowRgb = dark ? '0 0 0' : rgbTriplet(mix(c.fg, '#000000', 0.6))

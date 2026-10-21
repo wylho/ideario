@@ -207,6 +207,8 @@ pub fn run() {
             commands::adopt_order,
             commands::duplicate_note,
             commands::note_text,
+            commands::note_card,
+            commands::create_from_card,
             commands::delete_note,
             commands::trash_count,
             commands::empty_trash,

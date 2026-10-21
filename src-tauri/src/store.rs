@@ -214,6 +214,34 @@ pub struct NoteInput {
     pub tags: Vec<String>,
 }
 
+/// Cores de nota que um card pode trazer (as do Atrio, `NOTE_COLORS`).
+const CARD_COLORS: [&str; 7] = ["none", "sand", "sage", "sky", "rose", "lilac", "butter"];
+
+/// Card do Atrio (`@wylho/atrio`): a nota como ela vai e volta pela área de transferência entre o Ideario e o Nodo.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct CardInput {
+    #[serde(default)]
+    pub title: String,
+    #[serde(default)]
+    pub markdown: String,
+    #[serde(default)]
+    pub color: Option<String>,
+    #[serde(default)]
+    pub emoji: Option<String>,
+    #[serde(default)]
+    pub tags: Vec<String>,
+}
+
+/// A nota pronta para copiar como card.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct Card {
+    pub title: String,
+    pub markdown: String,
+    pub color: String,
+    pub emoji: Option<String>,
+    pub tags: Vec<String>,
+}
+
 /// Categoria como o sync a vê (com a ordem e a marca de apagada).
 #[derive(Debug, Clone, PartialEq)]
 pub struct CategoryRow {
@@ -1428,6 +1456,49 @@ impl Store {
         Ok(n.id)
     }
 
+    /// A nota como card do Atrio: corpo em Markdown (o mesmo do MCP), cor, emoji e as etiquetas manuais.
+    pub fn note_card(&self, id: &str) -> Result<Card> {
+        let n = self.note_input(id)?.ok_or("nota não encontrada")?;
+        let names = |h: &str| self.get_attachments(&[h.to_string()]).ok().and_then(|v| v.into_iter().next()).map(|a| a.name);
+        Ok(Card {
+            title: n.title,
+            markdown: crate::markdown::to_markdown(&n.body, &names),
+            color: n.color,
+            emoji: n.emoji,
+            tags: n.tags,
+        })
+    }
+
+    /// Nota nova a partir de um card colado (do Nodo, ou de outra nota). Devolve o id.
+    pub fn create_from_card(&self, card: &CardInput) -> Result<String> {
+        let color = card.color.as_deref().filter(|c| CARD_COLORS.contains(c)).unwrap_or("none");
+        let mut tags: Vec<String> = Vec::new();
+        for t in card.tags.iter().map(|t| crate::text::normalize_tag(t)).filter(|t| !t.is_empty()) {
+            if !tags.contains(&t) {
+                tags.push(t);
+            }
+        }
+        let input = NoteInput {
+            id: uuid::Uuid::now_v7().to_string(),
+            title: card.title.trim().to_string(),
+            body: crate::markdown::from_markdown(&card.markdown),
+            category_id: None,
+            color: color.to_string(),
+            pinned: false,
+            archived: false,
+            trashed_at: None,
+            reminder_at: None,
+            reminder_done: false,
+            reminder_doing: false,
+            status_on: false,
+            reminder_repeat: None,
+            emoji: card.emoji.as_deref().and_then(clean_emoji),
+            tags,
+        };
+        self.save_note(&input)?;
+        Ok(input.id)
+    }
+
     pub fn note_text(&self, id: &str) -> Result<String> {
         let Some(n) = self.note_input(id)? else { return Ok(String::new()) };
         Ok(projection::plain_text(&n.title, &self.project(&n.body)?))
@@ -2136,6 +2207,31 @@ mod tests {
 
     fn titles(v: &[NoteSummary]) -> Vec<&str> {
         v.iter().map(|n| n.label.as_str()).collect()
+    }
+
+    #[test]
+    fn card_copied_here_pastes_back_as_the_same_note() {
+        let s = Store::memory();
+        let id = s
+            .create_from_card(&CardInput {
+                title: "Feira".into(),
+                markdown: "- [ ] Arroz\n- [x] Feijão\n\nLevar **sacola** #casa".into(),
+                color: Some("sky".into()),
+                emoji: Some("🛒".into()),
+                tags: vec!["#Mercado".into(), " ".into()],
+            })
+            .unwrap();
+        let card = s.note_card(&id).unwrap();
+        assert_eq!(card.title, "Feira");
+        assert_eq!(card.color, "sky");
+        assert_eq!(card.emoji.as_deref(), Some("🛒"));
+        assert_eq!(card.tags, vec!["mercado".to_string()]);
+        assert!(card.markdown.contains("- [ ] Arroz") && card.markdown.contains("- [x] Feijão"), "{}", card.markdown);
+        assert!(card.markdown.contains("**sacola**"), "{}", card.markdown);
+        // Uma cor que o Ideario não conhece vira a padrão, em vez de recusar o card.
+        let other = s.create_from_card(&CardInput { color: Some("laranja".into()), ..Default::default() }).unwrap();
+        assert_eq!(s.note_card(&other).unwrap().color, "none");
+        assert!(s.note_card("nao-existe").is_err());
     }
 
     #[test]

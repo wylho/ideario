@@ -2,6 +2,9 @@
   // macOS: barra de título transparente; com a janela larga, a lateral sobe até o topo (como no Notas e no Finder).
   const macTitlebar = document.documentElement.dataset.titlebar === 'overlay'
   import { app } from './lib/app.svelte'
+  import { api } from './lib/api'
+  import { copyCard } from './lib/menus'
+  import { readCard } from '@wylho/atrio'
   import { makePreviews } from './lib/previews.svelte'
   import TopBar from './components/TopBar.svelte'
   import TabBar from './components/TabBar.svelte'
@@ -26,7 +29,7 @@
   // sem atrasar a primeira pintura da lista.
   const editorModule = import('./components/Editor.svelte')
 
-  const typing = (e: KeyboardEvent) => !!(e.target as Element | null)?.closest?.('input, textarea, [contenteditable="true"]')
+  const typing = (e: Event) => !!(e.target as Element | null)?.closest?.('input, textarea, [contenteditable="true"]')
 
   function onKeydown(e: KeyboardEvent) {
     const mod = e.ctrlKey || e.metaKey
@@ -54,11 +57,30 @@
     }
   }
 
+  // Card do Atrio (o formato que o Nodo também entende): com uma nota marcada, ⌘C copia como card; colar um card fora
+  // de um campo de texto cria a nota. Com o editor aberto ou num campo, copiar e colar são do texto.
+  function onCopy(e: ClipboardEvent) {
+    if (app.editor || typing(e) || app.selected.size !== 1) return
+    e.preventDefault()
+    void copyCard([...app.selected][0])
+  }
+
+  function onPaste(e: ClipboardEvent) {
+    if (app.editor || typing(e)) return
+    const card = readCard(e.clipboardData)
+    if (!card) return
+    e.preventDefault()
+    void api.createFromCard(card).then(
+      (id) => app.say('Card colado', { label: 'Abrir', run: () => app.openNote(id) }),
+      () => app.say('Não foi possível colar o card'),
+    )
+  }
+
   // Prévias de PDF e vídeo que ainda faltam: depois que a lista apareceu, em segundo plano.
   setTimeout(makePreviews, 1500)
 </script>
 
-<svelte:window onkeydown={onKeydown} />
+<svelte:window onkeydown={onKeydown} oncopy={onCopy} onpaste={onPaste} />
 
 <div class="shell" class:wide={app.wide} class:rail={app.wide && !app.sidebarOpen} class:selecting-notes={app.selected.size > 0}>
   {#if app.wide}<TopBar />{/if}

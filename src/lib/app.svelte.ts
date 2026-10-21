@@ -65,7 +65,7 @@ export interface EditorTarget {
   print?: boolean
 }
 
-/** Largura a partir da qual o layout é de desktop. Igual ao breakpoint em app.css. */
+/** Largura a partir da qual o layout é de desktop. Igual ao breakpoint em atrio.css (@wylho/atrio). */
 export const WIDE_MIN = 960
 
 const SORT_KEY = 'ideario.sort'

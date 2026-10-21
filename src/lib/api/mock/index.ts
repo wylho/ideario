@@ -695,6 +695,35 @@ export const mockApi: Api = {
     return done(copy.id)
   },
 
+  noteCard(id) {
+    const n = notes.get(id)
+    if (!n) return Promise.reject(new Error('nota não encontrada'))
+    // O núcleo converte com o mesmo Markdown do MCP; aqui basta a estrutura da prévia.
+    const markdown = project(n.body).blocks.map((b) => {
+      const pad = 'depth' in b ? '  '.repeat(b.depth) : ''
+      if (b.kind === 'task') return `${pad}- [${b.done ? 'x' : ' '}] ${b.text}`
+      if (b.kind === 'bullet') return `${pad}- ${b.text}`
+      if (b.kind === 'ordered') return `${pad}${b.n}. ${b.text}`
+      if (b.kind === 'heading') return `## ${b.text}`
+      if (b.kind === 'code') return '```\n' + b.text + '\n```'
+      return 'text' in b ? b.text : ''
+    }).join('\n')
+    return done({ title: n.title, markdown, color: n.color, emoji: n.emoji, tags: [...n.tags] })
+  },
+
+  createFromCard(card) {
+    const colors = ['none', 'sand', 'sage', 'sky', 'rose', 'lilac', 'butter']
+    const id = uuidv7()
+    saveNote({
+      id, title: card.title.trim(), body: mockMarkdown(card.markdown) as NoteInput['body'], categoryId: null,
+      color: (card.color && colors.includes(card.color) ? card.color : 'none') as NoteInput['color'],
+      pinned: false, archived: false, trashedAt: null, reminderAt: null, reminderDone: false, reminderDoing: false,
+      statusOn: false, reminderRepeat: null, emoji: card.emoji ?? null,
+      tags: (card.tags ?? []).map((t) => t.trim().replace(/^#/, '').toLowerCase()).filter(Boolean),
+    })
+    return done(id)
+  },
+
   noteText(id) {
     const n = notes.get(id)
     if (!n) return done('')

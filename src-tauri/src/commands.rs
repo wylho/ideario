@@ -354,6 +354,18 @@ pub fn duplicate_note(core: Core_, id: String) -> Result<String> {
     core.with(|s| s.duplicate_note(&id))
 }
 
+/// A nota como card do Atrio, para copiar (o Nodo cola como nó com nota).
+#[tauri::command]
+pub fn note_card(core: Core_, id: String) -> Result<crate::store::Card> {
+    core.with(|s| s.note_card(&id))
+}
+
+/// Cola um card do Atrio (do Nodo, ou de outra nota) como nota nova.
+#[tauri::command]
+pub fn create_from_card(core: Core_, card: crate::store::CardInput) -> Result<String> {
+    core.with(|s| s.create_from_card(&card))
+}
+
 #[tauri::command]
 pub fn note_text(core: Core_, id: String) -> Result<String> {
     core.with(|s| s.note_text(&id))

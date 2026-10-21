@@ -52,6 +52,11 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
   aparelhos e esconde também do MCP. Não é criptografia (decisão do usuário, ciente disso).
 - **Exportar nota:** Markdown/HTML num `.zip` com a pasta de anexos (no HTML áudio/vídeo tocam; no Markdown, link);
   PDF com áudio/vídeo como cartão (nome e duração). Nota sem anexo sai num arquivo só.
+- **Atrio** (`wylho/atrio`, pacote `@wylho/atrio`, nome do usuário): biblioteca de código compartilhado com o Nodo,
+  por dependência git numa tag (`github:wylho/atrio#vX.Y.Z`). Não é só estilo: o objetivo é o card inteiro (editor,
+  etiquetas, data, status, anexos, gravações) virar componente lá, com chaves por app (no Nodo a categoria fica
+  desligada). Hoje tem o `atrio.css` (era o `src/app.css`, que saiu daqui: mudança de visual se faz no Atrio e aqui
+  sobe a tag), o `CardBody` (miolo do `NoteCard`) e o card na área de transferência.
 - **Backup local:** manual ("Fazer backup agora") + automático semanal numa pasta escolhida, guardando os 4 últimos.
   Restaurar **junta** com o que existe (como o sync), nada se perde.
 
@@ -241,6 +246,10 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
   subsequência crescente): antes, começar a arrastar numa ordem por data subia todas as notas.
 - Título da nota é `textarea` que cresce (`autosize` no Editor): título longo quebra linha.
 - Filtro "Sem categoria"/"Sem tags": sentinelas `NO_CATEGORY`/`NO_TAGS` (`~none`) no `Filter` (TS e Rust).
+- **Card do Atrio (copiar e colar com o Nodo):** "Copiar como card" no menu da nota e ⌘C com uma nota marcada
+  (`copyCard` em `menus.ts`); colar um card fora de campo de texto cria a nota (`App.svelte`). Núcleo:
+  `Store::note_card` (corpo pelo mesmo `markdown.rs` do MCP) e `Store::create_from_card` (comandos `note_card` e
+  `create_from_card`; cor desconhecida vira a padrão; etiquetas normalizadas). O `NoteCard` usa o `CardBody` do Atrio.
 - **Fase 7 (Android, em andamento; prévia).** Projeto em `src-tauri/gen/android` (pacote `app.ideario`, via
   `tauri.android.conf.json`), compilado só no CI (job "APK (Android)"; aqui o SDK não baixa). APK assinado pela chave dos
   segredos (`ANDROID_KEYSTORE`, alias `ideario`; o SHA-1 vai no cliente OAuth "Android"). Login: a conta do aparelho pelo

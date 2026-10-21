@@ -108,6 +108,8 @@ export const tauriApi: Api = {
   adoptOrder: (sort) => write('adopt_order', { sort }),
   duplicateNote: (id) => write('duplicate_note', { id }),
   noteText: (id) => invoke('note_text', { id }),
+  noteCard: (id) => invoke('note_card', { id }),
+  createFromCard: (card) => write('create_from_card', { card }),
   deleteNote: (id) => write('delete_note', { id }),
 
   getSettings: () => invoke('get_settings'),

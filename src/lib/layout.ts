@@ -3,7 +3,7 @@ import type { NoteSummary } from './types'
 /**
  * Altura aproximada de um card de nota (px) numa coluna de largura `w`.
  * Só serve para distribuir os cards entre as colunas da masonry; não precisa ser exata.
- * Os números seguem os estilos de `.card` em app.css.
+ * Os números seguem os estilos de `.card` em atrio.css (@wylho/atrio).
  */
 export function estimateCard(n: NoteSummary, w: number): number {
   const inner = Math.max(80, w - 26)

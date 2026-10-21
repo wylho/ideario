@@ -1,5 +1,6 @@
 // Camada de dados da UI. No app, os comandos Tauri (`invoke`) do núcleo Rust (SQLite local, Fase 1);
 // no navegador (`npm run dev`, prévia) e nos testes e2e, um mock em memória com dados de exemplo.
+import type { ClipCard } from '@wylho/atrio'
 import type {
   Attachment, AttachmentKind, AttachmentRow, KeepReport, ExportReport, LinkPreview, BackupManifest, BackupReport, BackupStatus, RestoreReport, Box, McpInfo, OrphanCounts, Millis, Category, Filter, NoteDetail, NoteInput, NotePatch, NoteSort, NoteSummary, Settings, SyncState, SyncStatus, TagCount, Tone, UpdateInfo, SharedIn, ViewCounts, ReminderStatus,
 } from '../types'
@@ -69,6 +70,10 @@ export interface Api {
   duplicateNote(id: string): Promise<string>
   /** Texto da nota para copiar, com a estrutura em texto simples (tópicos, tarefas). */
   noteText(id: string): Promise<string>
+  /** A nota como card do Atrio, para copiar (o Nodo cola como nó com nota). */
+  noteCard(id: string): Promise<ClipCard>
+  /** Cola um card do Atrio (do Nodo, ou de outra nota) como nota nova; devolve o id. */
+  createFromCard(card: ClipCard): Promise<string>
   /** Apaga definitivamente (só a partir da lixeira). */
   deleteNote(id: string): Promise<void>
 
