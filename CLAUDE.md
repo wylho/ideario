@@ -88,6 +88,8 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
   **Atrio 0.16.0:** a barra do topo do card aberto é a `CardTopBar` do Atrio (a mesma do Nodo); o `Editor.svelte`
   só passa o rótulo (editada há…, ID curto), fixar e os itens do Ideario no menu (Exportar, Arquivar, Lixeira; na
   lixeira, o snippet `trashMenu` troca o menu).
+  **Atrio 0.17.1:** o visualizador de anexos é o `AttachmentViewer` de `@wylho/atrio/viewer` (o mesmo do Nodo);
+  `Lightbox.svelte` só liga baixar e "Abrir nota"; `PdfViewer.svelte` saiu e `lib/pdf.ts` reexporta o `openPdf` de lá.
   Antes no Atrio **0.11.0** (capa e anexos na prévia em Markdown; foto com o cursor numa lista entra depois dela).
   Desde a 0.9.0, as pílulas do card da lista são o `CardPills` do Atrio; com `onstatus`, a nota que tem status (ou
   lembrete) mostra o seletor de três cores no card e muda ali mesmo, sem abrir (pedido do usuário). O `vite.config.ts`
