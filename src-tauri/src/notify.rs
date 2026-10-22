@@ -130,6 +130,8 @@ fn schedule(app: &AppHandle, scheduled: &mut Vec<crate::reminders::Planned>) {
             .schedule(Schedule::At { date, repeating: false, allow_while_idle: true })
             .show();
     }
+    // O plugin só devolve o número da notificação tocada: a nota de cada número fica guardada aqui.
+    let _ = app.state::<Core>().with(|s| crate::reminders::remember_keys(s, &plan, now()));
     *scheduled = plan;
 }
 

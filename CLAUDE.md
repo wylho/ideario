@@ -276,5 +276,7 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
   JSON): comandos binários aceitam o corpo cru ou lista de bytes (`body_bytes` em `commands.rs`). `data-platform="android"` no `<html>` esconde
   o que só existe no desktop (bandeja, Claude, backup em pasta, importar por arquivo). Arquivos (`FilesPlugin.kt` +
   `device.rs`): baixar vai para Downloads (MediaStore), exportar abre o Compartilhar do sistema, PDF pela impressão do
-  sistema. Notificação com `ic_stat_ideario` (`tauri.android.conf.json`); tocar abre a nota (`SharePlugin.kt` lê o
-  `extra.note`). Ainda não: backup e importar do Keep no celular, widget.
+  sistema. Notificação com `ic_stat_ideario` (em cada aviso, `notify.rs`; `res/raw/keep.xml` impede o R8 de jogar o
+  ícone fora, senão sai um genérico); tocar abre a nota: o plugin 2.7 não devolve o `extra`, só o número da
+  notificação, que o núcleo troca pela nota (`reminders::remember_keys`/`note_for_key`, guardado em `sync_state`,
+  30 dias; `SharePlugin.kt` manda `notification`, `share.rs` resolve). Ainda não: backup e importar do Keep no celular, widget.

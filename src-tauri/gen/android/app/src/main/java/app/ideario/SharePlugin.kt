@@ -66,16 +66,20 @@ class SharePlugin(private val activity: Activity) : Plugin(activity) {
     pending = data
   }
 
-  /** Tocou na notificação de um lembrete (agendada pelo plugin de notificação, com a nota em `extra.note`). */
+  /**
+   * Tocou na notificação de um lembrete (agendada pelo plugin de notificação). A nota viria em `extra.note`, mas o
+   * plugin (2.7) não põe o objeto no toque: vem só o número da notificação, que o núcleo troca pela nota.
+   */
   private fun noteFromNotification(intent: Intent): Boolean {
     if (intent.getBooleanExtra(HANDLED, false)) return false
-    val json = intent.getStringExtra("LocalNotficationObject") ?: return false
-    val note = runCatching { JSONObject(json).optJSONObject("extra")?.optString("note") }.getOrNull()
-    if (note.isNullOrEmpty()) return false
+    val json = intent.getStringExtra("LocalNotficationObject")
+    val note = json?.let { runCatching { JSONObject(it).optJSONObject("extra")?.optString("note") }.getOrNull() }
+    val key = intent.getIntExtra("NotificationId", Int.MIN_VALUE)
+    if (note.isNullOrEmpty() && key == Int.MIN_VALUE) return false
     // Já tratado: voltar ao app ou girar a tela não abre a nota de novo.
     intent.putExtra(HANDLED, true)
     val data = JSObject()
-    data.put("note", note)
+    if (!note.isNullOrEmpty()) data.put("note", note) else data.put("notification", key)
     data.put("files", JSArray())
     pending = data
     return true

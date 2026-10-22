@@ -14,6 +14,10 @@ pub struct Shared {
     files: Vec<String>,
     /// Tocou na notificação de um lembrete: a nota a abrir.
     note: Option<String>,
+    /// Número da notificação tocada (o plugin de notificação não devolve a nota): `take_shared` troca pela nota.
+    #[serde(default, skip_serializing)]
+    #[cfg_attr(not(target_os = "android"), allow(dead_code))]
+    notification: Option<i32>,
 }
 
 #[cfg(target_os = "android")]
@@ -48,11 +52,22 @@ pub async fn take_shared(app: AppHandle) -> Result<Option<Shared>, String> {
     {
         use tauri::Manager;
         return tauri::async_runtime::spawn_blocking(move || {
-            app.state::<android::Share>()
+            let mut shared = app
+                .state::<android::Share>()
                 .0
                 .run_mobile_plugin::<android::Taken>("take", ())
                 .map(|t| t.shared)
-                .map_err(|e| e.to_string())
+                .map_err(|e| e.to_string())?;
+            if let Some(s) = shared.as_mut().filter(|s| s.note.is_none()) {
+                if let Some(key) = s.notification {
+                    s.note = app
+                        .state::<crate::commands::Core>()
+                        .with(|st| crate::reminders::note_for_key(st, key))
+                        .ok()
+                        .flatten();
+                }
+            }
+            Ok(shared)
         })
         .await
         .map_err(|e| e.to_string())?;

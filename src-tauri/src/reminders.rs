@@ -263,6 +263,35 @@ pub fn plan<Tz: TimeZone>(store: &Store, now: Millis, tz: &Tz) -> Result<Vec<Pla
 }
 
 #[cfg(any(target_os = "android", test))]
+/// Onde fica, só neste aparelho, a nota de cada número de notificação agendado.
+const KEYS_STATE: &str = "notification_keys";
+
+#[cfg(any(target_os = "android", test))]
+/// Por quanto tempo um número de notificação ainda leva à nota (tocar numa notificação antiga).
+const KEYS_KEEP: Millis = 30 * 86_400_000;
+
+#[cfg(any(target_os = "android", test))]
+/// Guarda a nota de cada número agendado, junto com os de antes (a notificação já disparada continua na bandeja, e
+/// tocar nela tem de achar a nota mesmo depois de a agenda mudar). Esquece o que passou há mais de `KEYS_KEEP`.
+pub fn remember_keys(store: &Store, plan: &[Planned], now: Millis) -> Result<()> {
+    let mut keys: Map<String, Value> =
+        store.sync_value(KEYS_STATE)?.and_then(|v| serde_json::from_str(&v).ok()).unwrap_or_default();
+    for p in plan {
+        keys.insert(p.key.to_string(), serde_json::json!([p.note, p.at]));
+    }
+    keys.retain(|_, v| v.get(1).and_then(Value::as_i64).is_some_and(|at| at >= now - KEYS_KEEP));
+    store.set_sync_value(KEYS_STATE, Some(&Value::Object(keys).to_string()))
+}
+
+#[cfg(any(target_os = "android", test))]
+/// A nota de uma notificação tocada, pelo número dela (o plugin de notificação do Android só devolve o número).
+pub fn note_for_key(store: &Store, key: i32) -> Result<Option<String>> {
+    let keys: Map<String, Value> =
+        store.sync_value(KEYS_STATE)?.and_then(|v| serde_json::from_str(&v).ok()).unwrap_or_default();
+    Ok(keys.get(&key.to_string()).and_then(|v| v.get(0)).and_then(Value::as_str).map(str::to_string))
+}
+
+#[cfg(any(target_os = "android", test))]
 fn plan_key(note: &str, at: Millis) -> i32 {
     use sha2::{Digest, Sha256};
     let h = Sha256::digest(format!("{note}@{at}").as_bytes());
@@ -449,6 +478,26 @@ mod tests {
         let keys: std::collections::HashSet<i32> = p.iter().map(|x| x.key).collect();
         assert_eq!(keys.len(), p.len());
         assert!(p.iter().all(|x| x.key >= 0));
+    }
+
+    #[test]
+    fn a_tapped_notification_finds_its_note_even_after_the_reminder_moved_on() {
+        let s = Store::memory();
+        let tz = sp();
+        let now = at(&tz, 2026, 10, 9, 12);
+        s.save_note(&note("b", "Plantas", Some(at(&tz, 2026, 10, 9, 18)), Some("day"))).unwrap();
+        let p = plan(&s, now, &tz).unwrap();
+        remember_keys(&s, &p, now).unwrap();
+        let fired = p[0].key;
+        // o lembrete disparou e o app, ao abrir, já mudou a agenda: o número continua levando à nota
+        let later = now + 7 * HOUR;
+        let p2 = plan(&s, later, &tz).unwrap();
+        remember_keys(&s, &p2, later).unwrap();
+        assert_eq!(note_for_key(&s, fired).unwrap().as_deref(), Some("b"));
+        assert_eq!(note_for_key(&s, 12345).unwrap(), None, "número que nunca foi agendado");
+        // o que passou há mais de 30 dias sai, para a lista não crescer para sempre
+        remember_keys(&s, &[], now + 31 * 24 * HOUR).unwrap();
+        assert_eq!(note_for_key(&s, fired).unwrap(), None);
     }
 
     #[test]

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- O ícone da notificação só é usado pelo nome (o núcleo manda "ic_stat_ideario" ao plugin de notificação, que acha
+     o recurso com getIdentifier). Sem isto, o build de release (optimization = R8 com redução de recursos) o descarta
+     e o Android mostra um ícone genérico. -->
+<resources xmlns:tools="http://schemas.android.com/tools" tools:keep="@drawable/ic_stat_ideario" />
