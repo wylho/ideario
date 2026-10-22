@@ -177,7 +177,7 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
   tauri-driver), desempenho (`tests/native/perf.mjs`, build de release) e `npm run tauri build`.
 - Site (`site/`, Cloudflare Pages em ideario.pages.dev) e `README.md` têm o mesmo conteúdo: ao mudar um, mudar o outro
   (skill `sync-site`; prints por `scripts/site-shots.mjs`).
-- **Versão 0.6.0** (22/10/2026, pedido do usuário: lançar tudo): o app em inglês e português (Configurações →
+- **Versão 0.6.0 lançada** (22/10/2026, Release `v0.6.0`; pedido do usuário: lançar tudo): o app em inglês e português (Configurações →
   Idioma), o card do Atrio 0.18.2 nos dois idiomas, notas de exemplo em inglês na prévia, licença GPL-3.0-or-later,
   site e README em inglês com o português em `/pt/` e `README.pt-BR.md`.
 - **Versão 0.5.1 lançada** (22/10/2026): no Android, notificação com o ícone monocromático e tocar abre a nota.
