@@ -4,6 +4,13 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
 **Especificação completa: `docs/SPEC.md`. Leia antes de qualquer tarefa.** O protótipo de design está em `prototype/`.
 
 ## Regras do projeto
+- **O Atrio é o hub (regra do usuário, vale para toda tarefa):** tudo o que o Ideario e o Nodo têm em comum mora
+  **só** no Atrio (`wylho/atrio`: componentes, CSS, regras do card, formatos, e no Rust a crate `atrio`), e os apps
+  só usam. O card é **um só**: não parecido, **exatamente o mesmo** nos dois programas (mesma prévia, mesmas regras,
+  mesmo visual). Antes de criar ou corrigir algo num app, perguntar: isto existe ou deveria existir no outro? Se sim,
+  a mudança se faz no Atrio, sobe a tag e os **dois** apps sobem juntos (nunca deixar um app numa tag velha). Mesmo
+  quando o usuário fala de um app só, se o assunto é peça do Atrio, o caminho é o Atrio. Plano em
+  `atrio/docs/UNIFICACAO.md`.
 - **Local-first**: a UI lê e escreve só no SQLite local. Rede apenas em segundo plano. Nada de spinner para abrir nota ou lista.
 - Notas, Lembretes, Arquivos e Moodboard são **visões do mesmo banco**. Não duplicar dados.
 - Cada nota é um **Y.Doc** (Yjs/yrs). As colunas SQL são uma projeção derivada dele.
