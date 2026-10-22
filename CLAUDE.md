@@ -181,7 +181,7 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
   resumo, "Tabela · N colunas × N linhas" e os nomes das colunas (no card estreito as colunas viravam fiapos). A tabela
   inteira continua no card aberto. `src/lib/layout.ts` estima a altura do resumo; o teste de colar Markdown confere o
   `.pv-tsum`. O MCP diz que o título é texto simples (Markdown não é reconhecido nele).
-- **Versão 0.6.2** (22/10/2026, pedido do usuário: "lança tudo"): a correção do `export_note` do MCP (abaixo).
+- **Versão 0.6.2 lançada** (22/10/2026, Release `v0.6.2`, pedido do usuário: "lança tudo"): a correção do `export_note` do MCP (abaixo).
 - **MCP conferido de ponta a ponta depois da 0.6.1** (pergunta do usuário): as 36 ferramentas rodando no `ideario --mcp`
   de verdade, com dados de teste numa pasta à parte (`XDG_DATA_HOME`). Corrigido: `export_note` gravava por cima de
   uma exportação anterior com o mesmo nome; agora usa `atrio::attach::unique_path` ("Receita (1).zip"), teste
