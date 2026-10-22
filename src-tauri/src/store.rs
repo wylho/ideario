@@ -26,19 +26,8 @@ const TRASH_DAYS: Millis = 30;
 const STEP: f64 = 1024.0;
 /// A ordem personalizada daqui já foi para o Drive (todas as notas levam o seu lugar no Y.Doc).
 const ORDER_SHARED: &str = "order_shared";
-/// Repetições de lembrete que existem.
-pub const REPEATS: [&str; 4] = ["day", "week", "month", "year"];
-
-/// Emoji de capa aceito: um emoji só (sequências com ZWJ, tom de pele, bandeiras e teclas incluídas), sem letras nem
-/// espaços. Qualquer outra coisa vira "sem emoji".
-pub fn clean_emoji(s: &str) -> Option<String> {
-    let s = s.trim();
-    let ok = !s.is_empty()
-        && s.len() <= 32
-        && !s.is_ascii()
-        && !s.chars().any(|c| c.is_whitespace() || c.is_control() || c.is_ascii_alphabetic());
-    ok.then(|| s.to_string())
-}
+/// Repetições de lembrete e emoji de capa: as regras do card, as mesmas do Nodo (crate do Atrio).
+pub use atrio::text::{clean_emoji, REPEATS};
 /// Cores das categorias (as mesmas de src/lib/colors.ts).
 const CATEGORY_COLORS: [&str; 10] = ["#C26A3D", "#B8901F", "#4F8A3E", "#3E8E7E", "#3D63D6", "#8A6BC4", "#C2557A", "#C0392B", "#8B5E3C", "#5F7380"];
 /// Formato da projeção gravada (2: blocos de arquivo levam o hash, para a miniatura).
@@ -1472,12 +1461,7 @@ impl Store {
     /// Nota nova a partir de um card colado (do Nodo, ou de outra nota). Devolve o id.
     pub fn create_from_card(&self, card: &CardInput) -> Result<String> {
         let color = card.color.as_deref().filter(|c| CARD_COLORS.contains(c)).unwrap_or("none");
-        let mut tags: Vec<String> = Vec::new();
-        for t in card.tags.iter().map(|t| crate::text::normalize_tag(t)).filter(|t| !t.is_empty()) {
-            if !tags.contains(&t) {
-                tags.push(t);
-            }
-        }
+        let tags = atrio::text::clean_tags(&card.tags);
         let input = NoteInput {
             id: uuid::Uuid::now_v7().to_string(),
             title: card.title.trim().to_string(),

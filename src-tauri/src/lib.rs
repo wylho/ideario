@@ -14,7 +14,8 @@ mod export;
 mod gtk_look;
 mod keep;
 mod link;
-mod markdown;
+/// Corpo da nota ↔ Markdown e regras de texto: os mesmos do Nodo, da crate do Atrio.
+use atrio::markdown;
 mod mcp;
 mod media;
 mod notify;
@@ -26,11 +27,11 @@ mod system_bars;
 mod sync;
 mod system_fonts;
 mod system_theme;
-mod text;
+use atrio::text;
 #[cfg(desktop)]
 mod updates;
 #[cfg(test)]
-mod testdoc;
+use atrio::testdoc;
 mod ydoc;
 
 use tauri::{Manager, WebviewWindowBuilder};

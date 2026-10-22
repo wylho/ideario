@@ -73,7 +73,11 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
   Y.Doc e salvamento contínuo, sync, fixar, arquivar, lixeira, exportar, modo documento, barra do topo no snippet
   `top`), com `features()` (tudo ligado) e um `CardHost` sobre o `api`. Mudança no card (blocos, anexos, gravador,
   lembrete, status, etiquetas, cor, barra de formatação) se faz no Atrio.
-  Hoje no Atrio **0.11.0** (capa e anexos na prévia em Markdown; foto com o cursor numa lista entra depois dela).
+  **Núcleo também pelo Atrio** (unificação, fase 1; Atrio 0.12.0): `src-tauri` depende da crate `atrio` na mesma tag
+  do Nodo; saíram as cópias `markdown.rs`, `text.rs` e `testdoc.rs` e a forma canônica de `ydoc.rs` (`lib.rs` faz
+  `use atrio::{markdown, text}`; `store.rs` reexporta `REPEATS`/`clean_emoji`; `clean_tags` do MCP e do card colado
+  são os do Atrio). Plano em `atrio/docs/UNIFICACAO.md`.
+  Antes no Atrio **0.11.0** (capa e anexos na prévia em Markdown; foto com o cursor numa lista entra depois dela).
   Desde a 0.9.0, as pílulas do card da lista são o `CardPills` do Atrio; com `onstatus`, a nota que tem status (ou
   lembrete) mostra o seletor de três cores no card e muda ali mesmo, sem abrir (pedido do usuário). O `vite.config.ts`
   deixa o Atrio fora do pré-empacotamento (senão o `npm run dev` quebra nos `.svelte.ts`).

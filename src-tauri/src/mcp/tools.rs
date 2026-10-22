@@ -1070,13 +1070,7 @@ fn create(core: &Core, a: &Args) -> Result<Out> {
 }
 
 fn clean_tags(tags: Vec<String>) -> Vec<String> {
-    let mut out: Vec<String> = Vec::new();
-    for t in tags.iter().map(|t| normalize_tag(t)).filter(|t| !t.is_empty()) {
-        if !out.contains(&t) {
-            out.push(t);
-        }
-    }
-    out
+    atrio::text::clean_tags(&tags)
 }
 
 /// Grava a nota mudada (só o que mudou vai para o Y.Doc) e anota para o app aberto.
