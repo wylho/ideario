@@ -25,8 +25,8 @@ pelo seu próprio Google Drive.</p>
 </p>
 
 <picture>
-  <source srcset="site/img/notas-escuro.webp" media="(prefers-color-scheme: dark)">
-  <img src="site/img/notas.webp" alt="Tela principal do Ideario: notas coloridas em cards, com checklists, fotos, lembretes e categorias na lateral">
+  <source srcset="site/img/pt/notas-escuro.webp" media="(prefers-color-scheme: dark)">
+  <img src="site/img/pt/notas.webp" alt="Tela principal do Ideario: notas coloridas em cards, com checklists, fotos, lembretes e categorias na lateral">
 </picture>
 
 ## Uma nota, seis jeitos de ver
@@ -79,7 +79,7 @@ arrasta para onde quiser.
 - Cole um link e ele vira um cartão com título e imagem
 - Um emoji grande de capa para achar a nota de longe
 
-<img src="site/img/nota.webp" alt="Nota aberta com três fotos lado a lado, um checklist e um PDF anexado">
+<img src="site/img/pt/nota.webp" alt="Nota aberta com três fotos lado a lado, um checklist e um PDF anexado">
 
 ## Lembretes que avisam de verdade
 
@@ -87,35 +87,35 @@ Notificação do sistema na hora certa, com Adiar e Concluir. Lembretes que se r
 Se o computador estava desligado, o Ideario avisa o que passou assim que abrir. Cada lembrete tem um status em três
 cores: vermelho (a fazer), amarelo (em andamento) e verde (concluído).
 
-<img src="site/img/lembretes.webp" alt="Lista de lembretes agrupada em atrasados, hoje, amanhã e próximos">
+<img src="site/img/pt/lembretes.webp" alt="Lista de lembretes agrupada em atrasados, hoje, amanhã e próximos">
 
 ## Calendário
 
 Os mesmos lembretes, no dia de cada um, por mês ou por semana. Arraste para outro dia e a data muda (a hora fica);
 toque no + de um dia para criar um lembrete nele. Os que se repetem já mostram as próximas vezes.
 
-<img src="site/img/calendario.webp" alt="Calendário do mês com os lembretes em cada dia, coloridos pelo status">
+<img src="site/img/pt/calendario.webp" alt="Calendário do mês com os lembretes em cada dia, coloridos pelo status">
 
 ## Kanban
 
 A fazer, em andamento e concluído, em três colunas. Arraste o card de uma coluna para outra ou toque no seletor de
 cores dele. Tudo isso também pelo Claude.
 
-<img src="site/img/kanban.webp" alt="Kanban com os lembretes em três colunas: a fazer, em andamento e concluído">
+<img src="site/img/pt/kanban.webp" alt="Kanban com os lembretes em três colunas: a fazer, em andamento e concluído">
 
 ## Moodboard das suas fotos
 
 Todas as imagens de todas as notas num mural só, com a paleta de cores de cada uma. Filtre por tom e encontre aquela
 referência sem lembrar em que nota ela estava.
 
-<img src="site/img/moodboard.webp" alt="Moodboard com as imagens das notas em mosaico e a paleta de cores de cada uma">
+<img src="site/img/pt/moodboard.webp" alt="Moodboard com as imagens das notas em mosaico e a paleta de cores de cada uma">
 
 ## Quando a nota cresce, vira documento
 
 Um clique e a nota abre em página inteira, com coluna de leitura. Exporte em Markdown, HTML ou PDF, com as fotos e
 anexos juntos.
 
-<img src="site/img/documento.webp" alt="Nota aberta no modo documento, em página inteira">
+<img src="site/img/pt/documento.webp" alt="Nota aberta no modo documento, em página inteira">
 
 ## Funciona com o Claude
 
@@ -124,7 +124,7 @@ como comprado”, “o que eu anotei sobre a viagem?”. O Claude fala com o Ide
 nosso no meio, e as categorias protegidas por PIN ficam de fora. Cada nota tem um ID curto (#a1b2c3d4): copie e diga
 “na nota #a1b2c3d4, monta uma tabela com os gastos”. Guia: [`docs/MCP.md`](docs/MCP.md).
 
-<img src="site/img/claude.webp" alt="Configurações do Ideario com a sincronização do Google Drive e o botão para ligar no Claude Desktop">
+<img src="site/img/pt/claude.webp" alt="Configurações do Ideario com a sincronização do Google Drive e o botão para ligar no Claude Desktop">
 
 ## Do tamanho que a janela estiver
 
@@ -132,7 +132,7 @@ Janela grande, lateral com categorias e tags; feche a lateral e as categorias vi
 Janela estreita, o layout se ajusta, com as visões numa barra embaixo. Tema claro, escuro ou o do sistema, com as
 cores de destaque do seu Windows, macOS ou Linux.
 
-<p align="center"><img src="site/img/janela-estreita.webp" width="300" alt="O Ideario numa janela estreita, com as notas em duas colunas e a barra de visões embaixo"></p>
+<p align="center"><img src="site/img/pt/janela-estreita.webp" width="300" alt="O Ideario numa janela estreita, com as notas em duas colunas e a barra de visões embaixo"></p>
 
 ## E mais
 
