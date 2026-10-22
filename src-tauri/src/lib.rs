@@ -17,9 +17,9 @@ mod link;
 /// Corpo da nota ↔ Markdown e regras de texto: os mesmos do Nodo, da crate do Atrio.
 use atrio::markdown;
 mod mcp;
-mod media;
+use atrio::media;
 mod notify;
-mod projection;
+use atrio::projection;
 mod reminders;
 mod share;
 mod store;

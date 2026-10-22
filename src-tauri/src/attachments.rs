@@ -5,7 +5,6 @@
 
 use std::path::{Path, PathBuf};
 
-use sha2::{Digest, Sha256};
 use tauri::http::{header, Request, Response, StatusCode};
 
 use crate::media::{self, Quality};
@@ -15,139 +14,16 @@ pub fn dir(data: &Path) -> PathBuf {
     data.join("attachments")
 }
 
-/// Tipo do anexo pelo MIME e pela extensão (o mesmo critério do mock).
-pub fn kind_of(mime: &str, name: &str) -> &'static str {
-    let ext = name.rsplit_once('.').map(|(_, e)| e.to_lowercase()).unwrap_or_default();
-    let has = |words: &[&str]| words.iter().any(|w| mime.contains(w));
-    if mime.starts_with("image/") {
-        "image"
-    } else if mime.starts_with("video/") {
-        "video"
-    } else if mime.starts_with("audio/") {
-        "audio"
-    } else if mime == "application/pdf" || ext == "pdf" {
-        "pdf"
-    } else if has(&["sheet", "excel", "csv"]) || ["xls", "xlsx", "ods", "csv"].contains(&ext.as_str()) {
-        "sheet"
-    } else if has(&["word", "document", "text", "rtf"]) || ["doc", "docx", "odt", "txt", "md", "rtf"].contains(&ext.as_str()) {
-        "doc"
-    } else {
-        "other"
-    }
-}
 
-/// Tipo MIME pela extensão, para arquivos que chegam pelo caminho (arrastados do sistema).
-pub fn mime_of(name: &str) -> &'static str {
-    let ext = name.rsplit_once('.').map(|(_, e)| e.to_lowercase()).unwrap_or_default();
-    match ext.as_str() {
-        "jpg" | "jpeg" => "image/jpeg",
-        "png" => "image/png",
-        "gif" => "image/gif",
-        "webp" => "image/webp",
-        "heic" => "image/heic",
-        "heif" => "image/heif",
-        "avif" => "image/avif",
-        "bmp" => "image/bmp",
-        "svg" => "image/svg+xml",
-        "tif" | "tiff" => "image/tiff",
-        "mp4" | "m4v" => "video/mp4",
-        "mov" => "video/quicktime",
-        "webm" => "video/webm",
-        "mkv" => "video/x-matroska",
-        "avi" => "video/x-msvideo",
-        "mp3" => "audio/mpeg",
-        "m4a" => "audio/mp4",
-        "aac" => "audio/aac",
-        "wav" => "audio/wav",
-        "ogg" | "oga" | "opus" => "audio/ogg",
-        "flac" => "audio/flac",
-        "pdf" => "application/pdf",
-        "zip" => "application/zip",
-        "txt" => "text/plain",
-        "md" => "text/markdown",
-        "csv" => "text/csv",
-        "json" => "application/json",
-        "html" | "htm" => "text/html",
-        "doc" => "application/msword",
-        "docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        "xls" => "application/vnd.ms-excel",
-        "xlsx" => "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        "ppt" => "application/vnd.ms-powerpoint",
-        "pptx" => "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-        "odt" => "application/vnd.oasis.opendocument.text",
-        "ods" => "application/vnd.oasis.opendocument.spreadsheet",
-        "rtf" => "application/rtf",
-        _ => "application/octet-stream",
-    }
-}
 
-/// Anexo pronto para gravar: já passou pelo pipeline (fotos) e tem o hash do conteúdo final.
-pub struct Prepared {
-    pub bytes: Vec<u8>,
-    pub thumb: Option<Vec<u8>>,
-    pub att: Attachment,
-}
+/// Anexo pronto para gravar (o preparo é o do Atrio: fotos pelo pipeline, o resto como veio).
+pub use atrio::attach::Prepared;
+// Regras dos anexos: as do Atrio, as mesmas do Nodo.
+pub use atrio::attach::{hash_from_path, kind_of, mime_of, parse_range, wants_thumb, CHUNK};
 
-/// Trabalho pesado, sem tocar no banco (roda fora da trava e da thread da janela): fotos passam pelo pipeline
-/// (SPEC §7); o resto fica exatamente como veio.
+/// Trabalho pesado, sem tocar no banco (roda fora da trava e da thread da janela).
 pub fn prepare(bytes: Vec<u8>, name: &str, mime: &str, quality: Quality) -> Prepared {
-    let mime = if mime.is_empty() { mime_of(name) } else { mime };
-    let kind = kind_of(mime, name);
-    let orig_len = bytes.len() as i64;
-    let processed = if kind == "image" { media::process(&bytes, mime, quality).ok() } else { None };
-    let (bytes, thumb, att) = match processed {
-        Some(p) => {
-            let converted = p.mime != mime;
-            let smaller = (p.bytes.len() as i64) < orig_len;
-            // Virou WebP: o nome acompanha, para o arquivo baixado abrir no programa certo.
-            let name = if converted { with_extension(name, "webp") } else { name.to_string() };
-            let att = Attachment {
-                hash: String::new(),
-                kind: kind.into(),
-                mime: p.mime,
-                name,
-                bytes: p.bytes.len() as i64,
-                // Economia só quando houve: a interface soma `orig_bytes - bytes`.
-                orig_bytes: (converted && smaller).then_some(orig_len),
-                width: Some(p.width as i64),
-                height: Some(p.height as i64),
-                palette: Some(p.palette),
-                tone: Some(p.tone.as_str().into()),
-                added_at: now(),
-            };
-            (p.bytes, Some(p.thumb), att)
-        }
-        None => {
-            // Não é foto, ou a foto não pôde ser lida (HEIC, SVG…): guarda como veio.
-            let (width, height) = match (kind, imagesize::blob_size(&bytes)) {
-                ("image", Ok(s)) => (Some(s.width as i64), Some(s.height as i64)),
-                _ => (None, None),
-            };
-            let att = Attachment {
-                hash: String::new(),
-                kind: kind.into(),
-                mime: mime.into(),
-                name: name.into(),
-                bytes: orig_len,
-                orig_bytes: None,
-                width,
-                height,
-                palette: None,
-                tone: None,
-                added_at: now(),
-            };
-            (bytes, None, att)
-        }
-    };
-    let hash = format!("{:x}", Sha256::digest(&bytes));
-    Prepared { bytes, thumb, att: Attachment { hash, ..att } }
-}
-
-fn with_extension(name: &str, ext: &str) -> String {
-    match name.rsplit_once('.') {
-        Some((stem, _)) if !stem.is_empty() => format!("{stem}.{ext}"),
-        _ => format!("{name}.{ext}"),
-    }
+    atrio::attach::prepare(bytes, name, mime, quality, now())
 }
 
 /// Grava o arquivo (uma vez por conteúdo) e a miniatura, e registra o anexo. Devolve o anexo como ficou no banco.
@@ -213,29 +89,12 @@ pub fn quality(store: &Store) -> Quality {
 /// Copia o anexo para a pasta Downloads, sem sobrescrever nada ("nome (1).pdf"). Devolve o caminho salvo.
 pub fn save_copy(data: &Path, downloads: &Path, hash: &str, name: &str) -> Result<PathBuf, String> {
     let src = dir(data).join(hash);
-    let safe: String = name.chars().map(|c| if "/\\:*?\"<>|".contains(c) { '_' } else { c }).collect();
-    let safe = if safe.trim().is_empty() { hash.to_string() } else { safe };
-    let (stem, ext) = match safe.rsplit_once('.') {
-        Some((s, e)) if !s.is_empty() => (s.to_string(), format!(".{e}")),
-        _ => (safe.clone(), String::new()),
-    };
-    let mut dest = downloads.join(&safe);
-    let mut i = 1;
-    while dest.exists() {
-        dest = downloads.join(format!("{stem} ({i}){ext}"));
-        i += 1;
-    }
+    let dest = atrio::attach::unique_path(downloads, if name.trim().is_empty() { hash } else { name });
     std::fs::create_dir_all(downloads).map_err(|e| e.to_string())?;
     std::fs::copy(&src, &dest).map_err(|e| e.to_string())?;
     Ok(dest)
 }
 
-/// Responde a `att://localhost/<hash>` com o arquivo, inteiro ou só o trecho pedido (Range).
-/// `?thumb` pede a miniatura (WebP); sem miniatura (não é foto, ou ainda não gerada), vai o arquivo.
-/// Hash pedido em `att://localhost/<hash>`.
-pub fn hash_of(req: &Request<Vec<u8>>) -> String {
-    req.uri().path().trim_start_matches('/').chars().filter(|c| c.is_ascii_hexdigit()).collect()
-}
 
 /// O que `serve` precisa do banco: lido de uma vez, e a trava do banco é solta antes de ler o arquivo.
 pub struct Info {
@@ -247,9 +106,6 @@ pub fn info(store: &Store, hash: &str) -> Info {
     Info { kind: store.attachment_kind(hash).ok().flatten(), mime: store.attachment_mime(hash).ok().flatten() }
 }
 
-/// Pedaço máximo para um pedido aberto ("bytes=N-"): o player pede o resto aos poucos, sem ler um vídeo de 500 MB
-/// inteiro a cada salto.
-const CHUNK: u64 = 4 * 1024 * 1024;
 
 pub fn serve(info: Info, data: &Path, req: &Request<Vec<u8>>) -> Response<Vec<u8>> {
     let hash = hash_of(req);
@@ -257,7 +113,7 @@ pub fn serve(info: Info, data: &Path, req: &Request<Vec<u8>>) -> Response<Vec<u8
     if hash.is_empty() {
         return not_found();
     }
-    if req.uri().query().is_some_and(|q| q.split('&').any(|p| p == "thumb")) {
+    if wants_thumb(req.uri().query()) {
         match std::fs::read(thumb_path(data, &hash)) {
             // Vazio = já tentou e não há prévia (PDF protegido, vídeo sem codec): a interface mostra o ícone.
             Ok(bytes) if !bytes.is_empty() => {
@@ -304,20 +160,6 @@ pub fn serve(info: Info, data: &Path, req: &Request<Vec<u8>>) -> Response<Vec<u8
     res.unwrap_or_else(|_| status_only(StatusCode::INTERNAL_SERVER_ERROR))
 }
 
-/// "bytes=a-b", "bytes=a-" (até `CHUNK`) ou "bytes=-n" (os últimos n) → (início, fim) inclusivos.
-fn parse_range(v: &str, len: u64) -> Option<(u64, u64)> {
-    let (a, b) = v.strip_prefix("bytes=")?.split(',').next()?.split_once('-')?;
-    let last = len.checked_sub(1)?;
-    let (start, end) = match (a.trim(), b.trim()) {
-        ("", n) => (len.saturating_sub(n.parse().ok()?), last),
-        (a, "") => {
-            let a: u64 = a.parse().ok()?;
-            (a, a.saturating_add(CHUNK - 1).min(last))
-        }
-        (a, b) => (a.parse().ok()?, b.parse::<u64>().ok()?.min(last)),
-    };
-    (start <= end && start < len).then_some((start, end))
-}
 
 /// Resposta vazia só com o código (não falha: sem cabeçalhos a montar).
 pub fn status_only(code: StatusCode) -> Response<Vec<u8>> {
@@ -334,28 +176,7 @@ mod tests {
         serve(info(store, &hash_of(req)), data, req)
     }
 
-    #[test]
-    fn ranges() {
-        assert_eq!(parse_range("bytes=0-99", 1000), Some((0, 99)));
-        assert_eq!(parse_range("bytes=900-", 1000), Some((900, 999)));
-        assert_eq!(parse_range("bytes=0-", 100 * 1024 * 1024), Some((0, CHUNK - 1)), "aberto: só um pedaço");
-        assert_eq!(parse_range("bytes=-10", 1000), Some((990, 999)));
-        assert_eq!(parse_range("bytes=0-5000", 1000), Some((0, 999)));
-        assert_eq!(parse_range("bytes=1000-", 1000), None);
-        assert_eq!(parse_range("bytes=0-", 0), None);
-        assert_eq!(parse_range("lixo", 1000), None);
-    }
 
-    #[test]
-    fn kinds() {
-        assert_eq!(kind_of("image/png", "a.png"), "image");
-        assert_eq!(kind_of("", "Contrato.PDF"), "pdf");
-        assert_eq!(kind_of("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "x.xlsx"), "sheet");
-        assert_eq!(kind_of("", "notas.md"), "doc");
-        assert_eq!(kind_of("application/zip", "a.zip"), "other");
-        assert_eq!(kind_of(mime_of("Foto.JPG"), "Foto.JPG"), "image");
-        assert_eq!(kind_of(mime_of("aula.m4a"), "aula.m4a"), "audio");
-    }
 
     #[test]
     fn photos_go_through_the_pipeline_and_serve_a_thumbnail() {

@@ -128,21 +128,8 @@ pub struct NoteSummary {
     pub position: f64,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Attachment {
-    pub hash: String,
-    pub kind: String,
-    pub mime: String,
-    pub name: String,
-    pub bytes: i64,
-    pub orig_bytes: Option<i64>,
-    pub width: Option<i64>,
-    pub height: Option<i64>,
-    pub palette: Option<Vec<String>>,
-    pub tone: Option<String>,
-    pub added_at: Millis,
-}
+/// O que se sabe de um anexo: o tipo do Atrio, o mesmo do Nodo.
+pub use atrio::attach::Attachment;
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]

@@ -41,38 +41,6 @@ pub trait Notifier {
     fn show(&self, notice: &Notice);
 }
 
-/// Próxima vez de um lembrete que se repete, depois de `now`, no mesmo horário local. Mês e ano contam a partir da
-/// data original (31/jan, todo mês → 28 ou 29/fev → 31/mar), sem escorregar.
-pub fn next_occurrence<Tz: TimeZone>(at: Millis, repeat: &str, now: Millis, tz: &Tz) -> Option<Millis> {
-    let anchor = tz.timestamp_millis_opt(at).single()?.naive_local();
-    let step = |k: u32| -> Option<NaiveDateTime> {
-        match repeat {
-            "day" => anchor.checked_add_days(Days::new(k as u64)),
-            "week" => anchor.checked_add_days(Days::new(7 * k as u64)),
-            "month" => anchor.checked_add_months(Months::new(k)),
-            "year" => anchor.checked_add_months(Months::new(12 * k)),
-            _ => None,
-        }
-    };
-    // Começa perto de `now` (um lembrete diário de anos atrás não precisa de milhares de voltas).
-    let elapsed_days = ((now - at).max(0) / 86_400_000) as u32;
-    let mut k = match repeat {
-        "day" => elapsed_days.saturating_sub(1).max(1),
-        "week" => (elapsed_days / 7).saturating_sub(1).max(1),
-        "month" => (elapsed_days / 31).saturating_sub(1).max(1),
-        _ => (elapsed_days / 366).saturating_sub(1).max(1),
-    };
-    loop {
-        let local = step(k)?;
-        // Horário que não existe (início do horário de verão): uma hora depois.
-        let when = tz.from_local_datetime(&local).earliest().or_else(|| tz.from_local_datetime(&(local + chrono::Duration::hours(1))).earliest())?;
-        let ms = when.timestamp_millis();
-        if ms > now {
-            return Some(ms);
-        }
-        k += 1;
-    }
-}
 
 /// O que venceu até `now` e ainda não foi avisado neste aparelho. Marca como avisado e reagenda os que se repetem.
 pub fn take_due<Tz: TimeZone>(store: &Store, now: Millis, tz: &Tz) -> Result<Vec<Alert>> {
@@ -113,70 +81,46 @@ pub fn snooze(store: &Store, id: &str, until: Millis) -> Result<()> {
 
 /// Concluir: o que é de uma vez fica concluído; o que se repete pula para a próxima vez (a série continua).
 pub fn complete<Tz: TimeZone>(store: &Store, id: &str, now: Millis, tz: &Tz) -> Result<()> {
-    match store.reminder_of(id)? {
-        Some((at, Some(repeat))) => {
-            store.set_snooze(id, None)?;
-            let Some(next) = next_occurrence(at, &repeat, now.max(at), tz) else { return Ok(()) };
-            let mut patch = Map::new();
-            patch.insert("reminderAt".into(), Value::from(next));
-            // A próxima vez começa do zero (vermelho).
-            patch.insert("reminderDoing".into(), Value::Bool(false));
-            store.reschedule(id, &patch).map(|_| ())
-        }
-        Some((_, None)) => store.set_reminder_done(id, true).map(|_| ()),
-        None => Ok(()),
+    let Some((at, repeat)) = store.reminder_of(id)? else { return Ok(()) };
+    if repeat.is_some() {
+        store.set_snooze(id, None)?;
     }
+    let mut card = CardStatus { reminder_at: Some(at), reminder_repeat: repeat, ..Default::default() };
+    card.complete(now, tz);
+    write_status(store, id, &card)
 }
 
-/// Status do lembrete, o seletor de três cores: vermelho (a fazer), amarelo (em andamento), verde (concluído).
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Status {
-    Todo,
-    Doing,
-    Done,
+/// Grava o que a regra do Atrio decidiu (nada disso conta como edição da nota).
+fn write_status(store: &Store, id: &str, card: &CardStatus) -> Result<()> {
+    let mut patch = Map::new();
+    if let Some(at) = card.reminder_at {
+        patch.insert("reminderAt".into(), Value::from(at));
+    } else {
+        patch.insert("statusOn".into(), Value::Bool(card.status_on));
+    }
+    patch.insert("reminderDone".into(), Value::Bool(card.reminder_done));
+    patch.insert("reminderDoing".into(), Value::Bool(card.reminder_doing));
+    store.reschedule(id, &patch).map(|_| ())
 }
 
-impl Status {
-    pub fn parse(s: &str) -> Option<Status> {
-        match s {
-            "todo" => Some(Status::Todo),
-            "doing" => Some(Status::Doing),
-            "done" => Some(Status::Done),
-            _ => None,
-        }
-    }
+// Status de três cores, a regra do lembrete que se repete e a próxima vez: as do Atrio, as mesmas do Nodo.
+pub use atrio::card::{next_occurrence, Status};
+use atrio::card::CardStatus;
 
-    pub fn of(done: bool, doing: bool) -> Status {
-        match (done, doing) {
-            (true, _) => Status::Done,
-            (false, true) => Status::Doing,
-            (false, false) => Status::Todo,
-        }
-    }
-
-    pub fn name(self) -> &'static str {
-        match self {
-            Status::Todo => "todo",
-            Status::Doing => "doing",
-            Status::Done => "done",
-        }
-    }
-}
-
-/// Muda o status. Com lembrete, verde é concluir (o que se repete pula para a próxima vez e volta ao vermelho). Sem
-/// lembrete, a nota passa a ter status (`statusOn`), como pelo menu da nota. Nada disso conta como edição da nota.
+/// Muda o status pela regra do Atrio: com lembrete, verde é concluir (o que se repete pula para a próxima vez e
+/// volta ao vermelho); sem lembrete, a nota passa a ter status (`statusOn`), como pelo menu da nota.
 pub fn set_status<Tz: TimeZone>(store: &Store, id: &str, status: Status, now: Millis, tz: &Tz) -> Result<()> {
-    let has_reminder = store.reminder_of(id)?.is_some();
-    if has_reminder && status == Status::Done {
+    let reminder = store.reminder_of(id)?;
+    if reminder.as_ref().is_some_and(|(_, r)| r.is_some()) && status == Status::Done {
         return complete(store, id, now, tz);
     }
-    let mut patch = Map::new();
-    patch.insert("reminderDone".into(), Value::Bool(status == Status::Done));
-    patch.insert("reminderDoing".into(), Value::Bool(status == Status::Doing));
-    if !has_reminder {
-        patch.insert("statusOn".into(), Value::Bool(true));
+    let mut card = CardStatus::default();
+    if let Some((at, repeat)) = reminder {
+        card.reminder_at = Some(at);
+        card.reminder_repeat = repeat;
     }
-    store.reschedule(id, &patch).map(|_| ())
+    card.set_status(status, now, tz);
+    write_status(store, id, &card)
 }
 
 /// Tira o status posto pelo menu. Nota com lembrete continua com status (ele vem do lembrete).
@@ -184,8 +128,10 @@ pub fn clear_status(store: &Store, id: &str) -> Result<()> {
     let mut patch = Map::new();
     patch.insert("statusOn".into(), Value::Bool(false));
     if store.reminder_of(id)?.is_none() {
-        patch.insert("reminderDone".into(), Value::Bool(false));
-        patch.insert("reminderDoing".into(), Value::Bool(false));
+        let mut card = CardStatus { status_on: true, ..Default::default() };
+        card.clear_status();
+        patch.insert("reminderDone".into(), Value::Bool(card.reminder_done));
+        patch.insert("reminderDoing".into(), Value::Bool(card.reminder_doing));
     }
     store.reschedule(id, &patch).map(|_| ())
 }
