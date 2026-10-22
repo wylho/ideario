@@ -293,6 +293,18 @@ fn export_from_the_mcp() {
 }
 
 #[test]
+fn exporting_twice_to_the_same_folder_keeps_both_files() {
+    let (core, t) = setup();
+    let id = id_in(&tool(&core, "create_note", json!({ "title": "Receita", "content": "Massa" }), true));
+    let folder = t.0.join("ex").display().to_string();
+    let first = json_of(&tool(&core, "export_note", json!({ "id": id, "format": "md", "folder": folder }), true));
+    let second = json_of(&tool(&core, "export_note", json!({ "id": id, "format": "md", "folder": folder }), true));
+    let (a, b) = (first["path"].as_str().unwrap(), second["path"].as_str().unwrap());
+    assert_ne!(a, b, "a segunda exportação não pode apagar a primeira");
+    assert!(std::path::Path::new(a).is_file() && std::path::Path::new(b).is_file());
+}
+
+#[test]
 fn backup_from_the_mcp() {
     let (core, t) = setup();
     let out = json_of(&tool(&core, "create_backup", json!({ "folder": t.0.join("bk").display().to_string() }), true));

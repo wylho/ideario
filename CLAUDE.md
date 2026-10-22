@@ -177,6 +177,10 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
   tauri-driver), desempenho (`tests/native/perf.mjs`, build de release) e `npm run tauri build`.
 - Site (`site/`, Cloudflare Pages em ideario.pages.dev) e `README.md` têm o mesmo conteúdo: ao mudar um, mudar o outro
   (skill `sync-site`; prints por `scripts/site-shots.mjs`).
+- **MCP conferido de ponta a ponta depois da 0.6.1** (pergunta do usuário): as 36 ferramentas rodando no `ideario --mcp`
+  de verdade, com dados de teste numa pasta à parte (`XDG_DATA_HOME`). Corrigido: `export_note` gravava por cima de
+  uma exportação anterior com o mesmo nome; agora usa `atrio::attach::unique_path` ("Receita (1).zip"), teste
+  `exporting_twice_to_the_same_folder_keeps_both_files`.
 - **Versão 0.6.1 lançada** (22/10/2026, Release `v0.6.1`, pedido do usuário): Atrio 0.20.0, a tabela aparece como tabela no card fechado (antes
   "a · b · c"; `PROJECTION_VERSION` 3 reprojeta as notas ao abrir; `PreviewBlock` agora é o tipo do Atrio, sem cópia
   em `types.ts`; mock e `layout.ts` contam a tabela) e copiar vários cards (Atrio 0.19.0).

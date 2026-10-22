@@ -689,7 +689,9 @@ fn run(core: &Core, name: &str, a: &Args) -> Result<Out> {
             };
             let title = core.with(|s| Ok(note(s, &id)?.title))?;
             let ext = if crate::export::has_attachments(core, &id)? { "zip" } else { format };
-            let r = crate::export::export_note(core, &id, format, &folder.join(format!("{}.{ext}", crate::export::file_stem(&title))))?;
+            // Nome livre na pasta ("Receita (1).zip"), como no anexo: exportar de novo não apaga o anterior.
+            let dest = atrio::attach::unique_path(&folder, &format!("{}.{ext}", crate::export::file_stem(&title)));
+            let r = crate::export::export_note(core, &id, format, &dest)?;
             Ok(Out::Json(serde_json::to_value(r).map_err(|e| e.to_string())?))
         }
         "create_backup" => {
