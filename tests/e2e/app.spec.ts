@@ -2390,11 +2390,11 @@ test.describe('Markdown no editor', () => {
     await expect(body.locator('ul li')).toHaveCount(2)
     await expect(body.locator('table th')).toHaveText(['Item', 'Qtd'])
     await expect(body).not.toContainText('|')
-    // Fechada, a nota mostra a tabela como tabela no card (prévia do Atrio), não "Item · Qtd".
+    // Fechada, a nota mostra só o resumo da tabela no card (Atrio 0.21.0): o tamanho e os nomes das colunas.
     await page.keyboard.press('Escape')
-    const card = page.locator('.card:has(.pv-table)', { hasText: 'Compras' })
-    await expect(card.locator('.pv-table th')).toHaveText(['Item', 'Qtd'])
-    await expect(card.locator('.pv-table td')).toHaveText(['Café', '1'])
+    const card = page.locator('.card:has(.pv-tsum)', { hasText: 'Compras' })
+    await expect(card.locator('.pv-tsum-size')).toHaveText('Tabela · 2 colunas × 1 linha')
+    await expect(card.locator('.pv-tsum-cols')).toHaveText('Item · Qtd')
   })
 })
 
