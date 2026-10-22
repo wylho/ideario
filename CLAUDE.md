@@ -177,7 +177,7 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
   tauri-driver), desempenho (`tests/native/perf.mjs`, build de release) e `npm run tauri build`.
 - Site (`site/`, Cloudflare Pages em ideario.pages.dev) e `README.md` têm o mesmo conteúdo: ao mudar um, mudar o outro
   (skill `sync-site`; prints por `scripts/site-shots.mjs`).
-- **Versão 0.6.1** (22/10/2026, pedido do usuário): Atrio 0.20.0, a tabela aparece como tabela no card fechado (antes
+- **Versão 0.6.1 lançada** (22/10/2026, Release `v0.6.1`, pedido do usuário): Atrio 0.20.0, a tabela aparece como tabela no card fechado (antes
   "a · b · c"; `PROJECTION_VERSION` 3 reprojeta as notas ao abrir; `PreviewBlock` agora é o tipo do Atrio, sem cópia
   em `types.ts`; mock e `layout.ts` contam a tabela) e copiar vários cards (Atrio 0.19.0).
 - **Versão 0.6.0 lançada** (22/10/2026, Release `v0.6.0`; pedido do usuário: lançar tudo): o app em inglês e português (Configurações →
