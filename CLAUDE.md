@@ -182,7 +182,7 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
   as setas e, ao soltar depois do limite, sincroniza e gira até terminar (`components/PullRefresh.svelte` em
   `main.content`, `app.pullRefresh`: `syncNow` e espera sair de "sincronizando"; sem Drive conectado ou sem internet,
   avisa por quê). Só com toque; mouse e trackpad não mudam. Teste e2e com eventos de toque.
-- **Versão 0.6.3** (22/10/2026, pedido do usuário: "lança tudo"): **Atrio 0.21.0** (escolha do usuário, opção D): a tabela no card fechado é só o
+- **Versão 0.6.3 lançada** (22/10/2026, Release `v0.6.3`, pedido do usuário: "lança tudo"): **Atrio 0.21.0** (escolha do usuário, opção D): a tabela no card fechado é só o
   resumo, "Tabela · N colunas × N linhas" e os nomes das colunas (no card estreito as colunas viravam fiapos). A tabela
   inteira continua no card aberto. `src/lib/layout.ts` estima a altura do resumo; o teste de colar Markdown confere o
   `.pv-tsum`. O MCP diz que o título é texto simples (Markdown não é reconhecido nele).
