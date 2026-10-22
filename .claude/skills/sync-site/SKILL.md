@@ -30,6 +30,15 @@ Se aparecer algo que pareça real, pare e pergunte ao usuário antes de publicar
 3. Confira que as afirmações são verdadeiras no código (recurso existe, nome do botão igual ao da UI). Nada de
    prometer o que não existe; nada de botão de download sem um Release público para apontar.
 
+## Como os prints devem ser (pedido do usuário)
+
+- **A tela cheia de conteúdo, nunca o app vazio.** Os cards preenchem a tela: vários cards com prévia de verdade
+  (lista de tarefas, foto de capa, etiquetas, status, lembrete), como o print do Nodo que o usuário aprovou em 22/10
+  (mapa "Lançamento do app" a 90%, cards com emoji, tarefas, #etiquetas e status ocupando a tela, claro e escuro).
+- **No recorte estreito (o que parece celular), dar zoom nos cards.** Sem medo de aproximar: o card tem de ocupar o
+  recorte, não ficar perdido num fundo vazio.
+- Sempre claro e escuro; dados fictícios; olhar cada imagem inteira antes de publicar.
+
 ## Quando os prints precisam mudar
 
 ```sh
