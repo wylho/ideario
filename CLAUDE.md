@@ -177,6 +177,7 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
   tauri-driver), desempenho (`tests/native/perf.mjs`, build de release) e `npm run tauri build`.
 - Site (`site/`, Cloudflare Pages em ideario.pages.dev) e `README.md` têm o mesmo conteúdo: ao mudar um, mudar o outro
   (skill `sync-site`; prints por `scripts/site-shots.mjs`).
+- **Versão 0.6.2** (22/10/2026, pedido do usuário: "lança tudo"): a correção do `export_note` do MCP (abaixo).
 - **MCP conferido de ponta a ponta depois da 0.6.1** (pergunta do usuário): as 36 ferramentas rodando no `ideario --mcp`
   de verdade, com dados de teste numa pasta à parte (`XDG_DATA_HOME`). Corrigido: `export_note` gravava por cima de
   uma exportação anterior com o mesmo nome; agora usa `atrio::attach::unique_path` ("Receita (1).zip"), teste
