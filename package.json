@@ -1,6 +1,7 @@
 {
   "name": "ideario",
   "private": true,
+  "license": "GPL-3.0-or-later",
   "version": "0.5.1",
   "type": "module",
   "scripts": {

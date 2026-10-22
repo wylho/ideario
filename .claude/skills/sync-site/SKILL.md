@@ -40,8 +40,12 @@ apontam um para o outro na primeira linha.
 - Validar: `python3 -c "import xml.etree.ElementTree as E; E.parse('site/sitemap.xml')"` e o JSON-LD com `json.loads`.
 - `site/_redirects`: só acrescentar regras (as de `/apt` e `/rpm` servem os repositórios Linux).
 - `site/googleb9f65d592b236440.html` é a verificação do Google: não apagar nem mover.
-- O repositório não tem arquivo de licença: não chamar o Ideario de "open source"/"código aberto" (dizer grátis e
-  com o código no GitHub) até o usuário escolher uma licença.
+- **Licença: GPL-3.0-or-later** (arquivo `LICENSE`, escolha do usuário em 22/10/2026). O Ideario é **grátis e de
+  código aberto** ("free and open source"/"open-source"): usar a expressão com naturalidade (frase de abertura,
+  linha "Grátis e de código aberto" do topo, descrição), sem repetir em toda seção. A licença aparece uma vez no
+  rodapé de cada página inicial, com link para `https://github.com/wylho/ideario/blob/HEAD/LICENSE`; nos termos de
+  uso (item 2) e na seção "License"/"Licença" no fim dos READMEs. O JSON-LD leva
+  `"license": "https://www.gnu.org/licenses/gpl-3.0.html"`.
 
 ## Regra que não pode falhar: só dados fictícios
 
@@ -62,7 +66,8 @@ Se aparecer algo que pareça real, pare e pergunte ao usuário antes de publicar
 2. Leve a mesma mudança a `README.md` (inglês) e `README.pt-BR.md` (português), na mesma ordem de seções. Diferenças
    permitidas:
    - no README as imagens usam caminhos relativos (`site/img/...`) e não há `loading`/`width` de layout;
-   - o README termina com a parte de desenvolvimento ("Development" / "Para desenvolver"), só no README;
+   - o README termina com a parte de desenvolvimento ("Development" / "Para desenvolver") e a licença ("License" /
+     "Licença"), só no README;
    - o comentário no topo do README fica.
 3. Confira que as afirmações são verdadeiras no código (recurso existe, nome do botão igual ao da UI). Nada de
    prometer o que não existe; nada de botão de download sem um Release público para apontar.

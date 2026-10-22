@@ -9,7 +9,7 @@
 <h1 align="center">Ideario</h1>
 
 <p align="center"><b>Organize your life in notes.</b><br>
-A free, local-first notes app with reminders, a calendar and a kanban board in one place: write once and see it however
+A free, open-source, local-first notes app with reminders, a calendar and a kanban board in one place: write once and see it however
 you need. It opens instantly, works offline and keeps everything on your computer. If you want, it syncs through your own
 Google Drive. A private Google Keep alternative for Windows, macOS, Linux and Android.</p>
 
@@ -212,3 +212,8 @@ Pages), English at the root and Portuguese in `site/pt/`; screenshots in `site/i
 `npm run build && node scripts/site-shots.mjs`.
 
 Shortcuts: <kbd>Ctrl/Cmd</kbd>+<kbd>N</kbd> new note, <kbd>Ctrl/Cmd</kbd>+<kbd>F</kbd> search, <kbd>Esc</kbd> closes the editor.
+
+## License
+
+Ideario is free and open source, licensed under the [GNU General Public License v3.0 or later](LICENSE)
+(GPL-3.0-or-later).

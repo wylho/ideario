@@ -9,7 +9,7 @@
 <h1 align="center">Ideario</h1>
 
 <p align="center"><b>Organize sua vida em notas.</b><br>
-Um app de notas grátis e local-first, com lembretes, calendário e kanban num lugar só: você escreve uma vez e vê do
+Um app de notas grátis, de código aberto e local-first, com lembretes, calendário e kanban num lugar só: você escreve uma vez e vê do
 jeito que precisar. Abre num instante, funciona sem internet e guarda tudo no seu computador. Se quiser, sincroniza
 pelo seu próprio Google Drive.</p>
 
@@ -209,3 +209,8 @@ Sync com o Google Drive: [`docs/GOOGLE_DRIVE.md`](docs/GOOGLE_DRIVE.md). Site: p
 Pages); prints em `site/img`, refeitos com `npm run build && node scripts/site-shots.mjs`.
 
 Atalhos: <kbd>Ctrl/Cmd</kbd>+<kbd>N</kbd> nota nova, <kbd>Ctrl/Cmd</kbd>+<kbd>F</kbd> busca, <kbd>Esc</kbd> fecha o editor.
+
+## Licença
+
+O Ideario é grátis e de código aberto, sob a [GNU General Public License v3.0 ou posterior](LICENSE)
+(GPL-3.0-or-later).

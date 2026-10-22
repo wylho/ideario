@@ -96,6 +96,9 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
   deixa o Atrio fora do pré-empacotamento (senão o `npm run dev` quebra nos `.svelte.ts`).
 - **Backup local:** manual ("Fazer backup agora") + automático semanal numa pasta escolhida, guardando os 4 últimos.
   Restaurar **junta** com o que existe (como o sync), nada se perde.
+- **Licença:** **GPL-3.0-or-later**, a mesma do Nodo e do Atrio (escolha do usuário, 22/10/2026), no arquivo
+  `LICENSE` (e no `license` do `package.json` e do `src-tauri/Cargo.toml`). O site e o README chamam o Ideario de
+  grátis e de código aberto; a licença aparece no rodapé do site, nos termos e no fim do README.
 
 ## Estado atual
 - **Fases 0 a 5 concluídas (e a importação do Keep).** No app, a UI fala com o núcleo Rust (`src/lib/api/tauri.ts` → `src-tauri/src/commands.rs`):
