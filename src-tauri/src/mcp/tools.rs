@@ -112,7 +112,7 @@ fn defs() -> Vec<Def> {
             title: "Criar nota",
             description: "Cria uma nota (entra no topo). Corpo em Markdown; para uma lista de compras use checklist (- [ ] item).",
             params: json!({
-                "title": s("título (pode ficar vazio)"),
+                "title": s("título (pode ficar vazio); texto simples, sem Markdown"),
                 "content": s("corpo em Markdown"),
                 "category": s("nome ou id de uma categoria existente"),
                 "tags": strings("tags (sem #)"),
@@ -132,7 +132,7 @@ fn defs() -> Vec<Def> {
             description: "Muda título, corpo (Markdown: substitui o corpo inteiro), categoria, tags, cor, emoji de capa ou fixada. Só o que vier muda. Para trocar um trecho do texto, prefira edit_note_text.",
             params: json!({
                 "id": s(ID),
-                "title": s("título novo"),
+                "title": s("título novo; texto simples, sem Markdown"),
                 "content": s("corpo novo inteiro, em Markdown (mantenha as linhas de fotos e anexos que devem ficar)"),
                 "category": s("nome ou id da categoria; vazio = sem categoria"),
                 "tags": strings("tags manuais (substituem as atuais; as #tags do texto continuam)"),

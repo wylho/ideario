@@ -116,7 +116,9 @@ fn initialize(params: &Value) -> Value {
 
 const INSTRUCTIONS: &str = "Ideario é o app de notas do usuário (estilo Google Keep), local no computador dele e \
 sincronizado pelo Google Drive. Notas têm título, corpo, categoria (só cor), tags, cor, fixada, arquivo/lixeira e \
-lembrete (que pode se repetir). O corpo entra e sai em Markdown: `### título`, **negrito**, *itálico*, listas, \
+lembrete (que pode se repetir). O título é texto simples, sem formatação: Markdown no título (**, #, links) não é \
+reconhecido e aparece como foi digitado; formatação vai só no corpo. O corpo entra e sai em Markdown: `### título`, \
+**negrito**, *itálico*, listas, \
 checklist `- [ ]`/`- [x]` com subitens recuados (2 espaços), blocos de código; fotos `![nome](ideario://att/<hash>)` \
 (várias na mesma linha ficam lado a lado) e anexos `[📎 nome](ideario://att/<hash>)` — mantenha essas linhas ao \
 reescrever uma nota, senão a foto/anexo sai da nota. `#palavra` no texto vira tag. Para mudanças pequenas prefira \
