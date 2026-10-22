@@ -2217,6 +2217,37 @@ test.describe('categorias e tags', () => {
 test.describe('celular (toque)', () => {
   test.use({ hasTouch: true, isMobile: true, viewport: { width: 390, height: 800 } })
 
+  // Puxar a lista com o dedo: eventos de toque de verdade (touchstart/move/end) no topo da área que rola.
+  async function pullDown(page: Page, distance: number) {
+    await page.evaluate(async (distance) => {
+      const el = document.querySelector('main.content') as HTMLElement
+      const r = el.getBoundingClientRect()
+      const x = r.left + r.width / 2
+      const y0 = r.top + 40
+      const touch = (y: number) => new Touch({ identifier: 1, target: el, clientX: x, clientY: y })
+      const fire = (type: string, y: number) =>
+        el.dispatchEvent(new TouchEvent(type, { bubbles: true, cancelable: true, touches: type === 'touchend' ? [] : [touch(y)], changedTouches: [touch(y)] }))
+      fire('touchstart', y0)
+      for (let i = 1; i <= 10; i++) {
+        fire('touchmove', y0 + (distance * i) / 10)
+        await new Promise((r) => setTimeout(r, 16))
+      }
+      fire('touchend', y0 + distance)
+    }, distance)
+  }
+
+  test('puxar a lista para baixo sincroniza; um puxão curto não', async ({ page }) => {
+    await expect(cards(page).first()).toBeVisible()
+    // Curto (menos que o limite): o círculo some sem girar.
+    await pullDown(page, 60)
+    await expect(page.locator('.pull-icon.spin')).toHaveCount(0)
+    await expect(page.locator('.pull')).toHaveCount(0)
+    // Comprido: gira enquanto sincroniza e some quando termina.
+    await pullDown(page, 220)
+    await expect(page.locator('.pull-icon.spin')).toBeVisible()
+    await expect(page.locator('.pull')).toHaveCount(0, { timeout: 8000 })
+  })
+
   test('a alça do bloco fica onde está o cursor: tocar abre o menu, arrastar reordena', async ({ page }) => {
     await cards(page).filter({ hasText: 'Viagem para Paraty' }).first().tap()
     const items = page.locator('#corpo ul[data-type="taskList"] > li')

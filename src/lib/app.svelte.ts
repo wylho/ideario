@@ -447,6 +447,38 @@ class AppState {
     })
   }
 
+  /**
+   * Puxar a lista para baixo (no celular): sincroniza agora e espera terminar, para o círculo girar enquanto vale a
+   * pena. Sem Drive conectado ou sem internet, diz por quê em vez de fingir que sincronizou.
+   */
+  async pullRefresh() {
+    const begun = Date.now()
+    const atLeast = () => new Promise((r) => setTimeout(r, Math.max(0, 500 - (Date.now() - begun))))
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      await atLeast()
+      return this.say(t('Sem internet: as notas sincronizam quando a conexão voltar.'))
+    }
+    const status = await api.syncStatus().catch(() => null)
+    if (!status?.connected) {
+      this.revision++
+      await atLeast()
+      if (status?.configured) this.say(t('Conecte o Google Drive nas Configurações para sincronizar.'))
+      return
+    }
+    api.syncNow()
+    // O sync começa logo (até 2 s) e termina quando sai de "sincronizando"; 30 s no máximo.
+    const wait = (ok: () => boolean, ms: number) =>
+      new Promise<void>((resolve) => {
+        const end = Date.now() + ms
+        const tick = () => (ok() || Date.now() > end ? resolve() : setTimeout(tick, 120))
+        tick()
+      })
+    await wait(() => this.sync === 'syncing', 2000)
+    await wait(() => this.sync !== 'syncing', 30000)
+    await atLeast()
+    if (this.sync === 'error') this.say(t('Não consegui sincronizar agora.'))
+  }
+
   say(msg: string, action?: { label: string; run: () => void }) {
     this.toast = msg
     this.toastAction = action ?? null

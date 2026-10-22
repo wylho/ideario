@@ -6,6 +6,8 @@
   import { copyCard } from './lib/menus'
   import { readCard, t } from '@wylho/atrio'
   import { makePreviews } from './lib/previews.svelte'
+  /** A área que rola (a lista de cada visão): o puxar para sincronizar fica nela. */
+  let content = $state<HTMLElement | undefined>(undefined)
   import TopBar from './components/TopBar.svelte'
   import TabBar from './components/TabBar.svelte'
   import Drawer from './components/Drawer.svelte'
@@ -19,6 +21,7 @@
   import MoodboardView from './components/MoodboardView.svelte'
   import Lightbox from './components/Lightbox.svelte'
   import FabMenu from './components/FabMenu.svelte'
+  import PullRefresh from './components/PullRefresh.svelte'
   import AppDialogs from './components/AppDialogs.svelte'
   import FileDrop from './components/FileDrop.svelte'
   import ReminderAlerts from './components/ReminderAlerts.svelte'
@@ -101,7 +104,7 @@
 
     <FilterBar />
 
-    <main class="content">
+    <main class="content" bind:this={content}>
       {#if app.view === 'notes'}
         <NotesView />
       {:else if app.view === 'reminders'}
@@ -116,6 +119,8 @@
         <MoodboardView />
       {/if}
     </main>
+
+    <PullRefresh target={content} />
 
     {#if app.box !== 'trash'}
       <FabMenu />
