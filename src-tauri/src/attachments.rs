@@ -19,7 +19,8 @@ pub fn dir(data: &Path) -> PathBuf {
 /// Anexo pronto para gravar (o preparo é o do Atrio: fotos pelo pipeline, o resto como veio).
 pub use atrio::attach::Prepared;
 // Regras dos anexos: as do Atrio, as mesmas do Nodo.
-pub use atrio::attach::{hash_from_path, kind_of, mime_of, parse_range, wants_thumb, CHUNK};
+pub use atrio::attach::mime_of;
+use atrio::attach::{hash_from_path, parse_range, wants_thumb};
 
 /// Trabalho pesado, sem tocar no banco (roda fora da trava e da thread da janela).
 pub fn prepare(bytes: Vec<u8>, name: &str, mime: &str, quality: Quality) -> Prepared {
@@ -95,6 +96,11 @@ pub fn save_copy(data: &Path, downloads: &Path, hash: &str, name: &str) -> Resul
     Ok(dest)
 }
 
+
+/// Hash pedido em `att://localhost/<hash>`.
+pub fn hash_of(req: &Request<Vec<u8>>) -> String {
+    hash_from_path(req.uri().path())
+}
 
 /// O que `serve` precisa do banco: lido de uma vez, e a trava do banco é solta antes de ler o arquivo.
 pub struct Info {

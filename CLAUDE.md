@@ -77,6 +77,10 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
   do Nodo; saíram as cópias `markdown.rs`, `text.rs` e `testdoc.rs` e a forma canônica de `ydoc.rs` (`lib.rs` faz
   `use atrio::{markdown, text}`; `store.rs` reexporta `REPEATS`/`clean_emoji`; `clean_tags` do MCP e do card colado
   são os do Atrio). Plano em `atrio/docs/UNIFICACAO.md`.
+  **Fase 2 (Atrio 0.13.0):** anexos (`atrio::attach`: tipo, MIME, hash, nomes, Range, `prepare`), o pipeline das
+  fotos (`atrio::media`, feature `media`), status e repetição (`atrio::card`) e a prévia do card
+  (`atrio::projection`) vêm da crate; saíram `media.rs` e `projection.rs`; `attachments.rs` e `reminders.rs` ficaram
+  só com o que é do Ideario (banco, pasta, miniaturas de PDF, adiar, avisar). `store::Attachment` é o do Atrio.
   Antes no Atrio **0.11.0** (capa e anexos na prévia em Markdown; foto com o cursor numa lista entra depois dela).
   Desde a 0.9.0, as pílulas do card da lista são o `CardPills` do Atrio; com `onstatus`, a nota que tem status (ou
   lembrete) mostra o seletor de três cores no card e muda ali mesmo, sem abrir (pedido do usuário). O `vite.config.ts`

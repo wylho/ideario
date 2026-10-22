@@ -4,7 +4,7 @@
 //!
 //! Aqui fica a regra (pura, testável). Quem mostra a notificação do sistema é o `Notifier` (lib.rs).
 
-use chrono::{Datelike, Days, Local, Months, NaiveDateTime, TimeZone};
+use chrono::{Datelike, Local, TimeZone};
 use serde::Serialize;
 use serde_json::{Map, Value};
 
@@ -256,6 +256,7 @@ pub fn tick(store: &Store, now: Millis, notifier: &dyn Notifier) -> Result<Vec<A
 #[cfg(test)]
 mod tests {
     use super::*;
+    use chrono::NaiveDateTime;
     use crate::store::{Filter, NoteInput};
     use chrono::FixedOffset;
     use serde_json::json;
@@ -493,6 +494,7 @@ mod props {
     //! A próxima vez de um lembrete que se repete, conferida contra a conta feita à mão (passo a passo desde a data
     //! original), para quaisquer datas: nunca pula uma ocorrência nem repete a mesma.
     use super::*;
+    use chrono::Months;
     use chrono::{Datelike, FixedOffset, NaiveDateTime, Timelike};
     use proptest::prelude::*;
 
