@@ -149,6 +149,7 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
   tauri-driver), desempenho (`tests/native/perf.mjs`, build de release) e `npm run tauri build`.
 - Site (`site/`, Cloudflare Pages em ideario.pages.dev) e `README.md` têm o mesmo conteúdo: ao mudar um, mudar o outro
   (skill `sync-site`; prints por `scripts/site-shots.mjs`).
+- **Versão 0.5.1 lançada** (22/10/2026): no Android, notificação com o ícone monocromático e tocar abre a nota.
 - **Versão 0.5.0 lançada** (22/10/2026, Release `v0.5.0` com APK do Android): o card inteiro do Atrio e o status no
   card da lista.
 - Release: `.github/workflows/release.yml` (subir a versão no `tauri.conf.json`; Actions → Release → Run workflow, no
