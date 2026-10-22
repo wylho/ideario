@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <url>
+    <loc>https://ideario.pages.dev/</loc>
+    <lastmod>2026-10-22</lastmod>
+    <xhtml:link rel="alternate" hreflang="en" href="https://ideario.pages.dev/"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://ideario.pages.dev/pt/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://ideario.pages.dev/"/>
+  </url>
+  <url>
+    <loc>https://ideario.pages.dev/pt/</loc>
+    <lastmod>2026-10-22</lastmod>
+    <xhtml:link rel="alternate" hreflang="en" href="https://ideario.pages.dev/"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://ideario.pages.dev/pt/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://ideario.pages.dev/"/>
+  </url>
+  <url>
+    <loc>https://ideario.pages.dev/privacy/</loc>
+    <lastmod>2026-10-22</lastmod>
+    <xhtml:link rel="alternate" hreflang="en" href="https://ideario.pages.dev/privacy/"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://ideario.pages.dev/privacidade/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://ideario.pages.dev/privacy/"/>
+  </url>
+  <url>
+    <loc>https://ideario.pages.dev/privacidade/</loc>
+    <lastmod>2026-10-22</lastmod>
+    <xhtml:link rel="alternate" hreflang="en" href="https://ideario.pages.dev/privacy/"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://ideario.pages.dev/privacidade/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://ideario.pages.dev/privacy/"/>
+  </url>
+  <url>
+    <loc>https://ideario.pages.dev/terms/</loc>
+    <lastmod>2026-10-22</lastmod>
+    <xhtml:link rel="alternate" hreflang="en" href="https://ideario.pages.dev/terms/"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://ideario.pages.dev/termos/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://ideario.pages.dev/terms/"/>
+  </url>
+  <url>
+    <loc>https://ideario.pages.dev/termos/</loc>
+    <lastmod>2026-10-22</lastmod>
+    <xhtml:link rel="alternate" hreflang="en" href="https://ideario.pages.dev/terms/"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://ideario.pages.dev/termos/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://ideario.pages.dev/terms/"/>
+  </url>
+</urlset>

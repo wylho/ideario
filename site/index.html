@@ -1,162 +1,228 @@
 <!doctype html>
-<html lang="pt-BR">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Ideario — organize sua vida em notas</title>
-<meta name="description" content="Ideario: notas, lembretes, calendário e kanban num lugar só, para Windows, macOS, Linux e Android. Abre na hora, funciona sem internet e sincroniza pelo seu Google Drive.">
-<meta property="og:title" content="Ideario — organize sua vida em notas">
-<meta property="og:description" content="Notas, lembretes, calendário e kanban num lugar só. Abre na hora, funciona sem internet e sincroniza pelo seu Google Drive.">
+<title>Ideario — Free Local-First Notes App and Google Keep Alternative</title>
+<meta name="description" content="A free, private notes app for Windows, macOS, Linux and Android. Offline Markdown notes, reminders, calendar and kanban, with optional Google Drive sync and an MCP server for Claude.">
+<link rel="canonical" href="https://ideario.pages.dev/">
+<link rel="alternate" hreflang="en" href="https://ideario.pages.dev/">
+<link rel="alternate" hreflang="pt-BR" href="https://ideario.pages.dev/pt/">
+<link rel="alternate" hreflang="x-default" href="https://ideario.pages.dev/">
+<meta name="robots" content="index, follow">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Ideario">
+<meta property="og:locale" content="en_US">
+<meta property="og:locale:alternate" content="pt_BR">
+<meta property="og:url" content="https://ideario.pages.dev/">
+<meta property="og:title" content="Ideario — Free Local-First Notes App and Google Keep Alternative">
+<meta property="og:description" content="A free, private notes app for Windows, macOS, Linux and Android. Offline Markdown notes, reminders, calendar and kanban, with optional Google Drive sync and an MCP server for Claude.">
 <meta property="og:image" content="https://ideario.pages.dev/img/notas.webp">
+<meta property="og:image:type" content="image/webp">
+<meta property="og:image:width" content="2880">
+<meta property="og:image:height" content="1800">
+<meta property="og:image:alt" content="Ideario, a local-first notes app: colorful note cards with checklists, photos and reminders">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Ideario — Free Local-First Notes App and Google Keep Alternative">
+<meta name="twitter:description" content="A free, private notes app for Windows, macOS, Linux and Android. Offline Markdown notes, reminders, calendar and kanban, with optional Google Drive sync and an MCP server for Claude.">
+<meta name="twitter:image" content="https://ideario.pages.dev/img/notas.webp">
+<meta name="twitter:image:alt" content="Ideario, a local-first notes app: colorful note cards with checklists, photos and reminders">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/style.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "Ideario",
+  "description": "A free, private notes app for Windows, macOS, Linux and Android. Offline Markdown notes, reminders, calendar and kanban, with optional Google Drive sync and an MCP server for Claude.",
+  "url": "https://ideario.pages.dev/",
+  "inLanguage": "en",
+  "applicationCategory": "ProductivityApplication",
+  "applicationSubCategory": "Notes",
+  "operatingSystem": "Windows, macOS, Linux, Android",
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD"
+  },
+  "isAccessibleForFree": true,
+  "downloadUrl": "https://github.com/wylho/ideario/releases/latest",
+  "image": "https://ideario.pages.dev/img/notas.webp",
+  "screenshot": [
+    "https://ideario.pages.dev/img/notas.webp",
+    "https://ideario.pages.dev/img/nota.webp",
+    "https://ideario.pages.dev/img/calendario.webp",
+    "https://ideario.pages.dev/img/kanban.webp"
+  ],
+  "featureList": [
+    "Markdown notes with checklists, photos, PDFs, audio and video",
+    "Reminders with system notifications",
+    "Calendar and kanban views",
+    "Works offline (local-first)",
+    "Optional sync through your own Google Drive",
+    "Google Keep import",
+    "Built-in MCP server for Claude"
+  ],
+  "author": {
+    "@type": "Person",
+    "name": "wylho",
+    "url": "https://github.com/wylho"
+  },
+  "sameAs": [
+    "https://github.com/wylho/ideario"
+  ]
+}
+</script>
 </head>
 <body>
 <header class="nav">
   <div class="wrap">
     <a class="brand" href="/"><img src="/favicon.svg" alt="">Ideario</a>
-    <nav class="nav-links"><a href="#recursos">Recursos</a><a href="#novidades">Novidades</a><a href="#claude">Claude</a><a href="#baixar">Baixar</a><a href="#english">English</a></nav>
-    <a class="icon-link" href="https://github.com/wylho/ideario" aria-label="Ideario no GitHub"><svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg></a>
-    <a class="btn primary sm" href="#baixar"><svg class="lucide" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg>Baixar grátis</a>
+    <nav class="nav-links"><a href="#features">Features</a><a href="#whats-new">What’s new</a><a href="#claude">Claude</a><a href="#download">Download</a></nav>
+    <a class="lang-link" href="/pt/" hreflang="pt-BR" lang="pt-BR" title="Ler em português" aria-label="Ler em português"><svg class="lucide" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg><span>PT</span></a>
+    <a class="icon-link" href="https://github.com/wylho/ideario" aria-label="Ideario on GitHub"><svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg></a>
+    <a class="btn primary sm" href="#baixar"><svg class="lucide" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg>Download free</a>
   </div>
 </header>
 
 <main>
 <section class="hero">
   <div class="bits" aria-hidden="true">
-    <div class="bit b1 mini-note"><b>Mercado da semana</b>
-      <div class="chk done"><i><svg class="lucide" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></i>Arroz</div><div class="chk"><i></i>Café em grão</div><div class="chk"><i></i>Leite</div>
-      <div class="mini-chips"><span class="mini-chip"><svg class="lucide" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.268 21a2 2 0 0 0 3.464 0"/><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"/></svg>Hoje, 18:30</span><span class="mini-chip tag">#compras</span></div></div>
-    <div class="bit b2"><div class="bit-label">Status</div><div class="bit-row"><span class="status-toggle"><span class="st-dot st-todo"></span><span class="st-dot st-doing on"></span><span class="st-dot st-done"></span></span><span>Em andamento</span></div></div>
-    <div class="bit b3"><div class="bit-row"><span class="ico-sm"><svg class="lucide" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.268 21a2 2 0 0 0 3.464 0"/><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"/></svg></span><div><b>Prova de Composição</b><div class="sub">Amanhã, 08:00</div></div></div>
-      <div class="bit-row" style="margin-top: 10px; gap: 8px"><span class="btn soft sm">Adiar</span><span class="btn primary sm">Concluir</span></div></div>
-    <div class="bit b4"><div class="bit-label">Cor da nota</div><div class="swatches" style="grid-template-columns: repeat(6, 26px)"><span class="swatch" style="--c: var(--n-sand)"></span><span class="swatch" style="--c: var(--n-sage)"></span><span class="swatch" style="--c: var(--n-sky)"></span><span class="swatch" style="--c: var(--n-rose)"></span><span class="swatch" style="--c: var(--n-lilac)"></span><span class="swatch on" style="--c: var(--n-butter)"></span></div></div>
+    <div class="bit b1 mini-note"><b>Weekly groceries</b>
+      <div class="chk done"><i><svg class="lucide" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></i>Rice</div><div class="chk"><i></i>Coffee beans</div><div class="chk"><i></i>Milk</div>
+      <div class="mini-chips"><span class="mini-chip"><svg class="lucide" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.268 21a2 2 0 0 0 3.464 0"/><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"/></svg>Today, 6:30 PM</span><span class="mini-chip tag">#groceries</span></div></div>
+    <div class="bit b2"><div class="bit-label">Status</div><div class="bit-row"><span class="status-toggle"><span class="st-dot st-todo"></span><span class="st-dot st-doing on"></span><span class="st-dot st-done"></span></span><span>In progress</span></div></div>
+    <div class="bit b3"><div class="bit-row"><span class="ico-sm"><svg class="lucide" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.268 21a2 2 0 0 0 3.464 0"/><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"/></svg></span><div><b>Piano recital</b><div class="sub">Tomorrow, 8:00 AM</div></div></div>
+      <div class="bit-row" style="margin-top: 10px; gap: 8px"><span class="btn soft sm">Snooze</span><span class="btn primary sm">Done</span></div></div>
+    <div class="bit b4"><div class="bit-label">Note color</div><div class="swatches" style="grid-template-columns: repeat(6, 26px)"><span class="swatch" style="--c: var(--n-sand)"></span><span class="swatch" style="--c: var(--n-sage)"></span><span class="swatch" style="--c: var(--n-sky)"></span><span class="swatch" style="--c: var(--n-rose)"></span><span class="swatch" style="--c: var(--n-lilac)"></span><span class="swatch on" style="--c: var(--n-butter)"></span></div></div>
   </div>
   <div class="hero-inner">
     <span class="chip">Windows · macOS · Linux · Android</span>
-    <h1>Organize sua vida em notas.</h1>
-    <p class="lead">Notas, lembretes, calendário e kanban num lugar só: você escreve uma vez e vê do jeito que precisar.
-    Abre num instante, funciona sem internet e, se quiser, sincroniza pelo seu próprio Google Drive.</p>
+    <h1>Organize your life in notes.</h1>
+    <p class="lead">A free, local-first notes app with reminders, a calendar and a kanban board in one place: write
+    once and see it however you need. It opens instantly, works offline and, if you want, syncs through your own Google
+    Drive.</p>
     <div class="cta">
-      <a class="btn primary" href="#baixar"><svg class="lucide" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg>Baixar grátis</a>
-      <a class="btn soft" href="https://github.com/wylho/ideario"><svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg>Ver no GitHub</a>
+      <a class="btn primary" href="#baixar"><svg class="lucide" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg>Download free</a>
+      <a class="btn soft" href="https://github.com/wylho/ideario"><svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg>View on GitHub</a>
     </div>
-    <p class="fine">Grátis · <a href="#novidades">Novo na versão 0.4: calendário, kanban e um ícone novo<svg class="lucide" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></a></p>
+    <p class="fine">Free · <a href="#whats-new">New in version 0.4: calendar, kanban and a new icon<svg class="lucide" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></a></p>
   </div>
 </section>
 
 <div class="showcase">
   <picture>
     <source srcset="/img/notas-escuro.webp" media="(prefers-color-scheme: dark)">
-    <img src="/img/notas.webp" width="2880" height="1800" alt="Tela principal do Ideario: notas coloridas em cards, com checklists, fotos, lembretes e categorias na lateral">
+    <img src="/img/notas.webp" width="2880" height="1800" alt="Ideario main screen: colorful note cards with checklists, photos and reminders, and categories in the sidebar">
   </picture>
 </div>
 
 <section class="section">
   <div class="wrap">
     <div class="section-head">
-      <span class="chip accent"><svg class="lucide" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z"/><path d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12"/><path d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17"/></svg>Uma nota, seis jeitos de ver</span>
-      <h2>Escreva uma vez. Veja do jeito que precisar.</h2>
-      <p>Tudo começa numa nota. O resto são visões dela, e nada é copiado: mudou num lugar, mudou em todos. Categorias
-      e tags filtram qualquer visão.</p>
+      <span class="chip accent"><svg class="lucide" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z"/><path d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12"/><path d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17"/></svg>One note, six views</span>
+      <h2>Write once. See it however you need.</h2>
+      <p>Everything starts as a note. The rest are views of it, and nothing is copied: change it in one place and it
+      changes everywhere. Categories and tags filter any view.</p>
     </div>
     <div class="grid">
-      <div class="box"><span class="ico"><svg class="lucide" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg></span><h3>Notas</h3><p>Cards coloridos, fixados no topo, na ordem que você arrastar.</p></div>
-      <div class="box"><span class="ico"><svg class="lucide" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.268 21a2 2 0 0 0 3.464 0"/><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"/></svg></span><h3>Lembretes</h3><p>O que vence hoje, amanhã e depois, com o que ficou atrasado em cima.</p></div>
-      <div class="box"><span class="ico"><svg class="lucide" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v3"/><path d="M16 2v3"/><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M8 13h.01"/><path d="M12 13h.01"/><path d="M16 13h.01"/><path d="M8 17h.01"/><path d="M12 17h.01"/><path d="M16 17h.01"/></svg></span><h3>Calendário</h3><p>Cada lembrete no seu dia, por mês ou por semana.</p></div>
-      <div class="box"><span class="ico"><svg class="lucide" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M8 7v7"/><path d="M12 7v4"/><path d="M16 7v9"/></svg></span><h3>Kanban</h3><p>Toda nota com status, em três colunas: a fazer, em andamento e concluído.</p></div>
-      <div class="box"><span class="ico"><svg class="lucide" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m16 6-8.414 8.586a2 2 0 0 0 2.829 2.829l8.414-8.586a4 4 0 1 0-5.657-5.657l-8.379 8.551a6 6 0 1 0 8.485 8.485l8.379-8.551"/></svg></span><h3>Arquivos</h3><p>PDFs, áudios, vídeos e documentos de todas as notas, com leitor de PDF.</p></div>
-      <div class="box"><span class="ico"><svg class="lucide" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m22 11-1.296-1.296a2.4 2.4 0 0 0-3.408 0L11 16"/><path d="M4 8a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2"/><circle cx="13" cy="7" r="1" fill="currentColor"/><rect x="8" y="2" width="14" height="14" rx="2"/></svg></span><h3>Moodboard</h3><p>Todas as fotos num mural, com a paleta de cores de cada uma.</p></div>
+      <div class="box"><span class="ico"><svg class="lucide" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg></span><h3>Notes</h3><p>Colorful cards, pinned to the top, in whatever order you drag them.</p></div>
+      <div class="box"><span class="ico"><svg class="lucide" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.268 21a2 2 0 0 0 3.464 0"/><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"/></svg></span><h3>Reminders</h3><p>What’s due today, tomorrow and later, with anything overdue at the top.</p></div>
+      <div class="box"><span class="ico"><svg class="lucide" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v3"/><path d="M16 2v3"/><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M8 13h.01"/><path d="M12 13h.01"/><path d="M16 13h.01"/><path d="M8 17h.01"/><path d="M12 17h.01"/><path d="M16 17h.01"/></svg></span><h3>Calendar</h3><p>Every reminder on its day, by month or by week.</p></div>
+      <div class="box"><span class="ico"><svg class="lucide" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M8 7v7"/><path d="M12 7v4"/><path d="M16 7v9"/></svg></span><h3>Kanban</h3><p>Every note with a status, in three columns: to do, in progress and done.</p></div>
+      <div class="box"><span class="ico"><svg class="lucide" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m16 6-8.414 8.586a2 2 0 0 0 2.829 2.829l8.414-8.586a4 4 0 1 0-5.657-5.657l-8.379 8.551a6 6 0 1 0 8.485 8.485l8.379-8.551"/></svg></span><h3>Files</h3><p>PDFs, audio, video and documents from all your notes, with a built-in PDF reader.</p></div>
+      <div class="box"><span class="ico"><svg class="lucide" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m22 11-1.296-1.296a2.4 2.4 0 0 0-3.408 0L11 16"/><path d="M4 8a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2"/><circle cx="13" cy="7" r="1" fill="currentColor"/><rect x="8" y="2" width="14" height="14" rx="2"/></svg></span><h3>Moodboard</h3><p>All your photos on one board, each with its own color palette.</p></div>
     </div>
   </div>
 </section>
 
-<section class="section band" id="novidades">
+<section class="section band" id="whats-new">
   <div class="wrap">
     <div class="section-head center">
-      <span class="chip accent"><svg class="lucide" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"/><path d="M20 2v4"/><path d="M22 4h-4"/><circle cx="4" cy="20" r="2"/></svg>Novidades</span>
-      <h2>Versão 0.4</h2>
-      <p>Calendário, kanban, status em três cores e um ícone novo.</p>
+      <span class="chip accent"><svg class="lucide" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"/><path d="M20 2v4"/><path d="M22 4h-4"/><circle cx="4" cy="20" r="2"/></svg>What’s new</span>
+      <h2>Version 0.4</h2>
+      <p>Calendar, kanban, a three-color status and a new icon.</p>
     </div>
     <div class="box news">
   <ul>
-    <li><b>Calendário:</b> os lembretes no dia de cada um, por mês ou semana; arraste para mudar o dia.</li>
-    <li><b>Kanban:</b> a fazer, em andamento e concluído; arraste o card entre as colunas.</li>
-    <li><b>Status em três cores</b>: vermelho, amarelo e verde, em qualquer nota (com lembrete ele vem sozinho), também pelo Claude.</li>
-    <li><b>Ícone novo.</b></li>
-    <li><b>Sincronização mais rápida:</b> as notas sobem para o Drive em paralelo, e mudar a ordem só envia o que mudou.</li>
-    <li>Títulos longos quebram linha, e a busca fica sempre no mesmo lugar da barra.</li>
+    <li><b>Calendar:</b> each reminder on its day, by month or week; drag it to change the day.</li>
+    <li><b>Kanban:</b> to do, in progress and done; drag cards between the columns.</li>
+    <li><b>Three-color status</b>: red, yellow and green, on any note (notes with a reminder get it automatically), also through Claude.</li>
+    <li><b>A new icon.</b></li>
+    <li><b>Faster sync:</b> notes upload to Drive in parallel, and reordering only sends what changed.</li>
+    <li>Long titles wrap, and search always stays in the same place in the toolbar.</li>
   </ul>
-  <p class="muted">Na 0.4.4: ícone sem placa no Linux e ajustes no celular (seleção e margens). Na 0.4.3: ícone novo e a bolinha de seleção dos cards mais discreta. Na 0.4.2: <b>status em qualquer nota</b>. Com lembrete ele aparece sozinho; sem lembrete, é só escolher no menu Status, e a nota entra no Kanban. Na 0.4.1: o ícone sem a borda azul no macOS.</p>
+  <p class="muted">In 0.4.4: an icon without a backplate on Linux and phone tweaks (selection and margins). In 0.4.3: a new icon and a subtler selection dot on cards. In 0.4.2: <b>status on any note</b>. With a reminder it appears on its own; without one, just pick it from the Status menu and the note joins the kanban board. In 0.4.1: the icon without the blue border on macOS.</p>
   <details>
-    <summary>Versões anteriores</summary>
-    <p><b>0.3:</b> editor com títulos, citações, código e tabelas; colar Markdown e prints direto na nota; um ID curto em
-    cada nota para falar dela com o Claude.</p>
-    <p><b>0.2:</b> Android (prévia); categorias em ordem de nome, de número de notas ou do seu jeito; lateral que vira
-    pílulas; a janela lembra o tamanho; sincronização em lotes, com a ordem dos cards indo junto.</p>
+    <summary>Earlier versions</summary>
+    <p><b>0.3:</b> an editor with headings, quotes, code and tables; paste Markdown and screenshots straight into a
+    note; a short ID on every note so you can refer to it when talking to Claude.</p>
+    <p><b>0.2:</b> Android (preview); categories sorted by name, by note count or by hand; a sidebar that turns into
+    pills; the window remembers its size; batched sync that carries the card order along.</p>
   </details>
-  <p class="muted">Quem já usa recebe sozinho: o app avisa ao abrir. Todas as versões estão no
-  <a href="https://github.com/wylho/ideario/releases">GitHub</a>.</p>
+  <p class="muted">If you already use Ideario, updates arrive on their own: the app lets you know when it opens.
+  Every version is on <a href="https://github.com/wylho/ideario/releases">GitHub</a>.</p>
     </div>
   </div>
 </section>
 
-<section class="section" id="recursos">
+<section class="section" id="features">
   <div class="wrap">
     <div class="section-head">
-      <span class="chip accent"><svg class="lucide" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13.4 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7.4"/><path d="M2 6h4"/><path d="M2 10h4"/><path d="M2 14h4"/><path d="M2 18h4"/><path d="M21.378 5.626a1 1 0 1 0-3.004-3.004l-5.01 5.012a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506z"/></svg>Recursos</span>
-      <h2>Tudo numa nota só.</h2>
-      <p>E cada nota aparece onde você precisa dela: na lista, no calendário, no kanban ou no mural.</p>
+      <span class="chip accent"><svg class="lucide" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13.4 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7.4"/><path d="M2 6h4"/><path d="M2 10h4"/><path d="M2 14h4"/><path d="M2 18h4"/><path d="M21.378 5.626a1 1 0 1 0-3.004-3.004l-5.01 5.012a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506z"/></svg>Features</span>
+      <h2>Everything in one note.</h2>
+      <p>And every note shows up where you need it: in the list, on the calendar, on the kanban board or on the moodboard.</p>
     </div>
     <div class="cards">
       <div class="card wide">
         <div>
-          <h3>Texto, fotos, checklists e anexos juntos</h3>
-          <p>Texto, checklist, fotos lado a lado, PDFs, áudio e vídeo convivem na mesma nota, cada um como um bloco que você
-    arrasta para onde quiser.</p>
+          <h3>Markdown notes with photos, checklists and attachments</h3>
+          <p>Text, checklists, side-by-side photos, PDFs, audio and video live together in the same note, each one a block
+    you can drag wherever you want.</p>
     <ul>
-      <li>Checklists com subitens em vários níveis; marcar um item marca os de dentro</li>
-      <li>Grave áudio ou tire foto sem sair da nota</li>
-      <li>Títulos, citações e tabelas; cole Markdown e ele já vira formatação</li>
-      <li>Cole um print direto na nota</li>
-      <li>Cole um link e ele vira um cartão com título e imagem</li>
-      <li>Um emoji grande de capa para achar a nota de longe</li>
+      <li>Checklists with nested sub-items; checking an item checks everything inside it</li>
+      <li>Record audio or take a photo without leaving the note</li>
+      <li>Headings, quotes and tables; paste Markdown and it turns into formatting</li>
+      <li>Paste a screenshot straight into the note</li>
+      <li>Paste a link and it becomes a card with a title and image</li>
+      <li>A big cover emoji to spot the note from afar</li>
     </ul>
         </div>
-        <div class="media"><img src="/img/nota.webp" width="2880" height="1800" loading="lazy" alt="Nota aberta com três fotos lado a lado, um checklist e um PDF anexado"></div>
+        <div class="media"><img src="/img/nota.webp" width="2880" height="1800" loading="lazy" alt="An open note with three photos side by side, a checklist and an attached PDF"></div>
       </div>
       <div class="card">
-        <h3>Lembretes que avisam de verdade</h3>
-        <p>Notificação do sistema na hora certa, com Adiar e Concluir. Lembretes que se repetem todo dia, semana, mês ou
-    ano. Se o computador estava desligado, o Ideario avisa o que passou assim que abrir. Cada lembrete tem um status
-    em três cores: vermelho (a fazer), amarelo (em andamento) e verde (concluído).</p>
-        <div class="media"><img src="/img/lembretes.webp" width="2880" height="1800" loading="lazy" alt="Lista de lembretes agrupada em atrasados, hoje, amanhã e próximos"></div>
+        <h3>Reminders that actually remind you</h3>
+        <p>System notifications right on time, with Snooze and Done. Reminders that repeat every day, week, month or
+    year. If your computer was off, Ideario tells you what you missed as soon as it opens. Every reminder has a
+    three-color status: red (to do), yellow (in progress) and green (done).</p>
+        <div class="media"><img src="/img/lembretes.webp" width="2880" height="1800" loading="lazy" alt="Reminders list grouped into overdue, today, tomorrow and upcoming"></div>
       </div>
       <div class="card">
-        <h3>Calendário</h3>
-        <p>Os mesmos lembretes, no dia de cada um, por mês ou por semana. Arraste para outro dia e a data muda (a hora
-    fica); toque no + de um dia para criar um lembrete nele. Os que se repetem já mostram as próximas vezes.</p>
-        <div class="media"><img src="/img/calendario.webp" width="2880" height="1800" loading="lazy" alt="Calendário do mês com os lembretes em cada dia, coloridos pelo status"></div>
+        <h3>Calendar</h3>
+
+        <p>The same reminders, each on its day, by month or by week. Drag one to another day and the date changes (the
+    time stays); tap a day’s + to create a reminder on it. Repeating reminders already show their next occurrences.</p>
+        <div class="media"><img src="/img/calendario.webp" width="2880" height="1800" loading="lazy" alt="Monthly calendar with reminders on each day, colored by status"></div>
       </div>
       <div class="card">
         <h3>Kanban</h3>
-        <p>A fazer, em andamento e concluído, em três colunas. Arraste o card de uma coluna para outra ou toque no
-    seletor de cores dele. Tudo isso também pelo Claude.</p>
-        <div class="media"><img src="/img/kanban.webp" width="2880" height="1800" loading="lazy" alt="Kanban com os lembretes em três colunas: a fazer, em andamento e concluído"></div>
+        <p>To do, in progress and done, in three columns. Drag a card from one column to another or tap its color
+    selector. Claude can do all of this too.</p>
+        <div class="media"><img src="/img/kanban.webp" width="2880" height="1800" loading="lazy" alt="Kanban board with reminders in three columns: to do, in progress and done"></div>
       </div>
       <div class="card">
-        <h3>Moodboard das suas fotos</h3>
-        <p>Todas as imagens de todas as notas num mural só, com a paleta de cores de cada uma. Filtre por tom e encontre
-    aquela referência sem lembrar em que nota ela estava.</p>
-        <div class="media"><img src="/img/moodboard.webp" width="2880" height="1800" loading="lazy" alt="Moodboard com as imagens das notas em mosaico e a paleta de cores de cada uma"></div>
+        <h3>A moodboard of your photos</h3>
+        <p>Every image from every note on a single board, each with its color palette. Filter by tone and find that
+    reference without remembering which note it was in.</p>
+        <div class="media"><img src="/img/moodboard.webp" width="2880" height="1800" loading="lazy" alt="Moodboard with images from the notes in a mosaic, each with its color palette"></div>
       </div>
       <div class="card wide">
         <div>
-          <h3>Quando a nota cresce, vira documento</h3>
-          <p>Um clique e a nota abre em página inteira, com coluna de leitura. Exporte em Markdown, HTML ou PDF, com as
-    fotos e anexos juntos.</p>
+          <h3>When a note grows, it becomes a document</h3>
+          <p>One click and the note opens full-page, with a comfortable reading column. Export it to Markdown, HTML or
+    PDF, with its photos and attachments.</p>
         </div>
-        <div class="media"><img src="/img/documento.webp" width="2880" height="1800" loading="lazy" alt="Nota aberta no modo documento, em página inteira"></div>
+        <div class="media"><img src="/img/documento.webp" width="2880" height="1800" loading="lazy" alt="A note open in document mode, full-page"></div>
       </div>
     </div>
   </div>
@@ -166,19 +232,19 @@
   <div class="wrap">
     <div class="section-head">
       <span class="chip accent"><svg class="lucide" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>Claude</span>
-      <h2>Funciona com o Claude.</h2>
-      <p>Ligue o Ideario no Claude Desktop ou no Claude Code com um clique, sem servidor nosso no meio.</p>
+      <h2>Works with Claude.</h2>
+      <p>Ideario has a built-in MCP server for Claude. Connect it to Claude Desktop or Claude Code in one click, with no server of ours in between.</p>
     </div>
     <div class="cards">
       <div class="card wide">
         <div>
-          <h3>Peça em português</h3>
-          <p>Ligue o Ideario no Claude Desktop ou no Claude Code com um clique e peça: “cria uma lista de compras”,
-    “marca o leite como comprado”, “o que eu anotei sobre a viagem?”. O Claude fala com o Ideario direto do seu
-    computador, sem servidor nosso no meio, e as categorias protegidas por PIN ficam de fora. Cada nota tem um ID
-    curto (#a1b2c3d4): copie e diga “na nota #a1b2c3d4, monta uma tabela com os gastos”.</p>
+          <h3>Just ask</h3>
+          <p>Connect Ideario to Claude Desktop or Claude Code with one click and ask: “make a shopping list”, “check off
+    the milk”, “what did I write about the trip?”. Claude talks to Ideario right on your computer, with no server of
+    ours in between, and PIN-protected categories stay out of reach. Every note has a short ID (#a1b2c3d4): copy it and
+    say “in note #a1b2c3d4, build a table of the expenses”.</p>
         </div>
-        <div class="media"><img src="/img/claude.webp" width="2880" height="1800" loading="lazy" alt="Configurações do Ideario com a sincronização do Google Drive e o botão para ligar no Claude Desktop"></div>
+        <div class="media"><img src="/img/claude.webp" width="2880" height="1800" loading="lazy" alt="Ideario settings with Google Drive sync and the button to connect Claude Desktop"></div>
       </div>
     </div>
   </div>
@@ -189,113 +255,90 @@
     <div class="cards">
       <div class="card wide">
         <div>
-          <span class="chip accent"><svg class="lucide" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h8"/><path d="M10 19v-3.96 3.15"/><path d="M7 19h5"/><rect width="6" height="10" x="16" y="12" rx="2"/></svg>Em qualquer tela</span>
-          <h3>Do tamanho que a janela estiver</h3>
-          <p>Janela grande, lateral com categorias e tags; feche a lateral e as categorias viram pílulas acima das notas.
-    Janela estreita, o layout se ajusta, com as visões numa barra embaixo. Tema claro, escuro ou o do sistema, com as
-    cores de destaque do seu Windows, macOS ou Linux.</p>
+          <span class="chip accent"><svg class="lucide" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h8"/><path d="M10 19v-3.96 3.15"/><path d="M7 19h5"/><rect width="6" height="10" x="16" y="12" rx="2"/></svg>On any screen</span>
+          <h3>Fits any window size</h3>
+          <p>In a large window, a sidebar with categories and tags; close it and categories become pills above your notes.
+    In a narrow window, the layout adapts, with the views in a bar at the bottom. Light, dark or system theme, with the
+    accent colors of your Windows, macOS or Linux desktop.</p>
         </div>
-        <div class="media phone"><img src="/img/janela-estreita.webp" width="1170" height="2532" loading="lazy" alt="O Ideario numa janela estreita, com as notas em duas colunas e a barra de visões embaixo"></div>
+        <div class="media phone"><img src="/img/janela-estreita.webp" width="1170" height="2532" loading="lazy" alt="Ideario in a narrow window, with notes in two columns and the views bar at the bottom"></div>
       </div>
     </div>
     <div class="section-head" style="margin-top: 120px">
-      <span class="chip accent"><svg class="lucide" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg>E mais</span>
-      <h2>Os detalhes que fazem falta.</h2>
+      <span class="chip accent"><svg class="lucide" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg>And more</span>
+      <h2>The details you’ll miss elsewhere.</h2>
     </div>
     <div class="grid four">
-      <div class="box"><span class="ico"><svg class="lucide" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 5h8"/><path d="M13 12h8"/><path d="M13 19h8"/><path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/></svg></span><h3>Várias de uma vez</h3><p>Selecione notas com o mouse, Ctrl ou Shift e mude a cor, a categoria ou arquive todas juntas, com Desfazer.</p></div>
-      <div class="box"><span class="ico"><svg class="lucide" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4.1 12 6"/><path d="m5.1 8-2.9-.8"/><path d="m6 12-1.9 2"/><path d="M7.2 2.2 8 5.1"/><path d="M9.037 9.69a.498.498 0 0 1 .653-.653l11 4.5a.5.5 0 0 1-.074.949l-4.349 1.041a1 1 0 0 0-.74.739l-1.04 4.35a.5.5 0 0 1-.95.074z"/></svg></span><h3>Clique direito em tudo</h3><p>Cards, lembretes, arquivos e categorias têm menu próprio, no clique direito ou no toque longo.</p></div>
-      <div class="box"><span class="ico"><svg class="lucide" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg></span><h3>Sync pelo seu Drive</h3><p>Numa pasta oculta do app no seu Google Drive, entre computadores e o celular, até a ordem dos cards. Sem servidor no meio, sem conta nova.</p></div>
-      <div class="box"><span class="ico"><svg class="lucide" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="16" r="1"/><rect x="3" y="10" width="18" height="12" rx="2"/><path d="M7 10V7a5 5 0 0 1 10 0v3"/></svg></span><h3>Categorias com PIN</h3><p>Esconda uma categoria inteira das listas e da busca, e peça um PIN para abrir. Ordene por nome, por número de notas ou arrastando.</p></div>
-      <div class="box"><span class="ico"><svg class="lucide" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m8 11 4 4 4-4"/><path d="M8 5H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-4"/></svg></span><h3>Vem do Google Keep?</h3><p>Solte o arquivo do Google Takeout e as notas entram com fotos, cores, marcadores e datas.</p></div>
-      <div class="box"><span class="ico"><svg class="lucide" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/></svg></span><h3>Backup local</h3><p>Um arquivo com tudo, quando quiser ou toda semana. Restaurar junta com o que já existe.</p></div>
-      <div class="box"><span class="ico"><svg class="lucide" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></svg></span><h3>Busca rápida</h3><p>Sem acento, por pedaço de palavra, em milhares de notas, no instante em que você digita.</p></div>
-      <div class="box"><span class="ico"><svg class="lucide" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.086 18.412A2 2 0 0112.67 19H5v-7.672a2 2 0 01.586-1.414L11.75 3.75a6 6 0 118.49 8.49z"/><path d="M16 8 2 22"/><path d="M17.488 15H9"/></svg></span><h3>Fotos leves</h3><p>Fotos reduzidas e sem localização por padrão. Quer a original? Uma opção nas configurações.</p></div>
+      <div class="box"><span class="ico"><svg class="lucide" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 5h8"/><path d="M13 12h8"/><path d="M13 19h8"/><path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/></svg></span><h3>Many at once</h3><p>Select notes with the mouse, Ctrl or Shift and change the color or category, or archive them all together, with Undo.</p></div>
+      <div class="box"><span class="ico"><svg class="lucide" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4.1 12 6"/><path d="m5.1 8-2.9-.8"/><path d="m6 12-1.9 2"/><path d="M7.2 2.2 8 5.1"/><path d="M9.037 9.69a.498.498 0 0 1 .653-.653l11 4.5a.5.5 0 0 1-.074.949l-4.349 1.041a1 1 0 0 0-.74.739l-1.04 4.35a.5.5 0 0 1-.95.074z"/></svg></span><h3>Right-click everything</h3><p>Cards, reminders, files and categories each have their own menu, on right-click or long-press.</p></div>
+      <div class="box"><span class="ico"><svg class="lucide" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg></span><h3>Sync with Google Drive</h3><p>Through a hidden app folder in your own Google Drive, across computers and your phone, down to the card order. No server in between, no new account.</p></div>
+      <div class="box"><span class="ico"><svg class="lucide" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="16" r="1"/><rect x="3" y="10" width="18" height="12" rx="2"/><path d="M7 10V7a5 5 0 0 1 10 0v3"/></svg></span><h3>Private categories with a PIN</h3><p>Hide a whole category from lists and search, and require a PIN to open it. Sort by name, by note count or by dragging.</p></div>
+      <div class="box"><span class="ico"><svg class="lucide" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m8 11 4 4 4-4"/><path d="M8 5H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-4"/></svg></span><h3>Coming from Google Keep?</h3><p>Drop in your Google Takeout file and your notes come in with photos, colors, labels and dates.</p></div>
+      <div class="box"><span class="ico"><svg class="lucide" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/></svg></span><h3>Local backup</h3><p>One file with everything, whenever you want or every week. Restoring merges with what’s already there.</p></div>
+      <div class="box"><span class="ico"><svg class="lucide" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></svg></span><h3>Fast search</h3><p>Accent-insensitive, matches parts of words, across thousands of notes, the instant you type.</p></div>
+      <div class="box"><span class="ico"><svg class="lucide" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.086 18.412A2 2 0 0112.67 19H5v-7.672a2 2 0 01.586-1.414L11.75 3.75a6 6 0 118.49 8.49z"/><path d="M16 8 2 22"/><path d="M17.488 15H9"/></svg></span><h3>Lightweight photos</h3><p>Photos are resized and stripped of location data by default. Want the original? It’s one setting away.</p></div>
     </div>
   </div>
 </section>
 
-<section class="section band" id="baixar">
+<section class="section band" id="download">
   <div class="wrap">
     <div class="section-head center">
-      <span class="chip accent"><svg class="lucide" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg>Baixar</span>
-      <h2>Grátis, e se atualiza sozinho.</h2>
-      <p>Os instaladores ficam na página de <a href="https://github.com/wylho/ideario/releases/latest">versões do GitHub</a>.</p>
+      <span class="chip accent"><svg class="lucide" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg>Download</span>
+      <h2>Free, and it updates itself.</h2>
+      <p>Installers for Windows, macOS, Linux and Android are on the <a href="https://github.com/wylho/ideario/releases/latest">GitHub releases page</a>.</p>
     </div>
     <div class="grid dl">
-      <div class="box"><span class="ico"><svg class="lucide" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></svg></span><h3>Windows</h3><p>Baixe o <code>-setup.exe</code> e instale. Quando sair versão nova, o app avisa ao abrir.</p><a class="btn soft sm" href="https://github.com/wylho/ideario/releases/latest"><svg class="lucide" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg>Baixar</a></div>
-      <div class="box"><span class="ico"><svg class="lucide" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 6.528V3a1 1 0 0 1 1-1h0"/><path d="M18.237 21A15 15 0 0 0 22 11a6 6 0 0 0-10-4.472A6 6 0 0 0 2 11a15.1 15.1 0 0 0 3.763 10 3 3 0 0 0 3.648.648 5.5 5.5 0 0 1 5.178 0A3 3 0 0 0 18.237 21"/></svg></span><h3>macOS</h3><p>Baixe o <code>.dmg</code> (Apple Silicon e Intel). Na primeira vez, clique com o botão direito no app e escolha <b>Abrir</b>: ele ainda não é assinado pela Apple.</p><a class="btn soft sm" href="https://github.com/wylho/ideario/releases/latest"><svg class="lucide" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg>Baixar</a></div>
-      <div class="box"><span class="ico"><svg class="lucide" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg></span><h3>Android <span class="tag">prévia</span></h3><p>Baixe o <code>_android.apk</code> no celular e abra; o Android pede para permitir instalar apps dessa fonte. Lembretes avisam com o app fechado; compartilhe de outro app para criar uma nota. Para atualizar, instale o novo por cima ou use o Obtainium.</p><a class="btn soft sm" href="https://github.com/wylho/ideario/releases/latest"><svg class="lucide" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg>Baixar</a></div>
+      <div class="box"><span class="ico"><svg class="lucide" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></svg></span><h3>Windows</h3><p>Download the <code>-setup.exe</code> and install it. When a new version comes out, the app lets you know when it opens.</p><a class="btn soft sm" href="https://github.com/wylho/ideario/releases/latest"><svg class="lucide" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg>Download</a></div>
+      <div class="box"><span class="ico"><svg class="lucide" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 6.528V3a1 1 0 0 1 1-1h0"/><path d="M18.237 21A15 15 0 0 0 22 11a6 6 0 0 0-10-4.472A6 6 0 0 0 2 11a15.1 15.1 0 0 0 3.763 10 3 3 0 0 0 3.648.648 5.5 5.5 0 0 1 5.178 0A3 3 0 0 0 18.237 21"/></svg></span><h3>macOS</h3><p>Download the <code>.dmg</code> (Apple Silicon and Intel). The first time, right-click the app and choose <b>Open</b>: it isn’t signed by Apple yet.</p><a class="btn soft sm" href="https://github.com/wylho/ideario/releases/latest"><svg class="lucide" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg>Download</a></div>
+      <div class="box"><span class="ico"><svg class="lucide" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg></span><h3>Android <span class="tag">preview</span></h3><p>Download the <code>_android.apk</code> on your phone and open it; Android asks you to allow installing apps from that source. Reminders fire even with the app closed; share from another app to create a note. To update, install the new one over it or use Obtainium.</p><a class="btn soft sm" href="https://github.com/wylho/ideario/releases/latest"><svg class="lucide" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg>Download</a></div>
     </div>
     <div class="box full" id="linux"><span class="ico"><svg class="lucide" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19h8"/><path d="m4 17 6-6-6-6"/></svg></span>
   <h3>Linux</h3>
-  <p>Pelo repositório, o Ideario atualiza junto com o resto do sistema. Ubuntu, Debian e derivados:</p>
+  <p>Install from the repository and Ideario updates along with the rest of your system. Ubuntu, Debian and derivatives:</p>
   <pre><code>curl -fsSL https://ideario.pages.dev/linux/ideario.gpg | sudo tee /usr/share/keyrings/ideario.gpg &gt; /dev/null
 echo "deb [signed-by=/usr/share/keyrings/ideario.gpg] https://ideario.pages.dev/apt stable main" | sudo tee /etc/apt/sources.list.d/ideario.list
 sudo apt update &amp;&amp; sudo apt install ideario</code></pre>
   <p>Fedora:</p>
   <pre><code>sudo curl -fsSL -o /etc/yum.repos.d/ideario.repo https://ideario.pages.dev/linux/ideario.repo
 sudo dnf install ideario</code></pre>
-  <p class="muted">Ou baixe o <code>.AppImage</code>, que roda em qualquer distribuição e também se atualiza sozinho.</p>
+  <p class="muted">Or download the <code>.AppImage</code>, which runs on any distribution and also updates itself.</p>
     </div>
-    <p class="note">Sem anúncios, sem rastreamento, sem coleta de dados. Leia a <a href="/privacidade/">Política de Privacidade</a> e os <a href="/termos/">Termos de Serviço</a>.</p>
+    <p class="note">No ads, no tracking, no data collection. Read the <a href="/privacy/">Privacy Policy</a> and the <a href="/terms/">Terms of Service</a>.</p>
   </div>
 </section>
 
 <section class="section" id="nodo">
   <div class="wrap">
     <div class="section-head">
-      <span class="chip accent"><svg class="lucide" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 9.5a5.5 5.5 0 0 1 9.591-3.676.56.56 0 0 0 .818 0A5.49 5.49 0 0 1 22 9.5c0 2.29-1.5 4-3 5.5l-5.492 5.313a2 2 0 0 1-3 .019L5 15c-1.5-1.5-3-3.2-3-5.5"/></svg>Do mesmo autor</span>
-      <h2>Para pensar em mapas, o Nodo.</h2>
-      <p>Mapas mentais com o mesmo jeito do Ideario: abre na hora, funciona sem internet, cada mapa é um arquivo seu e o Claude edita o mesmo mapa que você.</p>
+      <span class="chip accent"><svg class="lucide" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 9.5a5.5 5.5 0 0 1 9.591-3.676.56.56 0 0 0 .818 0A5.49 5.49 0 0 1 22 9.5c0 2.29-1.5 4-3 5.5l-5.492 5.313a2 2 0 0 1-3 .019L5 15c-1.5-1.5-3-3.2-3-5.5"/></svg>From the same author</span>
+      <h2>For thinking in maps, there’s Nodo.</h2>
+      <p>A free, open-source mind mapping app with the same spirit as Ideario: it opens instantly, works offline, every map is a file you own, and Claude edits the same map you do.</p>
     </div>
     <div class="cards">
       <div class="card wide sibling">
         <div>
           <a class="brand" href="https://nodo-1c7.pages.dev"><img src="/img/nodo-icone.svg" alt="">Nodo</a>
-          <ul><li>Selecione e digite: Tab cria um filho, Enter um irmão</li><li>Seis temas de mapa, ramos em curva ou em ângulo</li><li>Abre os mapas do Minder sem perder nada</li><li>Windows, macOS e Linux</li></ul>
-          <a class="btn primary" href="https://nodo-1c7.pages.dev">Conhecer o Nodo<svg class="lucide" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></a>
+          <ul><li>Select and type: Tab adds a child, Enter a sibling</li><li>Six map themes, curved or angled branches</li><li>Imports and exports Markdown and OPML</li><li>Windows, macOS and Linux</li></ul>
+          <a class="btn primary" href="https://nodo-1c7.pages.dev">Discover Nodo<svg class="lucide" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></a>
         </div>
-        <div class="media"><picture><source srcset="/img/nodo-escuro.webp" media="(prefers-color-scheme: dark)"><img src="/img/nodo.webp" width="2880" height="1800" loading="lazy" alt="Um mapa mental no Nodo: a raiz no centro e ramos coloridos dos dois lados"></picture></div>
+        <div class="media"><picture><source srcset="/img/nodo-escuro.webp" media="(prefers-color-scheme: dark)"><img src="/img/nodo.webp" width="2880" height="1800" loading="lazy" alt="A mind map in Nodo: the central topic in the middle with colorful branches on both sides"></picture></div>
       </div>
     </div>
   </div>
 </section>
 
-<section class="section" id="english" lang="en">
-  <div class="wrap english">
-    <h2>Ideario, in English</h2>
-  <p>Ideario is a free app to organize your life in notes, for Windows, macOS and Linux, with an Android preview. Notes,
-  reminders, a calendar and a kanban board are views of the same notes. It opens instantly, works offline and keeps your
-  notes on your computer. Optionally, it syncs between your computers and phone through your own Google Drive, in a hidden
-  app folder. There is no Ideario server and no data collection.</p>
-  <ul>
-    <li>Notes with checklists, tables, headings and quotes (paste Markdown or a screenshot), side-by-side photos, PDFs, audio, video, link cards and a big cover emoji</li>
-    <li>Reminders with system notifications, snooze and repeat, a three-color status, a calendar and a kanban board</li>
-    <li>Files view with a built-in PDF reader, and a moodboard of all your images, filterable by color</li>
-    <li>Document mode and export to Markdown, HTML or PDF</li>
-    <li>Works with Claude (Desktop and Code) through a local MCP server</li>
-    <li>Multi-select with batch actions, PIN-protected categories (sorted by name, note count or by hand), Google Keep import, local backups</li>
-    <li>New in 0.4: calendar, kanban, three-color reminder status, a new icon and faster sync</li>
-    <li>Updates itself (Windows, macOS, AppImage) or through the apt/dnf repository on Linux</li>
-  </ul>
-  <p><a href="https://github.com/wylho/ideario/releases/latest">Download the latest version</a> · Linux repository: see the
-  commands under <a href="#linux">Linux</a>.</p>
-  <p><a href="https://github.com/wylho/ideario">Source code on GitHub</a> · <a href="https://github.com/sponsors/wylho">Sponsor ♥</a> · <a href="/privacidade/#english">Privacy Policy</a> ·
-  <a href="/termos/#english">Terms of Service</a></p>
-  </div>
-</section>
 </main>
 
 <footer class="footer">
   <div class="wrap">
     <div class="cols">
-      <div><a class="brand" href="/"><img src="/favicon.svg" alt="">Ideario</a><p>Organize sua vida em notas.</p></div>
-      <div><h4>Ideario</h4><a href="/#recursos">Recursos</a><a href="/#novidades">Novidades</a><a href="/#claude">Claude</a><a href="/#baixar">Baixar</a></div>
-      <div><h4>Projeto</h4><a href="https://github.com/wylho/ideario">GitHub</a><a href="https://github.com/wylho/ideario/releases">Versões</a><a href="https://github.com/sponsors/wylho">Apoiar</a></div>
-      <div><h4>Sobre</h4><a href="/privacidade/">Privacidade</a><a href="/termos/">Termos</a><a href="/#english">English</a><a href="https://nodo-1c7.pages.dev">Nodo</a><a href="mailto:wyli4m@gmail.com">Contato</a></div>
+      <div><a class="brand" href="/"><img src="/favicon.svg" alt="">Ideario</a><p>Organize your life in notes.</p></div>
+      <div><h4>Ideario</h4><a href="/#features">Features</a><a href="/#whats-new">What’s new</a><a href="/#claude">Claude</a><a href="/#download">Download</a></div>
+      <div><h4>Project</h4><a href="https://github.com/wylho/ideario">GitHub</a><a href="https://github.com/wylho/ideario/releases">Releases</a><a href="https://github.com/sponsors/wylho">Sponsor</a></div>
+      <div><h4>About</h4><a href="/privacy/">Privacy</a><a href="/terms/">Terms</a><a href="/pt/" hreflang="pt-BR" lang="pt-BR">Português</a><a href="https://nodo-1c7.pages.dev">Nodo</a><a href="mailto:wyli4m@gmail.com">Contact</a></div>
     </div>
-    <p class="legal">Ideario · Contato: <a href="mailto:wyli4m@gmail.com">wyli4m@gmail.com</a> · Ícones <a href="https://lucide.dev">Lucide</a></p>
+    <p class="legal">Ideario · Contact: <a href="mailto:wyli4m@gmail.com">wyli4m@gmail.com</a> · Icons by <a href="https://lucide.dev">Lucide</a></p>
   </div>
 </footer>
 <script>

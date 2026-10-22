@@ -1,165 +1,169 @@
-<!-- Mesmo conteúdo da página inicial do site (site/index.html). Ao mudar um, mude o outro: skill /sync-site. -->
+<!-- Same content as the website home page (site/index.html), with the Portuguese copy in README.pt-BR.md and site/pt/index.html. Change one, change the others: skill /sync-site. -->
+
+<p align="center"><b>English</b> · <a href="README.pt-BR.md">Português</a></p>
 
 <p align="center">
-  <img src="public/favicon.svg" width="88" height="88" alt="Ícone do Ideario">
+  <img src="public/favicon.svg" width="88" height="88" alt="Ideario app icon">
 </p>
 
 <h1 align="center">Ideario</h1>
 
-<p align="center"><b>Organize sua vida em notas.</b><br>
-Notas, lembretes, calendário e kanban num lugar só: você escreve uma vez e vê do jeito que precisar. Abre num instante,
-funciona sem internet e guarda tudo no seu computador. Se quiser, sincroniza pelo seu próprio Google Drive.</p>
+<p align="center"><b>Organize your life in notes.</b><br>
+A free, local-first notes app with reminders, a calendar and a kanban board in one place: write once and see it however
+you need. It opens instantly, works offline and keeps everything on your computer. If you want, it syncs through your own
+Google Drive. A private Google Keep alternative for Windows, macOS, Linux and Android.</p>
 
-<p align="center"><a href="#novidades-da-versão-04"><b>Novo na versão 0.4: calendário, kanban e um ícone novo →</b></a></p>
+<p align="center"><a href="#whats-new-in-version-04"><b>New in version 0.4: calendar, kanban and a new icon →</b></a></p>
 
 <p align="center">
   <b>Windows · macOS · Linux · Android</b><br>
-  <a href="#baixar"><b>Baixar</b></a> ·
+  <a href="#download"><b>Download</b></a> ·
   <a href="https://ideario.pages.dev">ideario.pages.dev</a> ·
-  <a href="https://ideario.pages.dev/privacidade/">Privacidade</a> ·
-  <a href="#english">English</a> ·
-  <a href="https://github.com/sponsors/wylho">♥ Apoiar</a>
+  <a href="https://ideario.pages.dev/privacy/">Privacy</a> ·
+  <a href="README.pt-BR.md">Português</a> ·
+  <a href="https://github.com/sponsors/wylho">♥ Sponsor</a>
 </p>
 
 <picture>
   <source srcset="site/img/notas-escuro.webp" media="(prefers-color-scheme: dark)">
-  <img src="site/img/notas.webp" alt="Tela principal do Ideario: notas coloridas em cards, com checklists, fotos, lembretes e categorias na lateral">
+  <img src="site/img/notas.webp" alt="Ideario main screen: colorful note cards with checklists, photos and reminders, and categories in the sidebar">
 </picture>
 
-## Uma nota, seis jeitos de ver
+## One note, six views
 
-Tudo começa numa nota. O resto são visões dela, e nada é copiado: mudou num lugar, mudou em todos. Categorias e tags
-filtram qualquer visão.
+Everything starts as a note. The rest are views of it, and nothing is copied: change it in one place and it changes
+everywhere. Categories and tags filter any view.
 
 | | |
 |---|---|
-| **Notas** | Cards coloridos, fixados no topo, na ordem que você arrastar. |
-| **Lembretes** | O que vence hoje, amanhã e depois, com o que ficou atrasado em cima. |
-| **Calendário** | Cada lembrete no seu dia, por mês ou por semana. |
-| **Kanban** | Toda nota com status, em três colunas: a fazer, em andamento e concluído. |
-| **Arquivos** | PDFs, áudios, vídeos e documentos de todas as notas, com leitor de PDF. |
-| **Moodboard** | Todas as fotos num mural, com a paleta de cores de cada uma. |
+| **Notes** | Colorful cards, pinned to the top, in whatever order you drag them. |
+| **Reminders** | What’s due today, tomorrow and later, with anything overdue at the top. |
+| **Calendar** | Every reminder on its day, by month or by week. |
+| **Kanban** | Every note with a status, in three columns: to do, in progress and done. |
+| **Files** | PDFs, audio, video and documents from all your notes, with a built-in PDF reader. |
+| **Moodboard** | All your photos on one board, each with its own color palette. |
 
-## Novidades da versão 0.4
+## What’s new in version 0.4
 
-- **Calendário:** os lembretes no dia de cada um, por mês ou semana; arraste para mudar o dia.
-- **Kanban:** a fazer, em andamento e concluído; arraste o card entre as colunas.
-- **Status em três cores**: vermelho, amarelo e verde, em qualquer nota (com lembrete ele vem sozinho), também pelo Claude.
-- **Ícone novo.**
-- **Sincronização mais rápida:** as notas sobem para o Drive em paralelo, e mudar a ordem só envia o que mudou.
-- Títulos longos quebram linha, e a busca fica sempre no mesmo lugar da barra.
+- **Calendar:** each reminder on its day, by month or week; drag it to change the day.
+- **Kanban:** to do, in progress and done; drag cards between the columns.
+- **Three-color status**: red, yellow and green, on any note (notes with a reminder get it automatically), also through Claude.
+- **A new icon.**
+- **Faster sync:** notes upload to Drive in parallel, and reordering only sends what changed.
+- Long titles wrap, and search always stays in the same place in the toolbar.
 
-Na 0.4.4: ícone sem placa no Linux e ajustes no celular (seleção e margens). Na 0.4.3: ícone novo e a bolinha de seleção dos cards mais discreta. Na 0.4.2: **status em qualquer nota**. Com lembrete ele aparece sozinho; sem lembrete, é só escolher no menu Status, e a nota entra no Kanban. Na 0.4.1: o ícone sem a borda azul no macOS.
+In 0.4.4: an icon without a backplate on Linux and phone tweaks (selection and margins). In 0.4.3: a new icon and a subtler selection dot on cards. In 0.4.2: **status on any note**. With a reminder it appears on its own; without one, just pick it from the Status menu and the note joins the kanban board. In 0.4.1: the icon without the blue border on macOS.
 
 <details>
-<summary>Versões anteriores</summary>
+<summary>Earlier versions</summary>
 
-**0.3:** editor com títulos, citações, código e tabelas; colar Markdown e prints direto na nota; um ID curto em cada nota
-para falar dela com o Claude.
+**0.3:** an editor with headings, quotes, code and tables; paste Markdown and screenshots straight into a note; a short
+ID on every note so you can refer to it when talking to Claude.
 
-**0.2:** Android (prévia); categorias em ordem de nome, de número de notas ou do seu jeito; lateral que vira pílulas; a
-janela lembra o tamanho; sincronização em lotes, com a ordem dos cards indo junto.
+**0.2:** Android (preview); categories sorted by name, by note count or by hand; a sidebar that turns into pills; the
+window remembers its size; batched sync that carries the card order along.
 </details>
 
-Quem já usa recebe sozinho: o app avisa ao abrir. Todas as versões estão em
+If you already use Ideario, updates arrive on their own: the app lets you know when it opens. Every version is on
 [Releases](https://github.com/wylho/ideario/releases).
 
-## Tudo numa nota só
+## Everything in one note
 
-Texto, checklist, fotos lado a lado, PDFs, áudio e vídeo convivem na mesma nota, cada um como um bloco que você
-arrasta para onde quiser.
+Text, checklists, side-by-side photos, PDFs, audio and video live together in the same note, each one a block you can
+drag wherever you want.
 
-- Checklists com subitens em vários níveis; marcar um item marca os de dentro
-- Grave áudio ou tire foto sem sair da nota
-- Títulos, citações e tabelas; cole Markdown e ele já vira formatação
-- Cole um print direto na nota
-- Cole um link e ele vira um cartão com título e imagem
-- Um emoji grande de capa para achar a nota de longe
+- Checklists with nested sub-items; checking an item checks everything inside it
+- Record audio or take a photo without leaving the note
+- Headings, quotes and tables; paste Markdown and it turns into formatting
+- Paste a screenshot straight into the note
+- Paste a link and it becomes a card with a title and image
+- A big cover emoji to spot the note from afar
 
-<img src="site/img/nota.webp" alt="Nota aberta com três fotos lado a lado, um checklist e um PDF anexado">
+<img src="site/img/nota.webp" alt="An open note with three photos side by side, a checklist and an attached PDF">
 
-## Lembretes que avisam de verdade
+## Reminders that actually remind you
 
-Notificação do sistema na hora certa, com Adiar e Concluir. Lembretes que se repetem todo dia, semana, mês ou ano.
-Se o computador estava desligado, o Ideario avisa o que passou assim que abrir. Cada lembrete tem um status em três
-cores: vermelho (a fazer), amarelo (em andamento) e verde (concluído).
+System notifications right on time, with Snooze and Done. Reminders that repeat every day, week, month or year. If your
+computer was off, Ideario tells you what you missed as soon as it opens. Every reminder has a three-color status: red
+(to do), yellow (in progress) and green (done).
 
-<img src="site/img/lembretes.webp" alt="Lista de lembretes agrupada em atrasados, hoje, amanhã e próximos">
+<img src="site/img/lembretes.webp" alt="Reminders list grouped into overdue, today, tomorrow and upcoming">
 
-## Calendário
+## Calendar
 
-Os mesmos lembretes, no dia de cada um, por mês ou por semana. Arraste para outro dia e a data muda (a hora fica);
-toque no + de um dia para criar um lembrete nele. Os que se repetem já mostram as próximas vezes.
+The same reminders, each on its day, by month or by week. Drag one to another day and the date changes (the time
+stays); tap a day’s + to create a reminder on it. Repeating reminders already show their next occurrences.
 
-<img src="site/img/calendario.webp" alt="Calendário do mês com os lembretes em cada dia, coloridos pelo status">
+<img src="site/img/calendario.webp" alt="Monthly calendar with reminders on each day, colored by status">
 
 ## Kanban
 
-A fazer, em andamento e concluído, em três colunas. Arraste o card de uma coluna para outra ou toque no seletor de
-cores dele. Tudo isso também pelo Claude.
+To do, in progress and done, in three columns. Drag a card from one column to another or tap its color selector.
+Claude can do all of this too.
 
-<img src="site/img/kanban.webp" alt="Kanban com os lembretes em três colunas: a fazer, em andamento e concluído">
+<img src="site/img/kanban.webp" alt="Kanban board with reminders in three columns: to do, in progress and done">
 
-## Moodboard das suas fotos
+## A moodboard of your photos
 
-Todas as imagens de todas as notas num mural só, com a paleta de cores de cada uma. Filtre por tom e encontre aquela
-referência sem lembrar em que nota ela estava.
+Every image from every note on a single board, each with its color palette. Filter by tone and find that reference
+without remembering which note it was in.
 
-<img src="site/img/moodboard.webp" alt="Moodboard com as imagens das notas em mosaico e a paleta de cores de cada uma">
+<img src="site/img/moodboard.webp" alt="Moodboard with images from the notes in a mosaic, each with its color palette">
 
-## Quando a nota cresce, vira documento
+## When a note grows, it becomes a document
 
-Um clique e a nota abre em página inteira, com coluna de leitura. Exporte em Markdown, HTML ou PDF, com as fotos e
-anexos juntos.
+One click and the note opens full-page, with a comfortable reading column. Export it to Markdown, HTML or PDF, with its
+photos and attachments.
 
-<img src="site/img/documento.webp" alt="Nota aberta no modo documento, em página inteira">
+<img src="site/img/documento.webp" alt="A note open in document mode, full-page">
 
-## Funciona com o Claude
+## Works with Claude
 
-Ligue o Ideario no Claude Desktop ou no Claude Code com um clique e peça: “cria uma lista de compras”, “marca o leite
-como comprado”, “o que eu anotei sobre a viagem?”. O Claude fala com o Ideario direto do seu computador, sem servidor
-nosso no meio, e as categorias protegidas por PIN ficam de fora. Cada nota tem um ID curto (#a1b2c3d4): copie e diga
-“na nota #a1b2c3d4, monta uma tabela com os gastos”. Guia: [`docs/MCP.md`](docs/MCP.md).
+Ideario has a built-in MCP server for Claude. Connect it to Claude Desktop or Claude Code with one click and ask: “make
+a shopping list”, “check off the milk”, “what did I write about the trip?”. Claude talks to Ideario right on your
+computer, with no server of ours in between, and PIN-protected categories stay out of reach. Every note has a short ID
+(#a1b2c3d4): copy it and say “in note #a1b2c3d4, build a table of the expenses”. Guide: [`docs/MCP.md`](docs/MCP.md).
 
-<img src="site/img/claude.webp" alt="Configurações do Ideario com a sincronização do Google Drive e o botão para ligar no Claude Desktop">
+<img src="site/img/claude.webp" alt="Ideario settings with Google Drive sync and the button to connect Claude Desktop">
 
-## Do tamanho que a janela estiver
+## Fits any window size
 
-Janela grande, lateral com categorias e tags; feche a lateral e as categorias viram pílulas acima das notas.
-Janela estreita, o layout se ajusta, com as visões numa barra embaixo. Tema claro, escuro ou o do sistema, com as
-cores de destaque do seu Windows, macOS ou Linux.
+In a large window, a sidebar with categories and tags; close it and categories become pills above your notes. In a
+narrow window, the layout adapts, with the views in a bar at the bottom. Light, dark or system theme, with the accent
+colors of your Windows, macOS or Linux desktop.
 
-<p align="center"><img src="site/img/janela-estreita.webp" width="300" alt="O Ideario numa janela estreita, com as notas em duas colunas e a barra de visões embaixo"></p>
+<p align="center"><img src="site/img/janela-estreita.webp" width="300" alt="Ideario in a narrow window, with notes in two columns and the views bar at the bottom"></p>
 
-## E mais
-
-| | |
-|---|---|
-| **Várias de uma vez** | Selecione notas com o mouse, Ctrl ou Shift e mude a cor, a categoria ou arquive todas juntas, com Desfazer. |
-| **Clique direito em tudo** | Cards, lembretes, arquivos e categorias têm menu próprio, no clique direito ou no toque longo. |
-| **Sync pelo seu Drive** | Numa pasta oculta do app no seu Google Drive, entre computadores e o celular, até a ordem dos cards. Sem servidor no meio, sem conta nova. |
-| **Categorias com PIN** | Esconda uma categoria inteira das listas e da busca, e peça um PIN para abrir. Ordene por nome, por número de notas ou arrastando. |
-| **Vem do Google Keep?** | Solte o arquivo do Google Takeout e as notas entram com fotos, cores, marcadores e datas. |
-| **Backup local** | Um arquivo com tudo, quando quiser ou toda semana. Restaurar junta com o que já existe. |
-| **Busca rápida** | Sem acento, por pedaço de palavra, em milhares de notas, no instante em que você digita. |
-| **Fotos leves** | Fotos reduzidas e sem localização por padrão. Quer a original? Uma opção nas configurações. |
-
-<a id="baixar"></a>
-
-## Baixar
-
-Grátis. Os instaladores ficam na página de [versões do GitHub](https://github.com/wylho/ideario/releases/latest).
-Depois de instalado, o Ideario se atualiza sozinho.
+## And more
 
 | | |
 |---|---|
-| **Windows** | Baixe o `-setup.exe` e instale. Quando sair versão nova, o app avisa ao abrir. |
-| **macOS** | Baixe o `.dmg` (Apple Silicon e Intel). Na primeira vez, clique com o botão direito no app e escolha **Abrir**: ele ainda não é assinado pela Apple. |
-| **Android** (prévia) | Baixe o `_android.apk` no celular e abra; o Android pede para permitir instalar apps dessa fonte. Lembretes avisam com o app fechado; compartilhe de outro app para criar uma nota. Para atualizar, instale o novo por cima ou use o Obtainium. |
+| **Many at once** | Select notes with the mouse, Ctrl or Shift and change the color or category, or archive them all together, with Undo. |
+| **Right-click everything** | Cards, reminders, files and categories each have their own menu, on right-click or long-press. |
+| **Sync with Google Drive** | Through a hidden app folder in your own Google Drive, across computers and your phone, down to the card order. No server in between, no new account. |
+| **Private categories with a PIN** | Hide a whole category from lists and search, and require a PIN to open it. Sort by name, by note count or by dragging. |
+| **Coming from Google Keep?** | Drop in your Google Takeout file and your notes come in with photos, colors, labels and dates. |
+| **Local backup** | One file with everything, whenever you want or every week. Restoring merges with what’s already there. |
+| **Fast search** | Accent-insensitive, matches parts of words, across thousands of notes, the instant you type. |
+| **Lightweight photos** | Photos are resized and stripped of location data by default. Want the original? It’s one setting away. |
+
+<a id="download"></a>
+
+## Download
+
+Free. Installers are on the [GitHub releases page](https://github.com/wylho/ideario/releases/latest). Once installed,
+Ideario updates itself.
+
+| | |
+|---|---|
+| **Windows** | Download the `-setup.exe` and install it. When a new version comes out, the app lets you know when it opens. |
+| **macOS** | Download the `.dmg` (Apple Silicon and Intel). The first time, right-click the app and choose **Open**: it isn’t signed by Apple yet. |
+| **Android** (preview) | Download the `_android.apk` on your phone and open it; Android asks you to allow installing apps from that source. Reminders fire even with the app closed; share from another app to create a note. To update, install the new one over it or use Obtainium. |
 
 <a id="linux"></a>
 
-**Linux.** Pelo repositório, o Ideario atualiza junto com o resto do sistema. Ubuntu, Debian e derivados:
+**Linux.** Install from the repository and Ideario updates along with the rest of your system. Ubuntu, Debian and
+derivatives:
 
 ```sh
 curl -fsSL https://ideario.pages.dev/linux/ideario.gpg | sudo tee /usr/share/keyrings/ideario.gpg > /dev/null
@@ -174,58 +178,37 @@ sudo curl -fsSL -o /etc/yum.repos.d/ideario.repo https://ideario.pages.dev/linux
 sudo dnf install ideario
 ```
 
-Ou baixe o `.AppImage`, que roda em qualquer distribuição e também se atualiza sozinho.
+Or download the `.AppImage`, which runs on any distribution and also updates itself.
 
-**Privacidade:** sem anúncios, sem rastreamento, sem coleta de dados. Suas notas ficam no seu computador e, se você
-quiser, no seu Google Drive. Leia a [Política de Privacidade](https://ideario.pages.dev/privacidade/) e os
-[Termos de Serviço](https://ideario.pages.dev/termos/).
-
----
-
-<a id="english"></a>
-
-## Ideario, in English
-
-Ideario is a free app to organize your life in notes, for Windows, macOS and Linux, with an Android preview. Notes,
-reminders, a calendar and a kanban board are views of the same notes. It opens instantly, works offline and keeps your
-notes on your computer. Optionally, it syncs between your computers and phone through your own Google Drive, in a hidden
-app folder. There is no Ideario server and no data collection.
-
-- Notes with checklists, tables, headings and quotes (paste Markdown or a screenshot), side-by-side photos, PDFs, audio, video, link cards and a big cover emoji
-- Reminders with system notifications, snooze and repeat, a three-color status, a calendar and a kanban board
-- Files view with a built-in PDF reader, and a moodboard of all your images, filterable by color
-- Document mode and export to Markdown, HTML or PDF
-- Works with Claude (Desktop and Code) through a local MCP server
-- Multi-select with batch actions, PIN-protected categories (sorted by name, note count or by hand), Google Keep import, local backups
-- New in 0.4: calendar, kanban, three-color reminder status, a new icon and faster sync
-- Updates itself (Windows, macOS, AppImage) or through the apt/dnf repository on Linux
-
-[Download the latest version](https://github.com/wylho/ideario/releases/latest) · [Website](https://ideario.pages.dev) · [Sponsor ♥](https://github.com/sponsors/wylho) · [Privacy Policy](https://ideario.pages.dev/privacidade/#english) ·
-[Terms of Service](https://ideario.pages.dev/termos/#english)
+**Privacy:** no ads, no tracking, no data collection. Your notes stay on your computer and, if you want, in your Google
+Drive. Read the [Privacy Policy](https://ideario.pages.dev/privacy/) and the
+[Terms of Service](https://ideario.pages.dev/terms/).
 
 ---
 
-## Para desenvolver
+## Development
 
-Tauri 2 (Rust) + Svelte 5. Especificação: [`docs/SPEC.md`](docs/SPEC.md). Protótipo de design: [`prototype/`](prototype/).
+Tauri 2 (Rust) + Svelte 5. Specification (in Portuguese): [`docs/SPEC.md`](docs/SPEC.md). Design prototype:
+[`prototype/`](prototype/).
 
-**Requisitos:** Node 20+ e Rust estável (`rustup`), mais as
-[dependências de sistema do Tauri](https://v2.tauri.app/start/prerequisites/) (no Linux: `libwebkit2gtk-4.1-dev`,
+**Requirements:** Node 20+ and stable Rust (`rustup`), plus
+[Tauri’s system dependencies](https://v2.tauri.app/start/prerequisites/) (on Linux: `libwebkit2gtk-4.1-dev`,
 `libayatana-appindicator3-dev`, `librsvg2-dev`, `libxdo-dev`, `libssl-dev`).
 
 ```sh
 npm install
 
-npm run tauri dev      # app desktop com recarga ao vivo
-npm run tauri build    # instaladores em src-tauri/target/release/bundle/
+npm run tauri dev      # desktop app with live reload
+npm run tauri build    # installers in src-tauri/target/release/bundle/
 
-npm run dev            # só a interface no navegador (http://localhost:1420), com dados de exemplo fictícios
-npm run check          # tipos (svelte-check)
-npm run test:e2e       # testes de comportamento no Chromium
+npm run dev            # just the interface in the browser (http://localhost:1420), with fictional sample data
+npm run check          # types (svelte-check)
+npm run test:e2e       # behavior tests in Chromium
 cd src-tauri && cargo test
 ```
 
-Sync com o Google Drive: [`docs/GOOGLE_DRIVE.md`](docs/GOOGLE_DRIVE.md). Site: pasta [`site/`](site/) (Cloudflare
-Pages); prints em `site/img`, refeitos com `npm run build && node scripts/site-shots.mjs`.
+Google Drive sync: [`docs/GOOGLE_DRIVE.md`](docs/GOOGLE_DRIVE.md). Website: the [`site/`](site/) folder (Cloudflare
+Pages), English at the root and Portuguese in `site/pt/`; screenshots in `site/img`, regenerated with
+`npm run build && node scripts/site-shots.mjs`.
 
-Atalhos: <kbd>Ctrl/Cmd</kbd>+<kbd>N</kbd> nota nova, <kbd>Ctrl/Cmd</kbd>+<kbd>F</kbd> busca, <kbd>Esc</kbd> fecha o editor.
+Shortcuts: <kbd>Ctrl/Cmd</kbd>+<kbd>N</kbd> new note, <kbd>Ctrl/Cmd</kbd>+<kbd>F</kbd> search, <kbd>Esc</kbd> closes the editor.
