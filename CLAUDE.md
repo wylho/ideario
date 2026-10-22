@@ -81,6 +81,10 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
   fotos (`atrio::media`, feature `media`), status e repetição (`atrio::card`) e a prévia do card
   (`atrio::projection`) vêm da crate; saíram `media.rs` e `projection.rs`; `attachments.rs` e `reminders.rs` ficaram
   só com o que é do Ideario (banco, pasta, miniaturas de PDF, adiar, avisar). `store::Attachment` é o do Atrio.
+  **Fase 3 (Atrio 0.15.1):** o card da lista é o `NoteCard` do Atrio, o mesmo do Nodo; `components/NoteCard.svelte`
+  só liga o que é do Ideario (menu, seleção com `onmark`, fixar, filtros, arrastar). Atenção: o npm não troca a
+  dependência git só porque a tag mudou no `package.json` (segue o `package-lock`); a interface estava no Atrio 0.9.0
+  até aqui. O `scripts/apps-up.sh` do Atrio agora instala a tag pelo nome e confere a versão.
   Antes no Atrio **0.11.0** (capa e anexos na prévia em Markdown; foto com o cursor numa lista entra depois dela).
   Desde a 0.9.0, as pílulas do card da lista são o `CardPills` do Atrio; com `onstatus`, a nota que tem status (ou
   lembrete) mostra o seletor de três cores no card e muda ali mesmo, sem abrir (pedido do usuário). O `vite.config.ts`
