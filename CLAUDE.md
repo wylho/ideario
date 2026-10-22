@@ -66,6 +66,9 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
   Y.Doc e salvamento contínuo, sync, fixar, arquivar, lixeira, exportar, modo documento, barra do topo no snippet
   `top`), com `features()` (tudo ligado) e um `CardHost` sobre o `api`. Mudança no card (blocos, anexos, gravador,
   lembrete, status, etiquetas, cor, barra de formatação) se faz no Atrio.
+  Desde a 0.9.0, as pílulas do card da lista são o `CardPills` do Atrio; com `onstatus`, a nota que tem status (ou
+  lembrete) mostra o seletor de três cores no card e muda ali mesmo, sem abrir (pedido do usuário). O `vite.config.ts`
+  deixa o Atrio fora do pré-empacotamento (senão o `npm run dev` quebra nos `.svelte.ts`).
 - **Backup local:** manual ("Fazer backup agora") + automático semanal numa pasta escolhida, guardando os 4 últimos.
   Restaurar **junta** com o que existe (como o sync), nada se perde.
 

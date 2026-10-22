@@ -130,6 +130,14 @@ test('fixar, cor, arquivar, lixeira e restaurar', async ({ page }) => {
   await expect(note()).toHaveCount(0)
 })
 
+test('status no card da lista: muda sem abrir a nota; nota sem status não mostra o seletor', async ({ page }) => {
+  const card = cards(page).filter({ hasText: 'Mercado da semana' })
+  await card.getByRole('radio', { name: 'Em andamento' }).click()
+  await expect(page.locator('.editor')).toHaveCount(0)
+  await expect(card.getByRole('radio', { name: 'Em andamento' })).toHaveAttribute('aria-checked', 'true')
+  await expect(cards(page).filter({ has: page.getByRole('heading', { name: 'Embalagem: direção visual' }) }).locator('.status-toggle')).toHaveCount(0)
+})
+
 test('lembretes: grupos, concluir pela lista e ponto de atrasados', async ({ page }) => {
   await expect(page.locator('.tabbar .tab-n.late')).toHaveCount(1)
   await tab(page, 'Lembretes')
@@ -2483,7 +2491,8 @@ test.describe('Status em qualquer nota', () => {
     await page.getByRole('menuitem', { name: 'Status' }).click()
     await page.getByRole('menuitem', { name: 'Em andamento' }).click()
     await expect(page.locator('.toast span')).toHaveText('Nota em andamento')
-    await expect(card().locator('.pill', { hasText: 'Em andamento' })).toHaveCount(1)
+    // no card da lista, o status vira o seletor de três cores
+    await expect(card().getByRole('radio', { name: 'Em andamento' })).toHaveAttribute('aria-checked', 'true')
     await page.locator('.view-switch .lens', { hasText: 'Kanban' }).or(page.locator('.view-switch .lens[title="Kanban"]')).first().click()
     const kcard = page.locator('.kb-col', { hasText: 'Em andamento' }).locator('.kb-card', { hasText: 'Horários e estacionamento' })
     await expect(kcard).toHaveCount(1)
