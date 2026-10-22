@@ -14,7 +14,7 @@ import { NO_CATEGORY, NO_TAGS } from '../../types'
 import { noteToState, stateToNote } from './ydoc'
 import { mockMarkdown } from './markdown'
 import { fakeImageSrc } from './fake-images'
-import { DAY, SEED_CATEGORIES, SEED_FILES, SEED_IMAGES, seedNotes } from './seed'
+import { DAY, SEED_ACCOUNT, SEED_CATEGORIES, SEED_FILES, SEED_IMAGES, seedNotes } from './seed'
 
 /** `tags` guarda só as tags manuais; as `#tags` do corpo são derivadas na projeção. */
 interface StoredNote extends NoteInput {
@@ -359,7 +359,7 @@ function changed() {
 
 // Simula o ciclo do sync (SPEC §6): alguns instantes depois da última edição, sobe e volta a 'ok'.
 // A prévia começa com uma conta de exemplo conectada.
-let syncAccount: string | null = 'voce@gmail.com'
+let syncAccount: string | null = SEED_ACCOUNT
 let lastSyncAt = Date.now() - 2 * 60_000
 let signIn: ((ok: boolean) => void) | null = null
 const syncListeners = new Set<(s: SyncState) => void>()
@@ -775,7 +775,7 @@ export const mockApi: Api = {
     })
     signIn = null
     if (!ok) throw new Error('login cancelado')
-    syncAccount = 'voce@gmail.com'
+    syncAccount = SEED_ACCOUNT
     scheduleSync()
     return mockApi.syncStatus()
   },

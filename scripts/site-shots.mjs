@@ -1,5 +1,5 @@
 // Prints do app para o site, tirados da prévia no navegador com os dados de exemplo do mock (inventados: o
-// repositório é público). Em inglês em site/img (a página principal) e em português em site/img/pt.
+// repositório é público; em inglês o mock troca para os exemplos em inglês). Em inglês em site/img (a página principal) e em português em site/img/pt.
 // Regra do usuário: a tela cheia de cards, nunca um app vazio; no recorte de celular, zoom nos cards.
 //   npm run build && node scripts/site-shots.mjs
 // Chromium: o do Playwright, ou CHROMIUM=/caminho/do/chrome.
@@ -70,9 +70,9 @@ try {
     const L = (p, e) => (locale === 'pt-BR' ? p : e)
     await shot(browser, 'notas', desk)
     await shot(browser, 'notas-escuro', { ...desk, dark: true })
-    await shot(browser, 'nota', desk, openCard('Viagem para Paraty'))
+    await shot(browser, 'nota', desk, openCard(L('Viagem para Paraty', 'Trip to Harbor Bay')))
     await shot(browser, 'documento', desk, async (p) => {
-      await openCard('Ideias de campanha Q4')(p)
+      await openCard(L('Ideias de campanha Q4', 'Q4 campaign ideas'))(p)
       await p.getByRole('button', { name: L('Abrir como documento', 'Open as document') }).click()
     })
     await shot(browser, 'claude', desk, async (p) => {

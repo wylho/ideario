@@ -1,6 +1,7 @@
 // Dados de exemplo da Fase 0, portados do protótipo.
 import type { AttachmentKind, NoteColor, RichDoc, RichNode, Tone } from '../../types'
 import type { FakeImage } from './fake-images'
+import { i18n } from '@wylho/atrio'
 
 const HOUR = 3_600_000
 const DAY = 86_400_000
@@ -50,7 +51,7 @@ export interface SeedNote {
   updatedAt: number
 }
 
-export const SEED_CATEGORIES: SeedCategory[] = [
+const PT_CATEGORIES: SeedCategory[] = [
   { id: 'cat-aurora', name: 'Aurora', color: '#C26A3D' },
   { id: 'cat-ingles', name: 'Inglês', color: '#3E8E7E' },
   { id: 'cat-trabalho', name: 'Trabalho', color: '#8A6BC4' },
@@ -59,7 +60,7 @@ export const SEED_CATEGORIES: SeedCategory[] = [
   { id: 'cat-curso', name: 'Curso de Fotografia', color: '#B08A1E' },
 ]
 
-export const SEED_IMAGES: SeedImage[] = [
+const PT_IMAGES: SeedImage[] = [
   { hash: 'img-campanha', name: 'campanha-q4-grid.webp', kind: 'swatch', w: 600, h: 420, pal: ['#1D2B6B', '#3D63D6', '#A9BCF5', '#F2EDE4', '#E86A3A'], tone: 'frio', origKB: 3480, optKB: 286 },
   { hash: 'img-frasco', name: 'frasco-ref-01.webp', kind: 'bottle', w: 600, h: 800, pal: ['#E9D6C1', '#C26A3D', '#7A3B1F', '#F6EEE5', '#2E1A10'], tone: 'quente', origKB: 4210, optKB: 344 },
   { hash: 'img-serra', name: 'paisagem-serra.webp', kind: 'landscape', w: 600, h: 450, pal: ['#F4C9A0', '#E8875A', '#FBE6C8', '#6E4A6B', '#3B2A44'], tone: 'quente', origKB: 5120, optKB: 402 },
@@ -82,7 +83,7 @@ const PDF = 'application/pdf'
 const DOCX = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
 const XLSX = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
 
-export const SEED_FILES: SeedFile[] = [
+const PT_FILES: SeedFile[] = [
   { hash: 'file-aula07', name: 'Aula 07 - Luz natural.pdf', kind: 'pdf', mime: PDF, kb: 2410, noteId: 'n4', daysAgo: 2 },
   { hash: 'file-manual', name: 'Manual de marca Lumen v3.pdf', kind: 'pdf', mime: PDF, kb: 8120, noteId: 'n1', daysAgo: 6 },
   { hash: 'file-briefing', name: 'Briefing Aurora.docx', kind: 'doc', mime: DOCX, kb: 186, noteId: 'n2', daysAgo: 9 },
@@ -122,7 +123,7 @@ function at(dayOffset: number, h: number, m = 0) {
 }
 const hoursAgo = (h: number) => Date.now() - h * HOUR
 
-export function seedNotes(): SeedNote[] {
+function seedNotesPt(): SeedNote[] {
   return [
     {
       id: 'n1', title: 'Ideias de campanha Q4', categoryId: 'cat-lumen', tags: ['campanha', 'ideia'], color: 'sky', pinned: true,
@@ -274,4 +275,215 @@ export function seedNotes(): SeedNote[] {
   ]
 }
 
+// ---------- em inglês ----------
+// Os mesmos exemplos, contados para quem lê em inglês (os prints do site em inglês saem daqui). Mesmos ids, fotos,
+// datas e recursos; só o texto muda. Também inventados.
+
+const EN_CATEGORY_NAMES: Record<string, string> = {
+  'cat-aurora': 'Aurora',
+  'cat-ingles': 'Spanish',
+  'cat-trabalho': 'Work',
+  'cat-bemestar': 'Wellness',
+  'cat-lumen': 'Lumen',
+  'cat-curso': 'Photography Course',
+}
+
+const EN_IMAGE_NAMES: Record<string, string> = {
+  'img-campanha': 'campaign-q4-grid.webp',
+  'img-frasco': 'bottle-ref-01.webp',
+  'img-serra': 'hills-at-dusk.webp',
+  'img-grotesca': 'grotesque-specimen.webp',
+  'img-arcos': 'facade-arches.webp',
+  'img-outono': 'autumn-palette.webp',
+  'img-lavanda': 'lavender-tones.webp',
+  'img-rosa': 'pink-blocks.webp',
+  'img-mata': 'forest-trail.webp',
+  'img-serif': 'editorial-serif.webp',
+  'img-mockup': 'app-launch-mockup.webp',
+  'img-rotulo': 'label-proof-03.webp',
+  'img-amostras': 'paper-samples.webp',
+  'img-praia': 'harbor-pier.webp',
+  'img-folhagem': 'coastal-woods.webp',
+  'img-pao': 'sourdough-proof.webp',
+}
+
+const EN_FILE_NAMES: Record<string, string> = {
+  'file-aula07': 'Lesson 07 - Natural light.pdf',
+  'file-manual': 'Lumen brand guidelines v3.pdf',
+  'file-briefing': 'Aurora brief.docx',
+  'file-aula14': 'Conversation class 14.m4a',
+  'file-exposicao': 'Exposure chart.xlsx',
+  'file-pauta': '1-1 agenda October.docx',
+  'file-reuniao': 'Planning meeting recording.mp4',
+  'file-shadowing': 'Shadowing ep. 42.mp3',
+  'file-avaliacao': 'Q1 review - summary.pdf',
+  'file-lista3': 'Exercise sheet 3.pdf',
+  'file-gastos': 'Course materials.xlsx',
+  'file-roteiro': 'Harbor Bay itinerary.pdf',
+}
+
+function seedNotesEn(): SeedNote[] {
+  return [
+    {
+      id: 'n1', title: 'Q4 campaign ideas', categoryId: 'cat-lumen', tags: ['campaign', 'idea'], color: 'sky', pinned: true,
+      reminderAt: at(6, 10), reminderDoing: true, updatedAt: hoursAgo(3),
+      body: doc(
+        p('Common thread: ', bold('the coffee that wakes up the neighborhood'), '. Test three angles before the meeting.'),
+        img('img-campanha'),
+        ul('Post series with the baristas', 'Landing page with the menu', 'Back-to-school coupon'),
+        p('Check the tone of voice in the guidelines before locking the copy. #copy'),
+      ),
+    },
+    {
+      id: 'n2', title: 'Packaging: visual direction', categoryId: 'cat-aurora', tags: ['packaging', 'reference'], color: 'sand', pinned: true,
+      reminderAt: null, updatedAt: hoursAgo(20),
+      body: doc(p('Amber glass, a small label and lots of breathing room. No gold.'), img('img-frasco'), p('The hills at dusk are the bottle palette:'), img('img-serra')),
+    },
+    {
+      id: 'n3', title: 'Spanish verbs to review', categoryId: 'cat-ingles', tags: ['study'], color: 'sage', pinned: false,
+      reminderAt: at(1, 19), updatedAt: hoursAgo(26),
+      body: doc(check([['ser vs. estar', true], ['por vs. para', true], ['preterite vs. imperfect', false], ['present subjunctive', false], ['reflexive verbs', false]])),
+    },
+    {
+      id: 'n4', title: 'Metering: manual mode', categoryId: 'cat-curso', tags: ['study', 'assignment'], color: 'butter', pinned: false,
+      reminderAt: at(3, 9), updatedAt: hoursAgo(50),
+      body: doc(
+        h3('Steps'),
+        ul('Meter the light at the right spot', 'Set ISO and shutter speed', 'Check the histogram'),
+        p('Hand in the photo essay by Friday. The chart and the lesson PDF are attached.'),
+      ),
+    },
+    {
+      id: 'n5', title: 'Team 1:1 — agenda', categoryId: 'cat-trabalho', tags: ['meeting'], color: 'lilac', pinned: false,
+      reminderAt: at(0, 15), updatedAt: hoursAgo(5),
+      body: doc(check([['Revisit quarterly goals', false], ['Feedback on the onboarding project', false], ['December time off', true]]), file('file-reuniao')),
+    },
+    {
+      id: 'n6', title: 'Class times and parking', categoryId: 'cat-bemestar', tags: [], color: 'none', pinned: false,
+      reminderAt: null, updatedAt: hoursAgo(120),
+      body: doc(p('Classes from 7 am to 9 pm. Partner parking on the back street, entrance through gate B.')),
+    },
+    {
+      id: 'n7', title: 'Type references', categoryId: 'cat-lumen', tags: ['typography', 'reference'], color: 'none', pinned: false,
+      reminderAt: null, updatedAt: hoursAgo(72),
+      body: doc(img('img-grotesca'), p('A high-contrast grotesque for headlines, serif only for quotes.'), img('img-serif')),
+    },
+    {
+      id: 'n8', title: '', categoryId: null, tags: [], color: 'none', pinned: false,
+      reminderAt: at(-1, 18), updatedAt: hoursAgo(30),
+      body: doc(p('Buy AA batteries and a bulb for the porch')),
+    },
+    {
+      id: 'n9', title: 'Ideario: notes app', categoryId: null, tags: ['idea', 'app'], color: 'rose', pinned: false,
+      reminderAt: null, updatedAt: hoursAgo(1),
+      body: doc(
+        p('Quick notepad + idea hub. Local-first, syncs through Google Drive.'),
+        ul('Open straight into a new note', 'Optimized photos', 'Moodboard with palettes'),
+        img('img-rosa'),
+      ),
+    },
+    {
+      id: 'n10', title: 'Autumn palette', categoryId: 'cat-aurora', tags: ['color', 'reference'], color: 'none', pinned: false,
+      reminderAt: null, updatedAt: hoursAgo(96),
+      body: doc(row('img-outono', 'img-arcos'), p('Try terracotta with moss green.')),
+    },
+    {
+      id: 'n11', title: 'Lavender moodboard', categoryId: 'cat-lumen', tags: ['color'], color: 'none', pinned: false,
+      reminderAt: null, updatedAt: hoursAgo(200), archived: true,
+      body: doc(img('img-lavanda'), p('Dropped for the campaign, keep for later.')),
+    },
+    {
+      id: 'n12', title: 'Forest hike', categoryId: null, tags: ['travel'], color: 'sage', pinned: false,
+      reminderAt: null, updatedAt: hoursAgo(300), trashedDaysAgo: 4,
+      body: doc(img('img-mata'), p('Photos from the trail.')),
+    },
+    {
+      id: 'n13', title: 'Weekly groceries', categoryId: null, tags: ['home', 'shopping'], color: 'butter', pinned: true,
+      reminderAt: at(0, 19, 30), updatedAt: hoursAgo(2),
+      body: doc(
+        p('What we are out of:'),
+        check([['Rice', true], ['Coffee beans', false], ['Milk', false], ['Laundry detergent', false], ['Tomatoes and onions', true], ['Paper towels', false], ['Olive oil', false]]),
+      ),
+    },
+    {
+      id: 'n14', title: 'App launch post', categoryId: 'cat-lumen', tags: ['campaign', 'copy'], color: 'none', pinned: false,
+      reminderAt: at(2, 11), reminderDoing: true, updatedAt: hoursAgo(8),
+      body: doc(p('Open with the pain point: ', bold('the first cup of the day'), '. Show the ordering app in 3 screens and close with the waitlist invite.'), img('img-mockup')),
+    },
+    {
+      id: 'n15', title: 'Shadowing: episode 42', categoryId: 'cat-ingles', tags: ['study', 'pronunciation'], color: 'sage', pinned: false,
+      reminderAt: at(-1, 7, 30), reminderDone: true, updatedAt: hoursAgo(28),
+      body: doc(check([['Listen once without subtitles', true], ['Repeat out loud, line by line', true], ['Record and compare', false]]), file('file-shadowing'), p('Watch the rolled "r" and the rhythm of long sentences.')),
+    },
+    {
+      id: 'n16', title: 'Quarterly feedback', categoryId: 'cat-trabalho', tags: ['meeting', 'feedback'], color: 'none', pinned: false,
+      reminderAt: at(5, 14), updatedAt: hoursAgo(60),
+      body: doc(
+        p('Summary of the September one-on-ones. Bring to the all-hands only what concerns the whole team; the rest stays in the 1:1s.'),
+        h3('Team strengths'), ul('On-time delivery', 'Good documentation', 'Cross-team support'),
+        h3('To improve'), ul('Estimates', 'Meetings that run too long', 'Handoffs between shifts'),
+        h3('Agreements'), check([['Agenda sent 1 day ahead', true], ['30-minute meetings, tops', false], ['Notes in the team channel', false]]),
+        h3('Next steps'), p('Review Q4 goals with each person and schedule the retro for late November.'),
+      ),
+    },
+    {
+      id: 'n17', title: 'Workout routine', emoji: '🏃', categoryId: 'cat-bemestar', tags: ['workout'], color: 'rose', pinned: false,
+      reminderAt: null, updatedAt: hoursAgo(90),
+      body: doc(check([['Stretching', true], ['Easy 5K run', false], ['Strength training', false], ['Book a fitness assessment', false]])),
+    },
+    {
+      id: 'n18', title: 'Labels: color proofs', categoryId: 'cat-aurora', tags: ['packaging', 'print'], color: 'none', pinned: false,
+      reminderAt: at(-2, 10), updatedAt: hoursAgo(54),
+      body: doc(img('img-rotulo'), p('Proof 03 came out too warm. Ask for 5% less magenta and test on kraft paper.'), img('img-amostras')),
+    },
+    {
+      id: 'n19', title: 'Composition exam', categoryId: 'cat-curso', tags: ['study', 'exam'], color: 'butter', pinned: false,
+      reminderAt: at(1, 8), updatedAt: hoursAgo(14),
+      body: doc(check([['Rule of thirds', true], ['Leading lines', false], ['Framing', false], ['Redo exercise sheet 3', false], ['Review natural light', false]])),
+    },
+    {
+      id: 'n20', title: '', categoryId: null, tags: [], color: 'none', pinned: false,
+      reminderAt: at(-3, 9), reminderDone: true, updatedAt: hoursAgo(75),
+      body: doc(p('Renew the car insurance and send the inspection photos.')),
+    },
+    {
+      id: 'n21', title: 'Trip to Harbor Bay', emoji: '🏝️', categoryId: null, tags: ['travel'], color: 'sky', pinned: false,
+      reminderAt: at(9, 8), updatedAt: hoursAgo(40),
+      body: doc(row('img-praia', 'img-folhagem', 'img-mata'), check([['Book the inn', true], ['Sunscreen', false], ['Bug spray', false], ['Camera and batteries', false]])),
+    },
+    {
+      id: 'n22', title: 'Fonts to try', categoryId: 'cat-lumen', tags: ['typography'], color: 'none', pinned: false,
+      reminderAt: null, updatedAt: hoursAgo(130),
+      body: doc(ul('A grotesque with a true italic', 'Mono for on-screen numbers', 'Serif only for quotes'), p('Compare legibility at 12px on the phone.')),
+    },
+    {
+      id: 'n23', title: 'Sourdough bread', emoji: '🍞', categoryId: null, tags: ['recipe', 'home'], color: 'sand', pinned: false,
+      reminderAt: null, updatedAt: hoursAgo(160),
+      body: doc(img('img-pao'), h3('Ingredients'), ul('500 g flour', '350 ml water', '100 g levain', '10 g salt'), p('Stretch and fold every 30 min for the first 2 hours.')),
+    },
+    {
+      id: 'n24', title: 'September expenses', categoryId: 'cat-curso', tags: ['finances'], color: 'none', pinned: false,
+      reminderAt: null, updatedAt: hoursAgo(290), archived: true,
+      body: doc(p('Closed. Came in 8% under budget; the spreadsheet is attached.')),
+    },
+    {
+      id: 'n25', title: 'Old post draft', categoryId: 'cat-lumen', tags: [], color: 'none', pinned: false,
+      reminderAt: null, updatedAt: hoursAgo(400), trashedDaysAgo: 11,
+      body: doc(p('Discarded version of the coupon copy.')),
+    },
+  ]
+}
+
+// ---------- o que o mock usa ----------
+// Escolhido uma vez, ao carregar: inglês quando a interface está em inglês, português no resto (os testes e2e rodam
+// em português e contam com esses textos).
+const EN = i18n.locale === 'en'
+
+export const SEED_CATEGORIES: SeedCategory[] = EN ? PT_CATEGORIES.map((c) => ({ ...c, name: EN_CATEGORY_NAMES[c.id] ?? c.name })) : PT_CATEGORIES
+export const SEED_IMAGES: SeedImage[] = EN ? PT_IMAGES.map((i) => ({ ...i, name: EN_IMAGE_NAMES[i.hash] ?? i.name })) : PT_IMAGES
+export const SEED_FILES: SeedFile[] = EN ? PT_FILES.map((f) => ({ ...f, name: EN_FILE_NAMES[f.hash] ?? f.name })) : PT_FILES
+export const seedNotes = (): SeedNote[] => (EN ? seedNotesEn() : seedNotesPt())
+
 export { DAY }
+/** Conta do Google Drive de exemplo. */
+export const SEED_ACCOUNT = EN ? 'you@gmail.com' : 'voce@gmail.com'
