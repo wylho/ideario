@@ -9,6 +9,24 @@
 <link rel="alternate" hreflang="en" href="https://ideario.pages.dev/terms/">
 <link rel="alternate" hreflang="pt-BR" href="https://ideario.pages.dev/termos/">
 <link rel="alternate" hreflang="x-default" href="https://ideario.pages.dev/terms/">
+<script>
+// Idioma: sem escolha guardada, abre a página no idioma do navegador (português para pt-*, inglês para o resto).
+// Clicar no seletor de idioma guarda a escolha. Robôs de busca não são redirecionados (indexam as duas versões).
+(function () {
+  var key = 'site.lang', here = document.documentElement.lang
+  document.addEventListener('click', function (e) {
+    var a = e.target.closest && e.target.closest('a[hreflang]')
+    if (a) try { localStorage.setItem(key, a.hreflang) } catch (_) {}
+  })
+  try { if (localStorage.getItem(key)) return } catch (_) { return }
+  if (/bot|crawl|spider|slurp|lighthouse/i.test(navigator.userAgent)) return
+  var pt = (navigator.languages || [navigator.language]).some(function (l) { return /^pt/i.test(l || '') })
+  var want = pt ? 'pt-BR' : 'en'
+  if (here === want) return
+  var alt = document.querySelector('link[rel=alternate][hreflang="' + want + '"]')
+  if (alt) location.replace(new URL(alt.href).pathname + location.search + location.hash)
+})()
+</script>
 <meta name="robots" content="index, follow">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Ideario">

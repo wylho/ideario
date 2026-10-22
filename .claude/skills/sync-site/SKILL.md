@@ -31,6 +31,10 @@ apontam um para o outro na primeira linha.
   Open Graph e Twitter card com imagem em URL absoluta (`og:image` = um print de `site/img`).
 - **JSON-LD `SoftwareApplication`** no `<head>` das duas páginas iniciais (nome, descrição, sistemas, categoria,
   `offers` preço 0, `downloadUrl` = Releases do GitHub, `featureList`). Recurso novo ou sistema novo: atualizar aqui também.
+- **Idioma do navegador** (pedido do usuário): toda página com par em outro idioma leva, logo depois do
+  `hreflang` `x-default`, o mesmo `<script>` que abre a versão do idioma do navegador (português para `pt-*`, inglês
+  para o resto) quando a pessoa ainda não escolheu; clicar num link com `hreflang` guarda a escolha (`site.lang`).
+  Robôs não são redirecionados. Página nova com par = copiar o script e ter os `link rel="alternate"`.
 - **`site/sitemap.xml`** lista todas as páginas com os `xhtml:link` de `hreflang`; página nova = entrada nova (nas duas
   línguas) e `lastmod` atualizado. **`site/robots.txt`** aponta para o sitemap.
 - Validar: `python3 -c "import xml.etree.ElementTree as E; E.parse('site/sitemap.xml')"` e o JSON-LD com `json.loads`.
