@@ -39,6 +39,12 @@ trabalho **e** `main`). Repositório ausente: `add_repo` e clonar ao lado.
 6. **Commit e push** nos dois apps, com "Estado atual" do CLAUDE.md de cada um atualizado (tag nova e o que mudou).
    Lançar versão só quando o usuário pedir.
 
+## Achar duplicação (Graphify)
+Para conferir se sobrou código repetido entre os apps: `pip install graphifyy` (num venv), `graphify update .
+--no-cluster` na raiz de cada repositório (pôr `graphify-out/` em `.git/info/exclude`) e cruzar os rótulos dos três
+`graphify-out/graph.json`: o mesmo nome de função nos dois apps e não no Atrio é candidato a vir para cá. Não precisa
+de chave de IA.
+
 ## Armadilhas já vistas
 - Vite pré-empacota o Atrio e quebra nos `.svelte.ts`: `optimizeDeps.exclude: ['@wylho/atrio']` nos dois apps.
 - `cargo update -p atrio` mexe em outras dependências; para só resolver a tag nova use `cargo metadata` (o script já faz).
