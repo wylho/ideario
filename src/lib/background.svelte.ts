@@ -2,6 +2,7 @@
 // É uma escolha do aparelho (fica nele, como o tema). O núcleo Rust cuida do ícone e de esconder a janela.
 import { invoke, isTauri } from '@tauri-apps/api/core'
 import { app } from './app.svelte'
+import { t } from '@wylho/atrio'
 
 const KEY = 'ideario.background'
 
@@ -30,7 +31,7 @@ class Background {
     } catch {
       // sem armazenamento: vale só nesta sessão
     }
-    if (isTauri()) void invoke('set_background', { enabled: v }).catch(() => app.say('Não foi possível criar o ícone na bandeja'))
+    if (isTauri()) void invoke('set_background', { enabled: v }).catch(() => app.say(t('Não foi possível criar o ícone na bandeja')))
   }
 }
 

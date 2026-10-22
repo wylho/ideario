@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '@wylho/atrio'
   import { Images } from '@lucide/svelte'
   import { api } from '../lib/api'
   import { app, live } from '../lib/app.svelte'
@@ -16,9 +17,9 @@
 
 {#if items.ready && !items.current.length}
   {#if tone}
-    <Empty icon={Images} title="Nenhuma imagem neste tom" text="Escolha outro tom no alto da tela." />
+    <Empty icon={Images} title={t('Nenhuma imagem neste tom')} text={t('Escolha outro tom no alto da tela.')} />
   {:else}
-    <ViewEmpty view="moodboard" hint={app.filterLabel ? undefined : 'Imagens coladas nas notas aparecem aqui automaticamente.'} />
+    <ViewEmpty view="moodboard" hint={app.filterLabel ? undefined : t('Imagens coladas nas notas aparecem aqui automaticamente.')} />
   {/if}
 {/if}
 

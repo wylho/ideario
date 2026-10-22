@@ -2,6 +2,7 @@ import { isTauri } from '@tauri-apps/api/core'
 import { api } from './api'
 import { app } from './app.svelte'
 import { background } from './background.svelte'
+import { t } from '@wylho/atrio'
 
 // Lembretes que avisam (Fase 4). O núcleo confere a hora e mostra a notificação do sistema; aqui a janela mostra o
 // mesmo aviso (com Abrir, Adiar e Concluir) e atende os botões da notificação que precisam da janela.
@@ -32,7 +33,7 @@ export function openAlert(a: Alert) {
 export function snooze(a: Alert) {
   dismiss(a.id)
   void api.snoozeReminder(a.id, Date.now() + SNOOZE_MS)
-  app.say('Adiado por 10 minutos')
+  app.say(t('Adiado por 10 minutos'))
 }
 
 export function complete(a: Alert) {
@@ -64,5 +65,5 @@ export async function reminderSet() {
   } catch {
     return
   }
-  app.say('Para avisar com a janela fechada, deixe o Ideario na bandeja', { label: 'Ligar', run: () => background.set(true) })
+  app.say(t('Para avisar com a janela fechada, deixe o Ideario na bandeja'), { label: t('Ligar'), run: () => background.set(true) })
 }

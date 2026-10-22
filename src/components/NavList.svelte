@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '@wylho/atrio'
   import { Archive, ChevronDown, EyeOff, LayoutGrid, Lock, LockOpen, Plus, Settings, Trash2 } from '@lucide/svelte'
   import { app } from '../lib/app.svelte'
   import { categoryMenu, newCategory, tagMenu } from '../lib/menus'
@@ -37,9 +38,9 @@
   }
 
   const CAT_SORTS: { id: CategorySort; label: string }[] = [
-    { id: 'manual', label: 'Manual (arrastar)' },
-    { id: 'name', label: 'Nome (A–Z)' },
-    { id: 'count', label: 'Mais notas primeiro' },
+    { id: 'manual', get label() { return t('Manual (arrastar)') } },
+    { id: 'name', get label() { return t('Nome (A–Z)') } },
+    { id: 'count', get label() { return t('Mais notas primeiro') } },
   ]
 
   /** Arrastar uma categoria com o mouse para outra posição (no toque, pelo menu: Mover para cima/baixo).
@@ -85,14 +86,14 @@
 
 <div class="drawer-scroll">
   <div class="d-label">
-    <span>Categorias</span>
+    <span>{t('Categorias')}</span>
     {#if app.categories.length > 1}
-      <SortMenu small label="Ordem das categorias" heading="Ordem das categorias" options={CAT_SORTS} value={app.categorySort} onchange={(v) => app.setCategorySort(v)} />
+      <SortMenu small label={t('Ordem das categorias')} heading={t('Ordem das categorias')} options={CAT_SORTS} value={app.categorySort} onchange={(v) => app.setCategorySort(v)} />
     {/if}
-    <button class="icon-btn sm d-add" aria-label="Nova categoria" title="Nova categoria" onclick={() => newCategory((id) => pickCategory(id))}><Plus size={16} /></button>
+    <button class="icon-btn sm d-add" aria-label={t('Nova categoria')} title={t('Nova categoria')} onclick={() => newCategory((id) => pickCategory(id))}><Plus size={16} /></button>
   </div>
-  <button class="d-item" class:on={!app.filter.categoryId && app.box === 'active'} title="Tudo" onclick={() => pickCategory(null)}>
-    <LayoutGrid size={19} /><span class="grow">Tudo</span>
+  <button class="d-item" class:on={!app.filter.categoryId && app.box === 'active'} title={t('Tudo')} onclick={() => pickCategory(null)}>
+    <LayoutGrid size={19} /><span class="grow">{t('Tudo')}</span>
   </button>
   {#each app.categories as c (c.id)}
     <ContextMenu items={() => categoryMenu(c.id)}>
@@ -114,9 +115,9 @@
       <i class="dot lg" style:background={c.color}></i>
       <span class="grow">{c.name}</span>
       {#if c.locked}
-        {#if c.unlocked}<LockOpen size={14} class="cat-flag" aria-label="desbloqueada" />{:else}<Lock size={14} class="cat-flag" aria-label="protegida com PIN" />{/if}
+        {#if c.unlocked}<LockOpen size={14} class="cat-flag" aria-label={t('desbloqueada')} />{:else}<Lock size={14} class="cat-flag" aria-label={t('protegida com PIN')} />{/if}
       {:else if c.hidden}
-        <EyeOff size={14} class="cat-flag" aria-label="oculta" />
+        <EyeOff size={14} class="cat-flag" aria-label={t('oculta')} />
       {/if}
       {#if !c.locked || c.unlocked}<span class="count">{c.noteCount}</span>{/if}
     </button>
@@ -132,10 +133,10 @@
       data-drop-category={NO_CATEGORY}
       aria-pressed={app.filter.categoryId === NO_CATEGORY}
       onclick={() => pickCategory(NO_CATEGORY)}
-      title="Sem categoria"
+      title={t('Sem categoria')}
     >
       <i class="dot lg none"></i>
-      <span class="grow">Sem categoria</span>
+      <span class="grow">{t('Sem categoria')}</span>
       <span class="count">{app.orphans.uncategorized}</span>
     </button>
   {/if}
@@ -143,31 +144,31 @@
   <div class="d-sep"></div>
   <div class="d-label">
     <button class="d-toggle" aria-expanded={tagsOpen} aria-controls="nav-tags" onclick={toggleTags}>
-      Tags<ChevronDown size={15} />
+      {t('Tags')}<ChevronDown size={15} />
     </button>
-    {#if app.filter.tags.length}<button class="link" onclick={() => (app.filter.tags = [])}>Limpar</button>{/if}
+    {#if app.filter.tags.length}<button class="link" onclick={() => (app.filter.tags = [])}>{t('Limpar')}</button>{/if}
   </div>
   {#if tagsOpen}
   <div class="tag-cloud" id="nav-tags">
-    {#each app.tags as t (t.name)}
-      <ContextMenu items={() => tagMenu(t.name)}>
+    {#each app.tags as tag (tag.name)}
+      <ContextMenu items={() => tagMenu(tag.name)}>
         {#snippet children(trigger)}
-          <button {...trigger} class="chip" class:on={app.filter.tags.includes(t.name)} aria-pressed={app.filter.tags.includes(t.name)} onclick={() => app.toggleTag(t.name)}>
-            #{t.name}<span class="count">{t.count}</span>
+          <button {...trigger} class="chip" class:on={app.filter.tags.includes(tag.name)} aria-pressed={app.filter.tags.includes(tag.name)} onclick={() => app.toggleTag(tag.name)}>
+            #{tag.name}<span class="count">{tag.count}</span>
           </button>
         {/snippet}
       </ContextMenu>
     {/each}
     {#if showNoTags}
       <button class="chip no-tags" class:on={app.filter.tags.includes(NO_TAGS)} aria-pressed={app.filter.tags.includes(NO_TAGS)} onclick={() => app.toggleTag(NO_TAGS)}>
-        Sem tags<span class="count">{app.orphans.untagged}</span>
+        {t('Sem tags')}<span class="count">{app.orphans.untagged}</span>
       </button>
     {/if}
   </div>
   {/if}
 
   <div class="d-sep"></div>
-  <button class="d-item" class:on={app.box === 'archive'} title="Arquivo" onclick={() => app.openBox('archive')}><Archive size={19} /><span class="grow">Arquivo</span></button>
-  <button class="d-item" class:on={app.box === 'trash'} title="Lixeira" onclick={() => app.openBox('trash')}><Trash2 size={19} /><span class="grow">Lixeira</span></button>
-  <button class="d-item" title="Configurações" onclick={() => { app.drawerOpen = false; app.settingsOpen = true }}><Settings size={19} /><span class="grow">Configurações</span></button>
+  <button class="d-item" class:on={app.box === 'archive'} title={t('Arquivo')} onclick={() => app.openBox('archive')}><Archive size={19} /><span class="grow">{t('Arquivo')}</span></button>
+  <button class="d-item" class:on={app.box === 'trash'} title={t('Lixeira')} onclick={() => app.openBox('trash')}><Trash2 size={19} /><span class="grow">{t('Lixeira')}</span></button>
+  <button class="d-item" title={t('Configurações')} onclick={() => { app.drawerOpen = false; app.settingsOpen = true }}><Settings size={19} /><span class="grow">{t('Configurações')}</span></button>
 </div>

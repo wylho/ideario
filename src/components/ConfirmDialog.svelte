@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '@wylho/atrio'
   import { AlertDialog } from 'bits-ui'
 
   // Confirmação só para o que não tem volta (o resto usa "Desfazer" no aviso).
@@ -18,7 +19,7 @@
       <AlertDialog.Title class="confirm-title">{title}</AlertDialog.Title>
       <AlertDialog.Description class="confirm-text">{text}</AlertDialog.Description>
       <div class="confirm-actions">
-        <AlertDialog.Cancel class="btn ghost">Cancelar</AlertDialog.Cancel>
+        <AlertDialog.Cancel class="btn ghost">{t('Cancelar')}</AlertDialog.Cancel>
         <AlertDialog.Action class="btn danger" onclick={() => { onconfirm(); open = false }}>{confirm}</AlertDialog.Action>
       </div>
     </AlertDialog.Content>

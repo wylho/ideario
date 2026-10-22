@@ -2519,3 +2519,40 @@ test.describe('Status em qualquer nota', () => {
     await expect(page.locator('.kb-col', { hasText: 'A fazer' }).locator('.kb-card', { hasText: 'Planejar a mudança' })).toHaveCount(1)
   })
 })
+
+test.describe('idioma', () => {
+  // O navegador dos testes está em português (playwright.config: locale pt-BR). Aqui só o que é texto do Ideario: o
+  // que vem das peças do Atrio pode continuar em português até o Atrio traduzir.
+  test('trocar para inglês nas Configurações traduz a interface e fica guardado', async ({ page }) => {
+    await openSettings(page)
+    await expect(page.locator('.sheet-title')).toHaveText('Configurações')
+    await page.locator('#idioma').click()
+    await page.getByRole('option', { name: 'English' }).click()
+    await expect(page.locator('.sheet-title')).toHaveText('Settings')
+    await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+    await expect(page.getByText('Language', { exact: true })).toBeVisible()
+    await page.getByRole('button', { name: 'Close' }).click()
+    await expect(page.locator('.tabbar button', { hasText: 'Reminders' })).toBeVisible()
+    await expect(page.locator('#busca')).toHaveAttribute('placeholder', 'Search notes')
+    // a escolha fica no aparelho
+    await page.reload()
+    await expect(page.locator('.tabbar button', { hasText: 'Notes' })).toBeVisible()
+    // e volta para o português (os nomes do menu agora estão em inglês)
+    await page.getByLabel('Open menu').click()
+    await page.locator('.drawer').getByRole('button', { name: 'Settings' }).click()
+    await page.locator('#idioma').click()
+    await page.getByRole('option', { name: 'Português' }).click()
+    await expect(page.locator('.sheet-title')).toHaveText('Configurações')
+  })
+
+  test('em inglês: menu do card e aviso com Desfazer', async ({ page }) => {
+    await page.addInitScript(() => localStorage.setItem('atrio.locale', 'en'))
+    await page.reload()
+    await expect(cards(page).first()).toBeVisible()
+    await cards(page).first().click({ button: 'right' })
+    await expect(page.getByRole('menuitem', { name: 'Make a copy' })).toBeVisible()
+    await page.getByRole('menuitem', { name: 'Archive' }).click()
+    await expect(page.locator('.toast span')).toHaveText('Note archived')
+    await expect(page.locator('.toast').getByRole('button', { name: 'Undo' })).toBeVisible()
+  })
+})

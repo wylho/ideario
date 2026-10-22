@@ -306,3 +306,11 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
   ícone fora, senão sai um genérico); tocar abre a nota: o plugin 2.7 não devolve o `extra`, só o número da
   notificação, que o núcleo troca pela nota (`reminders::remember_keys`/`note_for_key`, guardado em `sync_state`,
   30 dias; `SharePlugin.kt` manda `notification`, `share.rs` resolve). Ainda não: backup e importar do Keep no celular, widget.
+- **Inglês e português (pedido do usuário: o app usado no mundo).** O idioma vem do Atrio (`t`, `tn`, `addMessages`,
+  `setLocale`, `intlLocale`, 0.18.0): o texto em português do código é a chave; o inglês do Ideario está em
+  `src/lib/i18n/en.ts` (registrado em `main.ts` antes de montar); o que vem das peças do Atrio é traduzido lá.
+  Configurações → Aparência → **Idioma** (Automático segue o sistema: português para pt-*, inglês para o resto; fica no
+  aparelho em `atrio.locale`). Textos em listas constantes são getters (`views.ts`, `NOTE_COLORS`, `STATUS`, ordens),
+  nunca congelados no import; datas e ordem alfabética pelo `intlLocale()` (no inglês, a semana do Calendário usa o
+  intervalo do `Intl`). Não traduzidos: mensagens do núcleo Rust e do mock, nomes de marca, conteúdo de exemplo.
+  e2e: o navegador dos testes fica em `pt-BR`; `idioma` testa a troca para inglês.

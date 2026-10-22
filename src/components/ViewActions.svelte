@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t, tn } from '@wylho/atrio'
   import { Archive, CheckCheck, ChevronLeft, ChevronRight, File as FileIcon, FileAudio, FileText, FileVideoCamera, Image, BrushCleaning } from '@lucide/svelte'
   import SortMenu from './SortMenu.svelte'
   import LayoutToggle from './LayoutToggle.svelte'
@@ -12,32 +13,32 @@
   // Menu dinâmico: as ações da visão atual, sempre no mesmo lugar e com os mesmos botões
   // (filtro da visão → ordenar → lista/grade). Nada disso fica no meio do conteúdo.
   const NOTE_SORTS: { id: NoteSort; label: string; hint?: string }[] = [
-    { id: 'custom', label: 'Personalizada', hint: 'arraste os cards' },
-    { id: 'updated', label: 'Última edição' },
-    { id: 'created', label: 'Data de criação' },
-    { id: 'category', label: 'Categoria' },
-    { id: 'title', label: 'Título (A–Z)' },
+    { id: 'custom', get label() { return t('Personalizada') }, get hint() { return t('arraste os cards') } },
+    { id: 'updated', get label() { return t('Última edição') } },
+    { id: 'created', get label() { return t('Data de criação') } },
+    { id: 'category', get label() { return t('Categoria') } },
+    { id: 'title', get label() { return t('Título (A–Z)') } },
   ]
   const FILE_SORTS: { id: FileSort; label: string }[] = [
-    { id: 'recent', label: 'Mais recentes' },
-    { id: 'name', label: 'Nome (A–Z)' },
-    { id: 'size', label: 'Tamanho' },
-    { id: 'kind', label: 'Tipo' },
+    { id: 'recent', get label() { return t('Mais recentes') } },
+    { id: 'name', get label() { return t('Nome (A–Z)') } },
+    { id: 'size', get label() { return t('Tamanho') } },
+    { id: 'kind', get label() { return t('Tipo') } },
   ]
   // Os ícones são os mesmos da lista de arquivos; planilhas e afins entram em "Outros documentos".
   const KINDS: { id: FileGroup; label: string; icon: typeof FileIcon }[] = [
-    { id: 'pdf', label: 'PDFs', icon: FileText },
-    { id: 'doc', label: 'Outros documentos', icon: FileIcon },
-    { id: 'image', label: 'Imagens', icon: Image },
-    { id: 'audio', label: 'Áudio', icon: FileAudio },
-    { id: 'video', label: 'Vídeo', icon: FileVideoCamera },
+    { id: 'pdf', get label() { return t('PDFs') }, icon: FileText },
+    { id: 'doc', get label() { return t('Outros documentos') }, icon: FileIcon },
+    { id: 'image', get label() { return t('Imagens') }, icon: Image },
+    { id: 'audio', get label() { return t('Áudio') }, icon: FileAudio },
+    { id: 'video', get label() { return t('Vídeo') }, icon: FileVideoCamera },
   ]
   const TONES: { id: Tone; label: string; swatch: string }[] = [
-    { id: 'quente', label: 'Quentes', swatch: '#D98E4A' },
-    { id: 'frio', label: 'Frios', swatch: '#3D63D6' },
-    { id: 'verde', label: 'Verdes', swatch: '#4F8A60' },
-    { id: 'rosa', label: 'Rosas', swatch: '#E58FA6' },
-    { id: 'neutro', label: 'Neutros', swatch: '#A39E92' },
+    { id: 'quente', get label() { return t('Quentes') }, swatch: '#D98E4A' },
+    { id: 'frio', get label() { return t('Frios') }, swatch: '#3D63D6' },
+    { id: 'verde', get label() { return t('Verdes') }, swatch: '#4F8A60' },
+    { id: 'rosa', get label() { return t('Rosas') }, swatch: '#E58FA6' },
+    { id: 'neutro', get label() { return t('Neutros') }, swatch: '#A39E92' },
   ]
 
   // Lixeira: "Esvaziar" só aparece quando há o que esvaziar.
@@ -45,24 +46,24 @@
   let confirmEmpty = $state(false)
   async function emptyTrash() {
     const n = await api.emptyTrash()
-    app.say(n === 1 ? '1 nota excluída para sempre' : `${n} notas excluídas para sempre`)
+    app.say(tn(n, '{n} nota excluída para sempre', '{n} notas excluídas para sempre'))
   }
 </script>
 
 {#if app.view === 'notes'}
   {#if app.box === 'trash' && trashed.current > 0}
-    <button class="icon-btn" aria-label="Esvaziar lixeira" title="Esvaziar lixeira" onclick={() => (confirmEmpty = true)}><BrushCleaning size={19} /></button>
+    <button class="icon-btn" aria-label={t('Esvaziar lixeira')} title={t('Esvaziar lixeira')} onclick={() => (confirmEmpty = true)}><BrushCleaning size={19} /></button>
     <span class="top-gap" aria-hidden="true"></span>
   {/if}
-  <SortMenu heading="Ordenar notas" options={NOTE_SORTS} value={app.sort} onchange={(v) => app.setSort(v)} />
+  <SortMenu heading={t('Ordenar notas')} options={NOTE_SORTS} value={app.sort} onchange={(v) => app.setSort(v)} />
   <LayoutToggle value={app.layout} onchange={(v) => (app.layout = v)} />
 {:else if app.view === 'reminders'}
   <button
     class="icon-btn"
     class:on={app.showDone}
     aria-pressed={app.showDone}
-    aria-label="Mostrar concluídos"
-    title={app.showDone ? 'Ocultar concluídos' : 'Mostrar concluídos'}
+    aria-label={t('Mostrar concluídos')}
+    title={app.showDone ? t('Ocultar concluídos') : t('Mostrar concluídos')}
     onclick={() => (app.showDone = !app.showDone)}
   >
     <CheckCheck size={19} />
@@ -72,32 +73,32 @@
     class="icon-btn"
     class:on={app.showDone}
     aria-pressed={app.showDone}
-    aria-label="Mostrar concluídos"
-    title={app.showDone ? 'Ocultar concluídos' : 'Mostrar concluídos'}
+    aria-label={t('Mostrar concluídos')}
+    title={app.showDone ? t('Ocultar concluídos') : t('Mostrar concluídos')}
     onclick={() => (app.showDone = !app.showDone)}
   >
     <CheckCheck size={19} />
   </button>
-  <button class="chip cal-today" onclick={() => (app.calDay = dayKey(Date.now()))}>Hoje</button>
-  <button class="icon-btn" aria-label={app.calMode === 'month' ? 'Mês anterior' : 'Semana anterior'} title={app.calMode === 'month' ? 'Mês anterior' : 'Semana anterior'} onclick={() => (app.calDay = shift(app.calDay, app.calMode, -1))}><ChevronLeft size={19} /></button>
-  <button class="icon-btn" aria-label={app.calMode === 'month' ? 'Próximo mês' : 'Próxima semana'} title={app.calMode === 'month' ? 'Próximo mês' : 'Próxima semana'} onclick={() => (app.calDay = shift(app.calDay, app.calMode, 1))}><ChevronRight size={19} /></button>
-  <div class="cal-mode" role="radiogroup" aria-label="Mostrar">
+  <button class="chip cal-today" onclick={() => (app.calDay = dayKey(Date.now()))}>{t('Hoje')}</button>
+  <button class="icon-btn" aria-label={app.calMode === 'month' ? t('Mês anterior') : t('Semana anterior')} title={app.calMode === 'month' ? t('Mês anterior') : t('Semana anterior')} onclick={() => (app.calDay = shift(app.calDay, app.calMode, -1))}><ChevronLeft size={19} /></button>
+  <button class="icon-btn" aria-label={app.calMode === 'month' ? t('Próximo mês') : t('Próxima semana')} title={app.calMode === 'month' ? t('Próximo mês') : t('Próxima semana')} onclick={() => (app.calDay = shift(app.calDay, app.calMode, 1))}><ChevronRight size={19} /></button>
+  <div class="cal-mode" role="radiogroup" aria-label={t('Mostrar')}>
     {#each [['month', 'Mês'], ['week', 'Semana']] as const as [m, label] (m)}
-      <button role="radio" aria-checked={app.calMode === m} class:on={app.calMode === m} onclick={() => (app.calMode = m)}>{label}</button>
+      <button role="radio" aria-checked={app.calMode === m} class:on={app.calMode === m} onclick={() => (app.calMode = m)}>{t(label)}</button>
     {/each}
   </div>
 {:else if app.view === 'files'}
-  <FilterGroup label="Tipo de arquivo" all="Todos os tipos" options={KINDS} value={app.filesKind} onchange={(v) => (app.filesKind = v)} />
-  <SortMenu heading="Ordenar arquivos" options={FILE_SORTS} value={app.filesSort} onchange={(v) => (app.filesSort = v)} />
+  <FilterGroup label={t('Tipo de arquivo')} all={t('Todos os tipos')} options={KINDS} value={app.filesKind} onchange={(v) => (app.filesKind = v)} />
+  <SortMenu heading={t('Ordenar arquivos')} options={FILE_SORTS} value={app.filesSort} onchange={(v) => (app.filesSort = v)} />
   <LayoutToggle value={app.filesLayout} onchange={(v) => (app.filesLayout = v)} />
 {:else if app.view === 'moodboard'}
-  <FilterGroup label="Tom das imagens" all="Todos os tons" options={TONES} value={app.moodTone} onchange={(v) => (app.moodTone = v)} />
+  <FilterGroup label={t('Tom das imagens')} all={t('Todos os tons')} options={TONES} value={app.moodTone} onchange={(v) => (app.moodTone = v)} />
   <button
     class="icon-btn"
     class:on={app.moodArchived}
     aria-pressed={app.moodArchived}
-    aria-label="Mostrar arquivados"
-    title={app.moodArchived ? 'Ocultar fotos das notas arquivadas' : 'Mostrar também as fotos das notas arquivadas'}
+    aria-label={t('Mostrar arquivados')}
+    title={app.moodArchived ? t('Ocultar fotos das notas arquivadas') : t('Mostrar também as fotos das notas arquivadas')}
     onclick={() => (app.moodArchived = !app.moodArchived)}
   >
     <Archive size={19} />
@@ -106,8 +107,8 @@
 
 <ConfirmDialog
   bind:open={confirmEmpty}
-  title="Esvaziar a lixeira?"
-  text={trashed.current === 1 ? 'A nota da lixeira será excluída para sempre. Não dá para desfazer.' : `As ${trashed.current} notas da lixeira serão excluídas para sempre. Não dá para desfazer.`}
-  confirm="Esvaziar"
+  title={t('Esvaziar a lixeira?')}
+  text={tn(trashed.current, 'A nota da lixeira será excluída para sempre. Não dá para desfazer.', 'As {n} notas da lixeira serão excluídas para sempre. Não dá para desfazer.')}
+  confirm={t('Esvaziar')}
   onconfirm={emptyTrash}
 />

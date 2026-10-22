@@ -7,6 +7,7 @@ import { NO_CATEGORY, NO_TAGS } from './types'
 import { uuidv7 } from './uuid'
 import { quickTimes } from './reminders'
 import { dayKey, fromKey } from './calendar'
+import { intlLocale, t } from '@wylho/atrio'
 
 export interface NameDialog {
   kind: 'name'
@@ -90,7 +91,7 @@ function readCatSort(): CategorySort {
     return 'name'
   }
 }
-const byName = new Intl.Collator('pt-BR', { sensitivity: 'base', numeric: true })
+const byName = { compare: (a: string, b: string) => a.localeCompare(b, intlLocale(), { sensitivity: 'base', numeric: true }) }
 function sortCategories(list: Category[], mode: CategorySort): Category[] {
   if (mode === 'manual') return list
   const out = [...list]
@@ -249,8 +250,8 @@ class AppState {
 
   /** "Lumen · #campanha", "Sem categoria · Sem tags", ou null sem filtro. */
   get filterLabel(): string | null {
-    const cat = this.filter.categoryId === NO_CATEGORY ? 'Sem categoria' : this.category(this.filter.categoryId)?.name
-    const parts = [cat, ...this.filter.tags.map((t) => (t === NO_TAGS ? 'Sem tags' : `#${t}`))].filter(Boolean)
+    const cat = this.filter.categoryId === NO_CATEGORY ? t('Sem categoria') : this.category(this.filter.categoryId)?.name
+    const parts = [cat, ...this.filter.tags.map((tag) => (tag === NO_TAGS ? t('Sem tags') : `#${tag}`))].filter(Boolean)
     return parts.length ? parts.join(' · ') : null
   }
 
@@ -278,12 +279,12 @@ class AppState {
   /** Pede o PIN da categoria; certo, desbloqueia (até o app fechar) e segue. */
   askUnlock(c: Category, then: () => void) {
     this.askPin({
-      title: `${c.name} está protegida`,
-      text: 'Digite o PIN para abrir. Ela fica aberta até você fechar o app ou bloquear de novo.',
-      fields: ['PIN'],
-      confirm: 'Abrir',
+      title: t('{nome} está protegida', { nome: c.name }),
+      text: t('Digite o PIN para abrir. Ela fica aberta até você fechar o app ou bloquear de novo.'),
+      fields: [t('PIN')],
+      confirm: t('Abrir'),
       submit: async ([pin]) => {
-        if (!(await api.unlockCategory(c.id, pin))) return 'PIN errado.'
+        if (!(await api.unlockCategory(c.id, pin))) return t('PIN errado.')
         await this.loadShared()
         then()
         return null

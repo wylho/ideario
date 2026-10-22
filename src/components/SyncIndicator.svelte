@@ -1,13 +1,14 @@
 <script lang="ts">
   import { CloudAlert, CloudOff, CloudSync } from '@lucide/svelte'
   import { app } from '../lib/app.svelte'
+  import { t } from '@wylho/atrio'
 
   // Só aparece quando há algo a dizer: sincronizando (some sozinho), sem conexão ou erro.
   // Com tudo certo, não ocupa espaço nenhum. Tocar leva às configurações do Drive.
   const info = $derived(
-    app.sync === 'syncing' ? { Icon: CloudSync, label: 'Sincronizando com o Drive…' }
-    : app.sync === 'offline' ? { Icon: CloudOff, label: 'Sem conexão. As alterações ficam salvas aqui e sobem quando voltar.' }
-    : app.sync === 'error' ? { Icon: CloudAlert, label: 'Não foi possível sincronizar com o Drive. Ver detalhes' }
+    app.sync === 'syncing' ? { Icon: CloudSync, label: t('Sincronizando com o Drive…') }
+    : app.sync === 'offline' ? { Icon: CloudOff, label: t('Sem conexão. As alterações ficam salvas aqui e sobem quando voltar.') }
+    : app.sync === 'error' ? { Icon: CloudAlert, label: t('Não foi possível sincronizar com o Drive. Ver detalhes') }
     : null,
   )
 </script>

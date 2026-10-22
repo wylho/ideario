@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '@wylho/atrio'
   import { Dialog } from 'bits-ui'
   import { EyeOff, Hash, Lock, X } from '@lucide/svelte'
   import { app } from '../lib/app.svelte'
@@ -13,13 +14,13 @@
   const noCategory = $derived(app.filter.categoryId === NO_CATEGORY)
   const showNoCategory = $derived(noCategory || (app.orphans.uncategorized > 0 && app.categories.length > 0))
   const showNoTags = $derived(app.filter.tags.includes(NO_TAGS) || (app.orphans.untagged > 0 && app.tags.length > 0))
-  const tagLabel = (t: string) => (t === NO_TAGS ? 'Sem tags' : `#${t}`)
-  const boxLabel = $derived(app.box === 'archive' ? 'Arquivo' : app.box === 'trash' ? 'Lixeira' : null)
+  const tagLabel = (tag: string) => (tag === NO_TAGS ? t('Sem tags') : `#${tag}`)
+  const boxLabel = $derived(app.box === 'archive' ? t('Arquivo') : app.box === 'trash' ? t('Lixeira') : null)
 </script>
 
 {#snippet activeTags()}
-  {#each app.filter.tags as t (t)}
-    <button class="chip on" onclick={() => app.toggleTag(t)} aria-label="Tirar {tagLabel(t)} do filtro">{tagLabel(t)}<X size={13} /></button>
+  {#each app.filter.tags as tag (tag)}
+    <button class="chip on" onclick={() => app.toggleTag(tag)} aria-label={t('Tirar {nome} do filtro', { nome: tagLabel(tag) })}>{tagLabel(tag)}<X size={13} /></button>
   {/each}
 {/snippet}
 
@@ -27,28 +28,28 @@
   <div class="filter-bar">
     <span class="scope-pill">
       {boxLabel}
-      <button aria-label="Voltar às notas" onclick={() => (app.box = 'active')}><X size={13} /></button>
+      <button aria-label={t('Voltar às notas')} onclick={() => (app.box = 'active')}><X size={13} /></button>
     </span>
-    {#if app.hasFilter}<span class="filter-hint">Filtro: {app.filterLabel}</span>{/if}
+    {#if app.hasFilter}<span class="filter-hint">{t('Filtro: {filtro}', { filtro: app.filterLabel ?? '' })}</span>{/if}
   </div>
 {:else if app.wide && app.sidebarOpen}
   {#if app.hasFilter}
     <div class="filter-bar">
       {#if cat || noCategory}
         <h1 class="filter-title">
-          {#if cat}<i class="dot" style:background={cat.color}></i>{cat.name}{:else}<i class="dot none"></i>Sem categoria{/if}
-          <button class="icon-btn sm" aria-label="Tirar {cat?.name ?? 'Sem categoria'} do filtro" onclick={() => (app.filter.categoryId = null)}><X size={16} /></button>
+          {#if cat}<i class="dot" style:background={cat.color}></i>{cat.name}{:else}<i class="dot none"></i>{t('Sem categoria')}{/if}
+          <button class="icon-btn sm" aria-label={t('Tirar {nome} do filtro', { nome: cat?.name ?? t('Sem categoria') })} onclick={() => (app.filter.categoryId = null)}><X size={16} /></button>
         </h1>
       {:else}
-        <span class="filter-hint">Filtrando:</span>
+        <span class="filter-hint">{t('Filtrando:')}</span>
       {/if}
       {@render activeTags()}
-      <button class="link" onclick={() => app.clearFilter()}>Limpar filtro</button>
+      <button class="link" onclick={() => app.clearFilter()}>{t('Limpar filtro')}</button>
     </div>
   {/if}
 {:else}
-  <div class="filter-row" role="group" aria-label="Categoria">
-    <button class="chip" class:on={!app.filter.categoryId} onclick={() => (app.filter.categoryId = null)}>Tudo</button>
+  <div class="filter-row" role="group" aria-label={t('Categoria')}>
+    <button class="chip" class:on={!app.filter.categoryId} onclick={() => (app.filter.categoryId = null)}>{t('Tudo')}</button>
     {#each app.categories as c (c.id)}
       <ContextMenu items={() => categoryMenu(c.id)}>
         {#snippet children(trigger)}
@@ -60,14 +61,14 @@
       </ContextMenu>
     {/each}
     {#if showNoCategory}
-      <button class="chip" class:on={noCategory} aria-pressed={noCategory} onclick={() => app.setCategory(NO_CATEGORY)}><i class="dot none"></i>Sem categoria</button>
+      <button class="chip" class:on={noCategory} aria-pressed={noCategory} onclick={() => app.setCategory(NO_CATEGORY)}><i class="dot none"></i>{t('Sem categoria')}</button>
     {/if}
     <button class="chip" class:on={app.filter.tags.length > 0} onclick={() => (tagsOpen = true)}>
-      <Hash size={14} />Tags{#if app.filter.tags.length}<span class="count">{app.filter.tags.length}</span>{/if}
+      <Hash size={14} />{t('Tags')}{#if app.filter.tags.length}<span class="count">{app.filter.tags.length}</span>{/if}
     </button>
   </div>
   {#if app.filter.tags.length}
-    <div class="filter-row">{@render activeTags()}<button class="link" onclick={() => (app.filter.tags = [])}>Limpar</button></div>
+    <div class="filter-row">{@render activeTags()}<button class="link" onclick={() => (app.filter.tags = [])}>{t('Limpar')}</button></div>
   {/if}
 {/if}
 
@@ -76,25 +77,25 @@
     <Dialog.Overlay class="overlay" />
     <Dialog.Content class="sheet" aria-describedby={undefined}>
       <div class="sheet-head">
-        <Dialog.Title class="sheet-title">Tags</Dialog.Title>
-        <Dialog.Close class="icon-btn" aria-label="Fechar"><X size={20} /></Dialog.Close>
+        <Dialog.Title class="sheet-title">{t('Tags')}</Dialog.Title>
+        <Dialog.Close class="icon-btn" aria-label={t('Fechar')}><X size={20} /></Dialog.Close>
       </div>
       <div class="sheet-scroll">
         <div class="tag-cloud">
-          {#each app.tags as t (t.name)}
-            <button class="chip" class:on={app.filter.tags.includes(t.name)} aria-pressed={app.filter.tags.includes(t.name)} onclick={() => app.toggleTag(t.name)}>
-              #{t.name}<span class="count">{t.count}</span>
+          {#each app.tags as tag (tag.name)}
+            <button class="chip" class:on={app.filter.tags.includes(tag.name)} aria-pressed={app.filter.tags.includes(tag.name)} onclick={() => app.toggleTag(tag.name)}>
+              #{tag.name}<span class="count">{tag.count}</span>
             </button>
           {/each}
           {#if showNoTags}
             <button class="chip no-tags" class:on={app.filter.tags.includes(NO_TAGS)} aria-pressed={app.filter.tags.includes(NO_TAGS)} onclick={() => app.toggleTag(NO_TAGS)}>
-              Sem tags<span class="count">{app.orphans.untagged}</span>
+              {t('Sem tags')}<span class="count">{app.orphans.untagged}</span>
             </button>
           {/if}
         </div>
         <div class="sheet-actions">
-          {#if app.filter.tags.length}<button class="btn ghost" onclick={() => (app.filter.tags = [])}>Limpar tags</button>{/if}
-          <Dialog.Close class="btn primary">Pronto</Dialog.Close>
+          {#if app.filter.tags.length}<button class="btn ghost" onclick={() => (app.filter.tags = [])}>{t('Limpar tags')}</button>{/if}
+          <Dialog.Close class="btn primary">{t('Pronto')}</Dialog.Close>
         </div>
       </div>
     </Dialog.Content>

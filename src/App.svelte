@@ -4,7 +4,7 @@
   import { app } from './lib/app.svelte'
   import { api } from './lib/api'
   import { copyCard } from './lib/menus'
-  import { readCard } from '@wylho/atrio'
+  import { readCard, t } from '@wylho/atrio'
   import { makePreviews } from './lib/previews.svelte'
   import TopBar from './components/TopBar.svelte'
   import TabBar from './components/TabBar.svelte'
@@ -71,8 +71,8 @@
     if (!card) return
     e.preventDefault()
     void api.createFromCard(card).then(
-      (id) => app.say('Card colado', { label: 'Abrir', run: () => app.openNote(id) }),
-      () => app.say('Não foi possível colar o card'),
+      (id) => app.say(t('Card colado'), { label: t('Abrir'), run: () => app.openNote(id) }),
+      () => app.say(t('Não foi possível colar o card')),
     )
   }
 
@@ -91,7 +91,7 @@
       <div class="mac-corner" data-tauri-drag-region></div>
     {/if}
     <!-- Aberta mostra tudo; fechada some, e as categorias viram pílulas acima das notas (FilterBar). -->
-    <aside class="sidebar" aria-label="Navegação">
+    <aside class="sidebar" aria-label={t('Navegação')}>
       <NavList />
     </aside>
   {/if}
@@ -125,7 +125,7 @@
 
     {#if app.task}
       <div class="task-bar" role="status" aria-live="polite">
-        <span>{app.task.label}{app.task.total ? ` · ${app.task.done} de ${app.task.total}` : ''}</span>
+        <span>{app.task.label}{app.task.total ? ` · ${t('{feito} de {total}', { feito: app.task.done, total: app.task.total })}` : ''}</span>
         <i style:width="{app.task.total ? (app.task.done / app.task.total) * 100 : 0}%"></i>
       </div>
     {/if}

@@ -1,9 +1,10 @@
 <script lang="ts" generics="T extends string">
   import { DropdownMenu } from 'bits-ui'
   import { ArrowDownUp, Check } from '@lucide/svelte'
+  import { t } from '@wylho/atrio'
 
   // Mesmo botão de ordenar em todas as visões que ordenam; muda só a lista de opções.
-  let { heading, options, value, onchange, small = false, label = 'Ordenar' }: {
+  let { heading, options, value, onchange, small = false, label: name }: {
     heading: string
     /** Nome do botão (antes da opção escolhida). */
     label?: string
@@ -13,6 +14,7 @@
     value: T
     onchange: (v: T) => void
   } = $props()
+  const label = $derived(name ?? t('Ordenar'))
   const current = $derived(options.find((s) => s.id === value) ?? options[0])
 </script>
 

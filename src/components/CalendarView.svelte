@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { intlLocale, t, tn } from '@wylho/atrio'
   import { Plus, Repeat } from '@lucide/svelte'
   import { api } from '../lib/api'
   import { app, live } from '../lib/app.svelte'
@@ -17,7 +18,7 @@
   // PageUp/PageDown o mês (ou a semana), T volta para hoje e Enter cria um lembrete no dia escolhido.
   const list = live(() => api.listReminders({ filter: $state.snapshot(app.filter), query: app.query, includeDone: app.showDone }), [] as NoteSummary[])
 
-  const WEEK = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb']
+  const WEEK = $derived([t('dom'), t('seg'), t('ter'), t('qua'), t('qui'), t('sex'), t('sáb')])
   const days = $derived(gridDays(fromKey(app.calDay).getTime(), app.calMode))
   const items = $derived(byDay(list.current, days[0], days[days.length - 1]))
   const month = $derived(fromKey(app.calDay).getMonth())
@@ -27,9 +28,12 @@
 
   const title = $derived.by(() => {
     const a = fromKey(app.calDay)
-    if (app.calMode === 'month') return a.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }).replace(/^./, (c) => c.toUpperCase())
+    const loc = intlLocale()
+    if (app.calMode === 'month') return a.toLocaleDateString(loc, { month: 'long', year: 'numeric' }).replace(/^./, (c) => c.toUpperCase())
     const [f, l] = [days[0], days[6]]
-    const fmt = (d: Date, o: Intl.DateTimeFormatOptions) => d.toLocaleDateString('pt-BR', o)
+    // Inglês: o intervalo do próprio Intl ("Oct 5 – 11"); em português, o "5 a 11 de outubro" de sempre.
+    if (loc !== 'pt-BR') return new Intl.DateTimeFormat(loc, { day: 'numeric', month: f.getMonth() === l.getMonth() ? 'long' : 'short' }).formatRange(f, l)
+    const fmt = (d: Date, o: Intl.DateTimeFormatOptions) => d.toLocaleDateString(loc, o)
     return f.getMonth() === l.getMonth()
       ? `${f.getDate()} a ${fmt(l, { day: 'numeric', month: 'long' })}`
       : `${fmt(f, { day: 'numeric', month: 'short' })} a ${fmt(l, { day: 'numeric', month: 'short' })}`
@@ -44,7 +48,7 @@
     const before = n.reminderAt
     const at = onDay(before, key)
     await api.updateNote(n.id, { reminderAt: at })
-    app.say(`Lembrete: ${fmtReminder(at)}`, { label: 'Desfazer', run: () => void api.updateNote(n.id, { reminderAt: before }) })
+    app.say(t('Lembrete: {quando}', { quando: fmtReminder(at) }), { label: t('Desfazer'), run: () => void api.updateNote(n.id, { reminderAt: before }) })
   }
 
   function newOn(key: string) {
@@ -100,7 +104,7 @@
         {/if}
         <b>{fmtTime(it.at)}</b>
         <span class="cal-t">{#if n.emoji}{n.emoji} {/if}{n.label}</span>
-        {#if n.reminderRepeat}<Repeat size={11} aria-label="se repete" />{/if}
+        {#if n.reminderRepeat}<Repeat size={11} aria-label={t('se repete')} />{/if}
       </div>
     {/snippet}
   </ContextMenu>
@@ -112,7 +116,7 @@
   <div class="cal-head">
     <h2>{title}</h2>
     <span>
-      {counts.total === 1 ? '1 lembrete' : `${counts.total} lembretes`}{#if counts.late}&nbsp;·&nbsp;<em>{counts.late === 1 ? '1 atrasado' : `${counts.late} atrasados`}</em>{/if}
+      {tn(counts.total, '{n} lembrete', '{n} lembretes')}{#if counts.late}&nbsp;·&nbsp;<em>{tn(counts.late, '{n} atrasado', '{n} atrasados')}</em>{/if}
     </span>
   </div>
 
@@ -130,7 +134,7 @@
         role="gridcell"
         tabindex="-1"
         data-drop={key}
-        aria-label={d.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
+        aria-label={d.toLocaleDateString(intlLocale(), { weekday: 'long', day: 'numeric', month: 'long' })}
         aria-selected={key === selected}
         onclick={() => (app.calDay = key)}
         onkeydown={(e) => e.key === ' ' && (e.preventDefault(), (app.calDay = key))}
@@ -138,12 +142,12 @@
       >
         <div class="cal-top">
           <span class="cal-num">{d.getDate()}</span>
-          <button class="cal-add" aria-label="Novo lembrete neste dia" title="Novo lembrete neste dia" onclick={(e) => (e.stopPropagation(), newOn(key))}><Plus size={14} /></button>
+          <button class="cal-add" aria-label={t('Novo lembrete neste dia')} title={t('Novo lembrete neste dia')} onclick={(e) => (e.stopPropagation(), newOn(key))}><Plus size={14} /></button>
         </div>
         <div class="cal-items">
           {#each its.slice(0, max) as it (it.n.id + it.at)}{@render chip(it, key)}{/each}
           {#if its.length > max}
-            <button class="cal-more" onclick={(e) => (e.stopPropagation(), (app.calDay = key), (app.calMode = 'week'))}>+{its.length - max} mais</button>
+            <button class="cal-more" onclick={(e) => (e.stopPropagation(), (app.calDay = key), (app.calMode = 'week'))}>{t('+{n} mais', { n: its.length - max })}</button>
           {/if}
         </div>
         {#if its.length}
@@ -156,11 +160,11 @@
   </div>
 
   <!-- Celular: os lembretes do dia tocado. -->
-  <section class="cal-daylist" aria-label="Lembretes do dia">
-    <h3 class="section-label">{fromKey(selected).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}</h3>
+  <section class="cal-daylist" aria-label={t('Lembretes do dia')}>
+    <h3 class="section-label">{fromKey(selected).toLocaleDateString(intlLocale(), { weekday: 'long', day: 'numeric', month: 'long' })}</h3>
     {#each items.get(selected) ?? [] as it (it.n.id + it.at)}{@render chip(it, selected, true)}{:else}
-      <p class="muted">Nenhum lembrete neste dia.</p>
+      <p class="muted">{t('Nenhum lembrete neste dia.')}</p>
     {/each}
-    <button class="btn ghost" onclick={() => newOn(selected)}><Plus size={16} />Novo lembrete</button>
+    <button class="btn ghost" onclick={() => newOn(selected)}><Plus size={16} />{t('Novo lembrete')}</button>
   </section>
 </div>

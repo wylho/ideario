@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '@wylho/atrio'
   import { Archive, Trash2 } from '@lucide/svelte'
   import { api } from '../lib/api'
   import { app, live } from '../lib/app.svelte'
@@ -54,8 +55,8 @@
     enabled: () => !isTrash,
     beforeStart: () => {
       if (app.sort === 'category') {
-        app.say('Na ordem por categoria os cards ficam agrupados.', {
-          label: 'Usar ordem livre',
+        app.say(t('Na ordem por categoria os cards ficam agrupados.'), {
+          label: t('Usar ordem livre'),
           run: () => void api.adoptOrder('category').then(() => app.setSort('custom')),
         })
         return false
@@ -63,7 +64,7 @@
       if (app.sort !== 'custom') {
         void api.adoptOrder(app.sort)
         app.setSort('custom')
-        app.say('Ordem personalizada')
+        app.say(t('Ordem personalizada'))
       }
       return true
     },
@@ -75,8 +76,8 @@
       if (!n || n.categoryId === categoryId) return
       const before = n.categoryId
       void api.updateNote(id, { categoryId })
-      const msg = categoryId ? `Movida para ${app.category(categoryId)?.name ?? 'a categoria'}` : 'Agora sem categoria'
-      app.say(msg, { label: 'Desfazer', run: () => void api.updateNote(id, { categoryId: before }) })
+      const msg = categoryId ? t('Movida para {nome}', { nome: app.category(categoryId)?.name ?? t('a categoria') }) : t('Agora sem categoria')
+      app.say(msg, { label: t('Desfazer'), run: () => void api.updateNote(id, { categoryId: before }) })
     },
   })
 </script>
@@ -99,28 +100,28 @@
 
 {#if notes.ready && !notes.current.length}
   {#if app.box === 'trash'}
-    <Empty icon={Trash2} title={app.query ? 'Nada encontrado' : 'Lixeira vazia'} text="Notas apagadas ficam aqui por 30 dias." />
+    <Empty icon={Trash2} title={app.query ? t('Nada encontrado') : t('Lixeira vazia')} text={t('Notas apagadas ficam aqui por 30 dias.')} />
   {:else if app.box === 'archive'}
-    <Empty icon={Archive} title={app.query ? 'Nada encontrado' : 'Nada arquivado'} text="Notas arquivadas saem da lista, mas continuam pesquisáveis aqui." />
+    <Empty icon={Archive} title={app.query ? t('Nada encontrado') : t('Nada arquivado')} text={t('Notas arquivadas saem da lista, mas continuam pesquisáveis aqui.')} />
   {:else}
     <ViewEmpty view="notes" />
   {/if}
 {:else}
-  {#if isTrash}<p class="banner">Notas na lixeira são apagadas depois de 30 dias.</p>{/if}
+  {#if isTrash}<p class="banner">{t('Notas na lixeira são apagadas depois de 30 dias.')}</p>{/if}
   {#if pinned.length}
-    <h2 class="section-label">Fixadas</h2>
+    <h2 class="section-label">{t('Fixadas')}</h2>
     {@render grid('pinned', pinned)}
   {/if}
   {#if app.sort === 'category'}
     {#each groups as g (g.id)}
       <h2 class="section-label">
-        {#if g.cat}<i class="dot" style:background={g.cat.color}></i>{g.cat.name}{:else}Sem categoria{/if}
+        {#if g.cat}<i class="dot" style:background={g.cat.color}></i>{g.cat.name}{:else}{t('Sem categoria')}{/if}
         <span class="count">{g.items.length}</span>
       </h2>
       {@render grid(`cat:${g.id}`, g.items)}
     {/each}
   {:else}
-    {#if pinned.length && rest.length}<h2 class="section-label">Outras</h2>{/if}
+    {#if pinned.length && rest.length}<h2 class="section-label">{t('Outras')}</h2>{/if}
     {#if rest.length}{@render grid('rest', rest)}{/if}
   {/if}
 {/if}

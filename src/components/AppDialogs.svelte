@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '@wylho/atrio'
   import { Dialog } from 'bits-ui'
   import { Check } from '@lucide/svelte'
   import { app } from '../lib/app.svelte'
@@ -66,16 +67,16 @@
             <input bind:value={name} autocomplete="off" spellcheck="false" autofocus maxlength="60" />
           </label>
           {#if color !== undefined}
-            <div class="color-pick" role="radiogroup" aria-label="Cor">
+            <div class="color-pick" role="radiogroup" aria-label={t('Cor')}>
               {#each CATEGORY_COLORS as c (c)}
-                <button type="button" class="color-dot" role="radio" aria-checked={color === c} aria-label={COLOR_NAMES[c] ?? c} title={COLOR_NAMES[c]} style:background={c} onclick={() => (color = c)}>
+                <button type="button" class="color-dot" role="radio" aria-checked={color === c} aria-label={COLOR_NAMES[c] ? t(COLOR_NAMES[c]) : c} title={COLOR_NAMES[c] ? t(COLOR_NAMES[c]) : undefined} style:background={c} onclick={() => (color = c)}>
                   {#if color === c}<Check size={14} strokeWidth={3} />{/if}
                 </button>
               {/each}
             </div>
           {/if}
           <div class="confirm-actions">
-            <button type="button" class="btn ghost" onclick={() => (app.dialog = null)}>Cancelar</button>
+            <button type="button" class="btn ghost" onclick={() => (app.dialog = null)}>{t('Cancelar')}</button>
             <button type="submit" class="btn primary" disabled={!name.trim()}>{d.confirm}</button>
           </div>
         </form>
@@ -113,9 +114,9 @@
               />
             </label>
           {/each}
-          <small class="pin-hint" class:bad={!!pinError} role={pinError ? 'alert' : undefined}>{pinError ?? 'De 4 a 8 números.'}</small>
+          <small class="pin-hint" class:bad={!!pinError} role={pinError ? 'alert' : undefined}>{pinError ?? t('De 4 a 8 números.')}</small>
           <div class="confirm-actions">
-            <button type="button" class="btn ghost" onclick={() => (app.dialog = null)}>Cancelar</button>
+            <button type="button" class="btn ghost" onclick={() => (app.dialog = null)}>{t('Cancelar')}</button>
             <button type="submit" class="btn primary" disabled={!pinsOk || pinBusy}>{d.confirm}</button>
           </div>
         </form>

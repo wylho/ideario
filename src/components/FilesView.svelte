@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { intlLocale, t } from '@wylho/atrio'
   import FilePreview from './FilePreview.svelte'
   import { File as FileIcon, FileAudio, FileSpreadsheet, FileText, FileVideoCamera, Paperclip } from '@lucide/svelte'
   import { api } from '../lib/api'
@@ -16,7 +17,7 @@
   const rows = live(() => api.listAttachments({ filter: $state.snapshot(app.filter), query: app.query }), [] as AttachmentRow[])
 
 
-  const byName = (a: AttachmentRow, b: AttachmentRow) => a.name.localeCompare(b.name, 'pt-BR')
+  const byName = (a: AttachmentRow, b: AttachmentRow) => a.name.localeCompare(b.name, intlLocale())
   const list = $derived(
     rows.current
       .filter((r) => !app.filesKind || fileGroup(r.kind) === app.filesKind)
@@ -35,15 +36,15 @@
 </script>
 
 <div class="stats">
-  <div><b>{rows.current.length}</b><span>arquivos</span></div>
-  <div><b>{fmtBytes(total)}</b><span>no Drive</span></div>
-  <div class="good"><b>−{fmtBytes(saved)}</b><span>economizados nas fotos</span></div>
+  <div><b>{rows.current.length}</b><span>{t('arquivos')}</span></div>
+  <div><b>{fmtBytes(total)}</b><span>{t('no Drive')}</span></div>
+  <div class="good"><b>−{fmtBytes(saved)}</b><span>{t('economizados nas fotos')}</span></div>
 </div>
 
 {#if rows.ready && !rows.current.length}
   <ViewEmpty view="files" />
 {:else if rows.ready && !list.length}
-  <Empty icon={Paperclip} title="Nenhum arquivo deste tipo" text="Escolha outro tipo no alto da tela." />
+  <Empty icon={Paperclip} title={t('Nenhum arquivo deste tipo')} text={t('Escolha outro tipo no alto da tela.')} />
 {/if}
 
 {#snippet fileIcon(r: AttachmentRow, big = false)}
@@ -69,7 +70,7 @@
           </span>
           <span class="f-size">
             {fmtBytes(r.bytes)}
-            {#if r.origBytes}<small>de {fmtBytes(r.origBytes)}</small>{/if}
+            {#if r.origBytes}<small>{t('de {tamanho}', { tamanho: fmtBytes(r.origBytes) })}</small>{/if}
           </span>
         </button>
           {/snippet}

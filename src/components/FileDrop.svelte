@@ -1,5 +1,6 @@
 <script lang="ts">
   import { FilePlus2, Paperclip } from '@lucide/svelte'
+  import { t } from '@wylho/atrio'
   import { isTauri } from '@tauri-apps/api/core'
   import { app, type DroppedFile } from '../lib/app.svelte'
   import { offerKeepImport } from '../lib/keep.svelte'
@@ -85,7 +86,7 @@
 {#if over}
   <div class="file-drop" class:into-note={!!app.editor} aria-hidden="true">
     <div class="file-drop-hint">
-      {#if app.editor}<Paperclip size={18} />Solte para anexar à nota{:else}<FilePlus2 size={18} />Solte para criar uma nota{/if}
+      {#if app.editor}<Paperclip size={18} />{t('Solte para anexar à nota')}{:else}<FilePlus2 size={18} />{t('Solte para criar uma nota')}{/if}
     </div>
   </div>
 {/if}

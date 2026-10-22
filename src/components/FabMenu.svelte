@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '@wylho/atrio'
   import { Camera, Image, Mic, Paperclip, PenLine, Plus } from '@lucide/svelte'
   import { app } from '../lib/app.svelte'
   import { canRecord, hasCamera } from '@wylho/atrio/editor'
@@ -13,11 +14,11 @@
   let root: HTMLElement | undefined = $state()
 
   const items = $derived([
-    { id: 'note', label: 'Nota', Icon: PenLine, run: () => app.openNew() },
-    ...(canRecord() ? [{ id: 'record', label: 'Gravar áudio', Icon: Mic, run: () => app.openNew(undefined, { record: true }) }] : []),
-    { id: 'photo', label: 'Foto', Icon: Image, run: () => pick(photoInput) },
-    ...(camera ? [{ id: 'camera', label: 'Câmera', Icon: Camera, run: () => app.openNew(undefined, { camera: true }) }] : []),
-    { id: 'file', label: 'Anexo', Icon: Paperclip, run: () => pick(fileInput) },
+    { id: 'note', label: t('Nota'), Icon: PenLine, run: () => app.openNew() },
+    ...(canRecord() ? [{ id: 'record', label: t('Gravar áudio'), Icon: Mic, run: () => app.openNew(undefined, { record: true }) }] : []),
+    { id: 'photo', label: t('Foto'), Icon: Image, run: () => pick(photoInput) },
+    ...(camera ? [{ id: 'camera', label: t('Câmera'), Icon: Camera, run: () => app.openNew(undefined, { camera: true }) }] : []),
+    { id: 'file', label: t('Anexo'), Icon: Paperclip, run: () => pick(fileInput) },
   ])
 
   function pick(input: HTMLInputElement | undefined) {
@@ -39,7 +40,7 @@
 <div class="fab-wrap" class:open bind:this={root}>
   {#if open}
     <div class="fab-scrim" aria-hidden="true"></div>
-    <ul class="fab-items" role="menu" aria-label="Criar">
+    <ul class="fab-items" role="menu" aria-label={t('Criar')}>
       {#each items as it, i (it.id)}
         <li style:--i={items.length - 1 - i}>
           <button role="menuitem" onclick={() => { open = false; it.run() }}>
@@ -50,7 +51,7 @@
       {/each}
     </ul>
   {/if}
-  <button class="fab" onclick={() => (open = !open)} aria-label={open ? 'Fechar' : 'Criar'} aria-expanded={open} aria-haspopup="menu" title="Criar (Ctrl+N: nota)">
+  <button class="fab" onclick={() => (open = !open)} aria-label={open ? t('Fechar') : t('Criar')} aria-expanded={open} aria-haspopup="menu" title={t('Criar (Ctrl+N: nota)')}>
     <Plus size={26} strokeWidth={2.2} />
   </button>
   <input bind:this={photoInput} type="file" accept="image/*" multiple hidden onchange={withFiles} />

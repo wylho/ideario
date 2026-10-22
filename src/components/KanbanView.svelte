@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '@wylho/atrio'
   import { Plus, Repeat } from '@lucide/svelte'
   import { api } from '../lib/api'
   import { app, live } from '../lib/app.svelte'
@@ -33,7 +34,7 @@
 </script>
 
 {#if list.ready && !list.current.length}
-  <ViewEmpty view="kanban" hint={app.filterLabel ? undefined : 'Toda nota com lembrete aparece aqui, e qualquer nota pelo menu Status.'} />
+  <ViewEmpty view="kanban" hint={app.filterLabel ? undefined : t('Toda nota com lembrete aparece aqui, e qualquer nota pelo menu Status.')} />
 {:else}
   <div class="kanban">
     {#each ['todo', 'doing', 'done'] as const as st (st)}
@@ -42,7 +43,7 @@
         <h2 class="kb-head">
           <i class="st-mark" aria-hidden="true"></i>{STATUS[st].label}<span class="count">{cols[st].length}</span>
           {#if st !== 'done'}
-            <button class="kb-add" aria-label="Nova nota em {STATUS[st].label}" title="Nova nota em {STATUS[st].label}" onclick={() => app.openNewInColumn(st === 'doing')}><Plus size={16} /></button>
+            <button class="kb-add" aria-label={t('Nova nota em {onde}', { onde: STATUS[st].label })} title={t('Nova nota em {onde}', { onde: STATUS[st].label })} onclick={() => app.openNewInColumn(st === 'doing')}><Plus size={16} /></button>
           {/if}
         </h2>
         <div class="kb-cards">
@@ -67,7 +68,7 @@
                   {#if n.reminderAt != null || cat}<div class="kb-meta">
                     {#if n.reminderAt != null}
                       <span class="pill" class:late={isOverdue(n)} class:done={n.reminderDone}>
-                        {fmtReminder(n.reminderAt)}{#if n.reminderRepeat}<Repeat size={11} aria-label="se repete" />{/if}
+                        {fmtReminder(n.reminderAt)}{#if n.reminderRepeat}<Repeat size={11} aria-label={t('se repete')} />{/if}
                       </span>
                     {/if}
                     {#if cat}<span class="pill"><i class="dot" style:background={cat.color}></i>{cat.name}</span>{/if}
@@ -76,10 +77,10 @@
               {/snippet}
             </ContextMenu>
           {:else}
-            <p class="kb-empty">{st === 'doing' ? 'Arraste para cá o que está em andamento' : st === 'done' ? 'Nada concluído ainda' : 'Nada a fazer'}</p>
+            <p class="kb-empty">{st === 'doing' ? t('Arraste para cá o que está em andamento') : st === 'done' ? t('Nada concluído ainda') : t('Nada a fazer')}</p>
           {/each}
           {#if st === 'done' && !allDone && cols.done.length > DONE_SHOWN}
-            <button class="btn ghost" onclick={() => (allDone = true)}>Mostrar todos ({cols.done.length})</button>
+            <button class="btn ghost" onclick={() => (allDone = true)}>{t('Mostrar todos ({n})', { n: cols.done.length })}</button>
           {/if}
         </div>
       </section>

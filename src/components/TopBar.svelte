@@ -9,14 +9,15 @@
   import ViewSwitch from './ViewSwitch.svelte'
   import { app } from '../lib/app.svelte'
   import { viewInfo } from '../lib/views'
+  import { t } from '@wylho/atrio'
 
   // Desktop: barra superior fixa. ☰ e as visões à esquerda (o nome do app já está no Dock/barra de título);
   // o resto ancorado à direita: a busca na ponta (sempre no mesmo lugar) e, à esquerda dela, as ações da visão.
   // O que aparece (nuvem) fica à esquerda de tudo e só ocupa a folga livre. A busca é um ícone que vira campo e fica aberto enquanto houver texto.
   // Celular: ☰ + campo de busca no topo do conteúdo.
-  const where = $derived(app.box === 'archive' ? 'Arquivo' : app.box === 'trash' ? 'Lixeira' : app.filterLabel)
-  const placeholder = $derived(`Buscar ${viewInfo(app.view).many}${where ? ` em ${where}` : ''}`)
-  const navLabel = $derived(!app.wide ? 'Abrir menu' : app.sidebarOpen ? 'Recolher barra lateral' : 'Expandir barra lateral')
+  const where = $derived(app.box === 'archive' ? t('Arquivo') : app.box === 'trash' ? t('Lixeira') : app.filterLabel)
+  const placeholder = $derived(where ? viewInfo(app.view).searchIn(where) : viewInfo(app.view).search)
+  const navLabel = $derived(!app.wide ? t('Abrir menu') : app.sidebarOpen ? t('Recolher barra lateral') : t('Expandir barra lateral'))
   const searchShown = $derived(!app.wide || app.searchOpen || !!app.query)
 
   let input: HTMLInputElement | undefined = $state()
@@ -48,7 +49,7 @@
       }}
     />
     {#if app.query}
-      <button class="icon-btn sm" aria-label="Limpar busca" onclick={() => { app.query = ''; input?.focus() }}><X size={14} /></button>
+      <button class="icon-btn sm" aria-label={t('Limpar busca')} onclick={() => { app.query = ''; input?.focus() }}><X size={14} /></button>
     {/if}
   </label>
 {/snippet}
@@ -88,7 +89,7 @@
       {#if searchShown}
         {@render searchField()}
       {:else}
-        <button class="icon-btn" aria-label="Buscar" title="Buscar (Ctrl+F)" onclick={() => (app.searchOpen = true)}><Search size={19} /></button>
+        <button class="icon-btn" aria-label={t('Buscar')} title={`${t('Buscar')} (Ctrl+F)`} onclick={() => (app.searchOpen = true)}><Search size={19} /></button>
       {/if}
     {/if}
   </div>

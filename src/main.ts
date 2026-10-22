@@ -2,7 +2,8 @@ import '@wylho/atrio/atrio.css'
 import { mount } from 'svelte'
 import App from './App.svelte'
 import { applySystemFonts } from './lib/system-fonts'
-import { setNotifier } from '@wylho/atrio'
+import { addMessages, setNotifier } from '@wylho/atrio'
+import { EN } from './lib/i18n/en'
 import { app } from './lib/app.svelte'
 import './lib/theme.svelte'
 import './lib/background.svelte'
@@ -10,6 +11,8 @@ import './lib/share.svelte'
 import './lib/backbutton.svelte'
 
 applySystemFonts()
+// Inglês do Ideario (o português é o próprio texto do código). Antes de montar, para a primeira pintura já sair no idioma.
+addMessages('en', EN)
 // Os avisos das peças do Atrio (microfone, câmera…) aparecem no toast do Ideario.
 setNotifier((msg) => app.say(msg))
 

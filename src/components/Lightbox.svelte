@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '@wylho/atrio'
   // O anexo aberto (foto, PDF, vídeo, áudio): o visualizador do Atrio, o mesmo do Nodo. Aqui fica só o que é do
   // Ideario: baixar pelo núcleo e "Abrir nota" quando o anexo veio de outra nota (Arquivos, Moodboard).
   import { AttachmentViewer } from '@wylho/atrio/viewer'
@@ -17,7 +18,7 @@
   {#snippet actions()}
     {@const img = app.lightbox}
     {#if img && app.editor?.id !== img.noteId}
-      <button class="btn primary" onclick={() => app.openNote(img.noteId)}>Abrir nota</button>
+      <button class="btn primary" onclick={() => app.openNote(img.noteId)}>{t('Abrir nota')}</button>
     {/if}
   {/snippet}
 </AttachmentViewer>

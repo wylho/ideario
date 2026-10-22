@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '@wylho/atrio'
   import { untrack } from 'svelte'
   // A nota aberta no Ideario: a janela em volta do card do Atrio (`NoteEditor`, o mesmo card do Nodo), o Y.Doc com o
   // salvamento contínuo e o sync, e o que só o Ideario tem (fixar, arquivar, lixeira, exportar, modo documento).
@@ -121,14 +122,14 @@
       if (closed || !ids.includes(id)) return
       if (pending.length) {
         persisted = false
-        app.say('Esta nota foi excluída fora desta janela (em outro aparelho ou pelo Claude); o que você escreveu aqui a manteve.')
+        app.say(t('Esta nota foi excluída fora desta janela (em outro aparelho ou pelo Claude); o que você escreveu aqui a manteve.'))
         schedule()
       } else {
         closed = true
         clearTimeout(timer)
         card?.cancelRecording()
         app.editor = null
-        app.say('Esta nota foi excluída fora desta janela (em outro aparelho ou pelo Claude).')
+        app.say(t('Esta nota foi excluída fora desta janela (em outro aparelho ou pelo Claude).'))
       }
     }),
   )
@@ -201,26 +202,26 @@
     } else if (!(await save())) {
       // Não salvou: a nota continua aberta, com tudo o que foi escrito.
       closed = false
-      app.say('Não foi possível salvar a nota. Ela continua aberta; tente de novo.')
+      app.say(t('Não foi possível salvar a nota. Ela continua aberta; tente de novo.'))
       return
     }
     api.settle()
     app.editor = null
-    if (msg) app.say(msg, before ? { label: 'Desfazer', run: () => void api.updateNote(id, before) } : undefined)
+    if (msg) app.say(msg, before ? { label: t('Desfazer'), run: () => void api.updateNote(id, before) } : undefined)
   }
 
   function deleteForever() {
     app.confirm({
-      title: 'Excluir para sempre?',
-      text: 'A nota sai deste aparelho e do Drive. Não dá para desfazer.',
-      confirm: 'Excluir',
+      title: t('Excluir para sempre?'),
+      text: t('A nota sai deste aparelho e do Drive. Não dá para desfazer.'),
+      confirm: t('Excluir'),
       onconfirm: async () => {
         closed = true
         clearTimeout(timer)
         card?.cancelRecording()
         await api.deleteNote(id)
         app.editor = null
-        app.say('Nota excluída')
+        app.say(t('Nota excluída'))
       },
     })
   }
@@ -293,7 +294,7 @@
               meta={m}
               {card}
               onback={() => close()}
-              backLabel="Voltar e salvar"
+              backLabel={t('Voltar e salvar')}
               wide={app.wide}
               {docMode}
               ondoc={toggleDoc}
@@ -302,13 +303,13 @@
               menu={wasTrashed ? trashMenu : undefined}
             >
               {#snippet label()}
-                {isNew ? 'Nova nota' : editedAt ? `Editada ${ago(editedAt)}` : ''}
+                {isNew ? t('Nova nota') : editedAt ? t('Editada {quando}', { quando: ago(editedAt) }) : ''}
                 <!-- ID curto: falar desta nota com o Claude ("na nota #a1b2c3d4"). Clicar copia. -->
-                {#if !isNew}<button class="ed-id" title="Copiar o ID da nota (para o Claude)" onclick={() => void copyNoteId(id, (msg) => app.say(msg))}>{shortId(id)}</button>{/if}
+                {#if !isNew}<button class="ed-id" title={t('Copiar o ID da nota (para o Claude)')} onclick={() => void copyNoteId(id, (msg) => app.say(msg))}>{shortId(id)}</button>{/if}
               {/snippet}
               {#snippet menuStart()}
                 <DropdownMenu.Sub>
-                  <DropdownMenu.SubTrigger class="menu-item"><FileDown size={16} /><span class="grow">Exportar</span><ChevronRight size={16} /></DropdownMenu.SubTrigger>
+                  <DropdownMenu.SubTrigger class="menu-item"><FileDown size={16} /><span class="grow">{t('Exportar')}</span><ChevronRight size={16} /></DropdownMenu.SubTrigger>
                   <DropdownMenu.SubContent class="menu" sideOffset={4}>
                     {#each exportEntries(id, m.title, !!card?.hasMedia(), () => void printNote()) as e (e.label)}
                       <DropdownMenu.Item class="menu-item" onSelect={e.onSelect}><e.icon size={16} />{e.label}</DropdownMenu.Item>
@@ -318,11 +319,11 @@
               {/snippet}
               {#snippet menuEnd()}
                 <DropdownMenu.Separator class="menu-sep" />
-                <DropdownMenu.Item class="menu-item" onSelect={() => m && close({ archived: !m.archived }, m.archived ? 'Nota desarquivada' : 'Nota arquivada')}>
-                  {#if m.archived}<ArchiveRestore size={16} />Desarquivar{:else}<Archive size={16} />Arquivar{/if}
+                <DropdownMenu.Item class="menu-item" onSelect={() => m && close({ archived: !m.archived }, m.archived ? t('Nota desarquivada') : t('Nota arquivada'))}>
+                  {#if m.archived}<ArchiveRestore size={16} />{t('Desarquivar')}{:else}<Archive size={16} />{t('Arquivar')}{/if}
                 </DropdownMenu.Item>
                 <DropdownMenu.Separator class="menu-sep" />
-                <DropdownMenu.Item class="menu-item danger" onSelect={() => close({ trashedAt: Date.now() }, 'Nota movida para a lixeira')}><Trash2 size={16} />Mover para a lixeira</DropdownMenu.Item>
+                <DropdownMenu.Item class="menu-item danger" onSelect={() => close({ trashedAt: Date.now() }, t('Nota movida para a lixeira'))}><Trash2 size={16} />{t('Mover para a lixeira')}</DropdownMenu.Item>
               {/snippet}
             </CardTopBar>
           {/snippet}
@@ -334,7 +335,7 @@
 
 <!-- Nota na lixeira: o menu do card só tem restaurar e excluir. -->
 {#snippet trashMenu()}
-  <DropdownMenu.Item class="menu-item" onSelect={() => close({ trashedAt: null }, 'Nota restaurada')}><ArchiveRestore size={16} />Restaurar</DropdownMenu.Item>
+  <DropdownMenu.Item class="menu-item" onSelect={() => close({ trashedAt: null }, t('Nota restaurada'))}><ArchiveRestore size={16} />{t('Restaurar')}</DropdownMenu.Item>
   <DropdownMenu.Separator class="menu-sep" />
-  <DropdownMenu.Item class="menu-item danger" onSelect={deleteForever}><Trash2 size={16} />Excluir para sempre</DropdownMenu.Item>
+  <DropdownMenu.Item class="menu-item danger" onSelect={deleteForever}><Trash2 size={16} />{t('Excluir para sempre')}</DropdownMenu.Item>
 {/snippet}
