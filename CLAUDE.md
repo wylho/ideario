@@ -85,6 +85,9 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
   só liga o que é do Ideario (menu, seleção com `onmark`, fixar, filtros, arrastar). Atenção: o npm não troca a
   dependência git só porque a tag mudou no `package.json` (segue o `package-lock`); a interface estava no Atrio 0.9.0
   até aqui. O `scripts/apps-up.sh` do Atrio agora instala a tag pelo nome e confere a versão.
+  **Atrio 0.16.0:** a barra do topo do card aberto é a `CardTopBar` do Atrio (a mesma do Nodo); o `Editor.svelte`
+  só passa o rótulo (editada há…, ID curto), fixar e os itens do Ideario no menu (Exportar, Arquivar, Lixeira; na
+  lixeira, o snippet `trashMenu` troca o menu).
   Antes no Atrio **0.11.0** (capa e anexos na prévia em Markdown; foto com o cursor numa lista entra depois dela).
   Desde a 0.9.0, as pílulas do card da lista são o `CardPills` do Atrio; com `onstatus`, a nota que tem status (ou
   lembrete) mostra o seletor de três cores no card e muda ali mesmo, sem abrir (pedido do usuário). O `vite.config.ts`

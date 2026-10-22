@@ -4,13 +4,10 @@
   // salvamento contínuo e o sync, e o que só o Ideario tem (fixar, arquivar, lixeira, exportar, modo documento).
   import { Editor as TipTap } from '@tiptap/core'
   import { Dialog, DropdownMenu } from 'bits-ui'
-  import {
-    Archive, ArchiveRestore, ArrowLeft, Check, ChevronRight, CircleDashed, MoreVertical, Pin, PinOff, Trash2,
-    BookOpen, Minimize2, FileDown, SmilePlus,
-  } from '@lucide/svelte'
+  import { Archive, ArchiveRestore, ChevronRight, FileDown, Trash2 } from '@lucide/svelte'
   import { exportEntries, printNote } from '../lib/exporting'
   import { bareUrl, fillPreview, insertLinkCard, NoteEditor } from '@wylho/atrio/editor'
-  import { features, ReminderPopover, type CardHost } from '@wylho/atrio'
+  import { CardTopBar, features, type CardHost } from '@wylho/atrio'
   import { isDocNote, setDocNote } from '../lib/docmode'
   import { api } from '../lib/api'
   import { download, newCategory } from '../lib/menus'
@@ -20,9 +17,8 @@
   import { makePreviews } from '../lib/previews.svelte'
   import { reminderSet } from '../lib/notify.svelte'
   import { ago } from '../lib/format'
-  import { STATUS } from '../lib/status'
   import { copyNoteId, shortId } from '../lib/noteid'
-  import { hasStatus, statusOf, type Attachment, type SharedIn } from '../lib/types'
+  import type { Attachment, SharedIn } from '../lib/types'
 
   let { target }: { target: EditorTarget } = $props()
 
@@ -293,79 +289,52 @@
           ondestroy={onDestroy}
         >
           {#snippet top()}
-            <div class="ed-top">
-              <button class="icon-btn" aria-label="Voltar e salvar" onclick={() => close()}><ArrowLeft size={20} /></button>
-              <span class="ed-saved">
+            <CardTopBar
+              meta={m}
+              {card}
+              onback={() => close()}
+              backLabel="Voltar e salvar"
+              wide={app.wide}
+              {docMode}
+              ondoc={toggleDoc}
+              pinned={m.pinned}
+              onpin={() => m && (m.pinned = !m.pinned)}
+              menu={wasTrashed ? trashMenu : undefined}
+            >
+              {#snippet label()}
                 {isNew ? 'Nova nota' : editedAt ? `Editada ${ago(editedAt)}` : ''}
                 <!-- ID curto: falar desta nota com o Claude ("na nota #a1b2c3d4"). Clicar copia. -->
-                {#if !isNew}<button class="ed-id" title="Copiar o ID da nota (para o Claude)" onclick={() => void copyNoteId(id, (m) => app.say(m))}>{shortId(id)}</button>{/if}
-              </span>
-              <!-- Modo documento só na janela larga: no celular e na estreita a nota já abre na tela toda. -->
-              {#if app.wide}<button
-                class="icon-btn"
-                aria-pressed={docMode}
-                aria-label={docMode ? 'Voltar ao card' : 'Abrir como documento'}
-                title={docMode ? 'Voltar ao card' : 'Abrir como documento (página inteira)'}
-                onclick={toggleDoc}
-              >
-                {#if docMode}<Minimize2 size={19} />{:else}<BookOpen size={19} />{/if}
-              </button>{/if}
-              <button class="icon-btn" aria-label={m.pinned ? 'Desafixar' : 'Fixar'} aria-pressed={m.pinned} onclick={() => m && (m.pinned = !m.pinned)}>
-                {#if m.pinned}<PinOff size={19} />{:else}<Pin size={19} />{/if}
-              </button>
-              <ReminderPopover
-                value={m.reminderAt}
-                repeat={m.reminderRepeat}
-                onchange={(v) => card?.reminder(v)}
-                onrepeat={(r) => m && (m.reminderRepeat = r)}
-              />
-              <DropdownMenu.Root>
-                <DropdownMenu.Trigger class="icon-btn" aria-label="Mais opções"><MoreVertical size={19} /></DropdownMenu.Trigger>
-                <DropdownMenu.Portal>
-                  <DropdownMenu.Content class="menu" align="end" sideOffset={6}>
-                    {#if wasTrashed}
-                      <DropdownMenu.Item class="menu-item" onSelect={() => close({ trashedAt: null }, 'Nota restaurada')}><ArchiveRestore size={16} />Restaurar</DropdownMenu.Item>
-                      <DropdownMenu.Separator class="menu-sep" />
-                      <DropdownMenu.Item class="menu-item danger" onSelect={deleteForever}><Trash2 size={16} />Excluir para sempre</DropdownMenu.Item>
-                    {:else}
-                      <DropdownMenu.Sub>
-                        <DropdownMenu.SubTrigger class="menu-item"><FileDown size={16} /><span class="grow">Exportar</span><ChevronRight size={16} /></DropdownMenu.SubTrigger>
-                        <DropdownMenu.SubContent class="menu" sideOffset={4}>
-                          {#each exportEntries(id, m.title, !!card?.hasMedia(), () => void printNote()) as e (e.label)}
-                            <DropdownMenu.Item class="menu-item" onSelect={e.onSelect}><e.icon size={16} />{e.label}</DropdownMenu.Item>
-                          {/each}
-                        </DropdownMenu.SubContent>
-                      </DropdownMenu.Sub>
-                      <DropdownMenu.Sub>
-                        <DropdownMenu.SubTrigger class="menu-item"><CircleDashed size={16} /><span class="grow">Status</span><ChevronRight size={16} /></DropdownMenu.SubTrigger>
-                        <DropdownMenu.SubContent class="menu" sideOffset={4}>
-                          {#each ['todo', 'doing', 'done'] as const as st (st)}
-                            <DropdownMenu.Item class="menu-item" onSelect={() => card?.status(st)}>
-                              <i class="menu-swatch" style:background={STATUS[st].color}></i><span class="grow">{STATUS[st].label}</span>
-                              {#if hasStatus(m) && statusOf(m) === st}<span class="menu-check"><Check size={15} /></span>{/if}
-                            </DropdownMenu.Item>
-                          {/each}
-                          {#if m.statusOn && m.reminderAt == null}
-                            <DropdownMenu.Separator class="menu-sep" />
-                            <DropdownMenu.Item class="menu-item" onSelect={() => card?.status('none')}><span class="grow">Sem status</span></DropdownMenu.Item>
-                          {/if}
-                        </DropdownMenu.SubContent>
-                      </DropdownMenu.Sub>
-                      <DropdownMenu.Item class="menu-item" onSelect={() => card?.chooseEmoji()}><SmilePlus size={16} />{m.emoji ? 'Mudar emoji de capa' : 'Emoji de capa'}</DropdownMenu.Item>
-                      <DropdownMenu.Separator class="menu-sep" />
-                      <DropdownMenu.Item class="menu-item" onSelect={() => m && close({ archived: !m.archived }, m.archived ? 'Nota desarquivada' : 'Nota arquivada')}>
-                        {#if m.archived}<ArchiveRestore size={16} />Desarquivar{:else}<Archive size={16} />Arquivar{/if}
-                      </DropdownMenu.Item>
-                      <DropdownMenu.Separator class="menu-sep" />
-                      <DropdownMenu.Item class="menu-item danger" onSelect={() => close({ trashedAt: Date.now() }, 'Nota movida para a lixeira')}><Trash2 size={16} />Mover para a lixeira</DropdownMenu.Item>
-                    {/if}
-                  </DropdownMenu.Content>
-                </DropdownMenu.Portal>
-              </DropdownMenu.Root>
-            </div>
+                {#if !isNew}<button class="ed-id" title="Copiar o ID da nota (para o Claude)" onclick={() => void copyNoteId(id, (msg) => app.say(msg))}>{shortId(id)}</button>{/if}
+              {/snippet}
+              {#snippet menuStart()}
+                <DropdownMenu.Sub>
+                  <DropdownMenu.SubTrigger class="menu-item"><FileDown size={16} /><span class="grow">Exportar</span><ChevronRight size={16} /></DropdownMenu.SubTrigger>
+                  <DropdownMenu.SubContent class="menu" sideOffset={4}>
+                    {#each exportEntries(id, m.title, !!card?.hasMedia(), () => void printNote()) as e (e.label)}
+                      <DropdownMenu.Item class="menu-item" onSelect={e.onSelect}><e.icon size={16} />{e.label}</DropdownMenu.Item>
+                    {/each}
+                  </DropdownMenu.SubContent>
+                </DropdownMenu.Sub>
+              {/snippet}
+              {#snippet menuEnd()}
+                <DropdownMenu.Separator class="menu-sep" />
+                <DropdownMenu.Item class="menu-item" onSelect={() => m && close({ archived: !m.archived }, m.archived ? 'Nota desarquivada' : 'Nota arquivada')}>
+                  {#if m.archived}<ArchiveRestore size={16} />Desarquivar{:else}<Archive size={16} />Arquivar{/if}
+                </DropdownMenu.Item>
+                <DropdownMenu.Separator class="menu-sep" />
+                <DropdownMenu.Item class="menu-item danger" onSelect={() => close({ trashedAt: Date.now() }, 'Nota movida para a lixeira')}><Trash2 size={16} />Mover para a lixeira</DropdownMenu.Item>
+              {/snippet}
+            </CardTopBar>
           {/snippet}
         </NoteEditor>
       </Dialog.Content>
     </Dialog.Portal>
   </Dialog.Root>
 {/if}
+
+<!-- Nota na lixeira: o menu do card só tem restaurar e excluir. -->
+{#snippet trashMenu()}
+  <DropdownMenu.Item class="menu-item" onSelect={() => close({ trashedAt: null }, 'Nota restaurada')}><ArchiveRestore size={16} />Restaurar</DropdownMenu.Item>
+  <DropdownMenu.Separator class="menu-sep" />
+  <DropdownMenu.Item class="menu-item danger" onSelect={deleteForever}><Trash2 size={16} />Excluir para sempre</DropdownMenu.Item>
+{/snippet}
