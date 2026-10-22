@@ -260,8 +260,8 @@ checksum = "1505bd5d3d116872e7271a6d4e16d81d0c8570876c8de68093a09ac269d8aac0"
 
 [[package]]
 name = "atrio"
-version = "0.18.2"
-source = "git+https://github.com/wylho/atrio?tag=v0.18.2#11969fa2fda7a80b1f87644e96413c6635ec8f05"
+version = "0.20.0"
+source = "git+https://github.com/wylho/atrio?tag=v0.20.0#61ff9220cc9f0bc3c4364848d6696aabe70dca14"
 dependencies = [
  "chrono",
  "fast_image_resize",
@@ -1941,7 +1941,7 @@ dependencies = [
 
 [[package]]
 name = "ideario"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "atrio",
  "base64 0.22.1",

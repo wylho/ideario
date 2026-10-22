@@ -40,19 +40,8 @@ export interface TagCount {
  * Bloco da prévia do card, na ordem do documento. Preserva a estrutura (título, parágrafo,
  * tópico, lista numerada, tarefa) em vez de achatar tudo num texto corrido.
  */
-export type PreviewBlock =
-  | { kind: 'heading' | 'text'; text: string }
-  | { kind: 'bullet'; text: string; depth: number }
-  | { kind: 'ordered'; text: string; n: number; depth: number }
-  | { kind: 'task'; text: string; done: boolean; depth: number }
-  /** Anexo no meio do texto (vídeo, áudio, PDF…): mostrado como uma linha com ícone. */
-  | { kind: 'file'; text: string; fileKind: AttachmentKind; hash: string }
-  /** Bloco de código: as primeiras linhas, sem formatação. */
-  | { kind: 'code'; text: string }
-  /** Cartão de link: título (ou endereço) e o site. */
-  | { kind: 'link'; text: string; url: string; site: string }
-  /** Tarefas que não couberam na prévia (máx. 4) ou texto cortado. */
-  | { kind: 'more'; count: number }
+export type { PreviewBlock } from '@wylho/atrio'
+import type { PreviewBlock } from '@wylho/atrio'
 
 /** Projeção de uma nota para listas e cards (colunas derivadas do Y.Doc). */
 export interface NoteSummary {

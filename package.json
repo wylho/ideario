@@ -2,7 +2,7 @@
   "name": "ideario",
   "private": true,
   "license": "GPL-3.0-or-later",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -24,7 +24,7 @@
     "@tiptap/pm": "^3.31.4",
     "@tiptap/starter-kit": "^3.31.4",
     "@tiptap/y-tiptap": "^3.0.9",
-    "@wylho/atrio": "github:wylho/atrio#v0.18.2",
+    "@wylho/atrio": "github:wylho/atrio#v0.20.0",
     "emojibase-data": "^17.0.0",
     "pdfjs-dist": "^4.10.38",
     "yjs": "^13.6.33"

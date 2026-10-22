@@ -27,6 +27,8 @@ export function estimateCard(n: NoteSummary, w: number): number {
     else if (b.kind === 'heading') pv += lines(b.text, 8) * 20 + 4
     else if (b.kind === 'file' || b.kind === 'link') pv += 24
     else if (b.kind === 'code') pv += b.text.split('\n').length * 16.7 + 16
+    // Tabela: cada linha com a célula mais alta (a quebra conta pela largura de uma coluna), e o "+N linhas".
+    else if (b.kind === 'table') pv += b.rows.reduce((s, r) => s + Math.max(1, ...r.map((c) => lines(c, 6.2 * r.length))) * 17 + 7, 0) + (b.more ? 20 : 0) + 4
     else if (b.kind === 'text') pv += lines(b.text, n.title ? 6.6 : 7.8) * (n.title ? 19.6 : 23) + 3
     else pv += lines(b.text, 6.6) * 19.6 + 3
   }

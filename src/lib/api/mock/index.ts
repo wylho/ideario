@@ -48,6 +48,7 @@ const MAX_BLOCKS = 24
 const MAX_TASKS = 12
 const MAX_CHARS = 1200
 const MAX_CODE_LINES = 8
+const MAX_TABLE_ROWS = 8
 
 const notes = new Map<string, StoredNote>()
 const attachments = new Map<string, Attachment>()
@@ -146,13 +147,18 @@ function project(body: RichDoc): Projection {
       case 'orderedList':
       case 'taskList':
         return listItems(n, depth)
-      // Tabela: uma linha da prévia por linha da tabela (como o núcleo).
-      case 'table':
-        for (const row of n.content ?? []) {
-          const cells = (row.content ?? []).map((c) => clean(inline(c))).filter(Boolean)
-          if (cells.length) blocks.push({ kind: 'text', text: cells.join(' · ') })
+      // Tabela: aparece como tabela no card, as primeiras linhas (como o núcleo, `atrio::projection`).
+      case 'table': {
+        const all = (n.content ?? [])
+          .map((row) => (row.content ?? []).map((c) => clean(inline(c))))
+          .filter((cells) => cells.some(Boolean))
+        if (all.length) {
+          const header = (n.content?.[0]?.content ?? []).some((c) => c.type === 'tableHeader')
+          const text = all.map((cells) => cells.filter(Boolean).join(' · ')).join('\n')
+          blocks.push({ kind: 'table', rows: all.slice(0, MAX_TABLE_ROWS), header, more: Math.max(0, all.length - MAX_TABLE_ROWS), text })
         }
         return
+      }
       case 'codeBlock': {
         const text = inline(n).replace(/\s+$/, '').split('\n').slice(0, MAX_CODE_LINES).join('\n')
         if (text.trim()) blocks.push({ kind: 'code', text })
@@ -706,6 +712,7 @@ export const mockApi: Api = {
       if (b.kind === 'ordered') return `${pad}${b.n}. ${b.text}`
       if (b.kind === 'heading') return `## ${b.text}`
       if (b.kind === 'code') return '```\n' + b.text + '\n```'
+      if (b.kind === 'table') return b.rows.map((r, i) => `| ${r.join(' | ')} |` + (i === 0 && b.header ? `\n|${r.map(() => '---|').join('')}` : '')).join('\n')
       return 'text' in b ? b.text : ''
     }).join('\n')
     return done({ title: n.title, markdown, color: n.color, emoji: n.emoji, tags: [...n.tags] })

@@ -31,7 +31,8 @@ pub use atrio::text::{clean_emoji, REPEATS};
 /// Cores das categorias (as mesmas de src/lib/colors.ts).
 const CATEGORY_COLORS: [&str; 10] = ["#C26A3D", "#B8901F", "#4F8A3E", "#3E8E7E", "#3D63D6", "#8A6BC4", "#C2557A", "#C0392B", "#8B5E3C", "#5F7380"];
 /// Formato da projeção gravada (2: blocos de arquivo levam o hash, para a miniatura).
-const PROJECTION_VERSION: u32 = 2;
+// 3: tabela de verdade na prévia (Atrio 0.20.0).
+const PROJECTION_VERSION: u32 = 3;
 
 fn err<E: std::fmt::Display>(e: E) -> String {
     e.to_string()
