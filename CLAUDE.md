@@ -177,7 +177,7 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
   tauri-driver), desempenho (`tests/native/perf.mjs`, build de release) e `npm run tauri build`.
 - Site (`site/`, Cloudflare Pages em ideario.pages.dev) e `README.md` têm o mesmo conteúdo: ao mudar um, mudar o outro
   (skill `sync-site`; prints por `scripts/site-shots.mjs`).
-- **Versão 0.6.4** (24/10/2026, pedido do usuário: "lança o ideário com o update de arrastar para baixo"): **puxar para
+- **Versão 0.6.4 lançada** (24/10/2026, Release `v0.6.4`, pedido do usuário: "lança o ideário com o update de arrastar para baixo"): **puxar para
   baixo sincroniza** (pedido do usuário: no celular, ter que ir às Configurações para sincronizar era ruim): no topo de qualquer visão, puxar a lista com o dedo mostra o círculo com
   as setas e, ao soltar depois do limite, sincroniza e gira até terminar (`components/PullRefresh.svelte` em
   `main.content`, `app.pullRefresh`: `syncNow` e espera sair de "sincronizando"; sem Drive conectado ou sem internet,
