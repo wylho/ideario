@@ -1941,7 +1941,7 @@ dependencies = [
 
 [[package]]
 name = "ideario"
-version = "0.6.3"
+version = "0.6.4"
 dependencies = [
  "atrio",
  "base64 0.22.1",

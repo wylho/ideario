@@ -1,6 +1,6 @@
 [package]
 name = "ideario"
-version = "0.6.3"
+version = "0.6.4"
 description = "Ideario: notas local-first com sync pelo Google Drive"
 license = "GPL-3.0-or-later"
 edition = "2021"
