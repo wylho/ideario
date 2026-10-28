@@ -42,7 +42,7 @@ dirs = "7"
 url = "2"
 
 # O que o Ideario e o Nodo compartilham no núcleo (Markdown da nota, forma canônica, regras do card): uma crate só.
-atrio = { git = "https://github.com/wylho/atrio", tag = "v0.21.0", features = ["media"] }
+atrio = { git = "https://github.com/wylho/atrio", tag = "v0.22.0", features = ["media"] }
 
 [profile.release]
 codegen-units = 1
@@ -86,4 +86,4 @@ objc2-app-kit = { version = "0.3", default-features = false, features = ["std", 
 
 [dev-dependencies]
 proptest = "1"
-atrio = { git = "https://github.com/wylho/atrio", tag = "v0.21.0", features = ["media", "testdoc"] }
+atrio = { git = "https://github.com/wylho/atrio", tag = "v0.22.0", features = ["media", "testdoc"] }

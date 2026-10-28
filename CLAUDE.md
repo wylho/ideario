@@ -177,6 +177,11 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
   tauri-driver), desempenho (`tests/native/perf.mjs`, build de release) e `npm run tauri build`.
 - Site (`site/`, Cloudflare Pages em ideario.pages.dev) e `README.md` têm o mesmo conteúdo: ao mudar um, mudar o outro
   (skill `sync-site`; prints por `scripts/site-shots.mjs`).
+- **PDF da nota com o card no topo (Atrio 0.22.0)** (escolha do usuário, opção C; o título longo saía cortado no
+  PDF porque no papel era o campo de texto): o topo do papel é o card da nota (cor, emoji, título inteiro, pílulas de
+  categoria, lembrete, status e etiquetas), o texto embaixo, e o papel é sempre claro mesmo com o app no escuro. Tudo
+  no Atrio (`NoteEditor` `.ed-print-card` e o `@media print` do `atrio.css`); aqui só a tag e o e2e "modo documento"
+  conferindo o card no papel.
 - **Versão 0.6.4 lançada** (24/10/2026, Release `v0.6.4`, pedido do usuário: "lança o ideário com o update de arrastar para baixo"): **puxar para
   baixo sincroniza** (pedido do usuário: no celular, ter que ir às Configurações para sincronizar era ruim): no topo de qualquer visão, puxar a lista com o dedo mostra o círculo com
   as setas e, ao soltar depois do limite, sincroniza e gira até terminar (`components/PullRefresh.svelte` em
