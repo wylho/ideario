@@ -4,7 +4,7 @@
   import { app } from './lib/app.svelte'
   import { api } from './lib/api'
   import { copyCard } from './lib/menus'
-  import { readCard, t } from '@wylho/atrio'
+  import { importCardFiles, readCard, t } from '@wylho/atrio'
   import { makePreviews } from './lib/previews.svelte'
   /** A área que rola (a lista de cada visão): o puxar para sincronizar fica nela. */
   let content = $state<HTMLElement | undefined>(undefined)
@@ -73,10 +73,13 @@
     const card = readCard(e.clipboardData)
     if (!card) return
     e.preventDefault()
-    void api.createFromCard(card).then(
-      (id) => app.say(t('Card colado'), { label: t('Abrir'), run: () => app.openNote(id) }),
-      () => app.say(t('Não foi possível colar o card')),
-    )
+    // Fotos e arquivos que vieram junto entram primeiro; o texto passa a citar o hash que o núcleo deu a eles.
+    void importCardFiles(card, (file, name) => api.importFile(file, name))
+      .then((c) => api.createFromCard(c))
+      .then(
+        (id) => app.say(t('Card colado'), { label: t('Abrir'), run: () => app.openNote(id) }),
+        () => app.say(t('Não foi possível colar o card')),
+      )
   }
 
   // Prévias de PDF e vídeo que ainda faltam: depois que a lista apareceu, em segundo plano.

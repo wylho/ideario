@@ -196,6 +196,7 @@ const CARD_COLORS: [&str; 7] = ["none", "sand", "sage", "sky", "rose", "lilac", 
 
 /// Card do Atrio (`@wylho/atrio`): a nota como ela vai e volta pela área de transferência entre o Ideario e o Nodo.
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CardInput {
     #[serde(default)]
     pub title: String,
@@ -207,16 +208,33 @@ pub struct CardInput {
     pub emoji: Option<String>,
     #[serde(default)]
     pub tags: Vec<String>,
+    /// Lembrete e status (card do Atrio, versão 2). Os arquivos dos anexos a interface já importou antes.
+    #[serde(default)]
+    pub reminder_at: Option<Millis>,
+    #[serde(default)]
+    pub reminder_repeat: Option<String>,
+    #[serde(default)]
+    pub reminder_done: bool,
+    #[serde(default)]
+    pub reminder_doing: bool,
+    #[serde(default)]
+    pub status_on: bool,
 }
 
 /// A nota pronta para copiar como card.
 #[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Card {
     pub title: String,
     pub markdown: String,
     pub color: String,
     pub emoji: Option<String>,
     pub tags: Vec<String>,
+    pub reminder_at: Option<Millis>,
+    pub reminder_repeat: Option<String>,
+    pub reminder_done: bool,
+    pub reminder_doing: bool,
+    pub status_on: bool,
 }
 
 /// Categoria como o sync a vê (com a ordem e a marca de apagada).
@@ -1443,6 +1461,11 @@ impl Store {
             color: n.color,
             emoji: n.emoji,
             tags: n.tags,
+            reminder_at: n.reminder_at,
+            reminder_repeat: n.reminder_repeat,
+            reminder_done: n.reminder_done,
+            reminder_doing: n.reminder_doing,
+            status_on: n.status_on,
         })
     }
 
@@ -1459,11 +1482,11 @@ impl Store {
             pinned: false,
             archived: false,
             trashed_at: None,
-            reminder_at: None,
-            reminder_done: false,
-            reminder_doing: false,
-            status_on: false,
-            reminder_repeat: None,
+            reminder_at: card.reminder_at,
+            reminder_done: card.reminder_done,
+            reminder_doing: card.reminder_doing,
+            status_on: card.status_on,
+            reminder_repeat: card.reminder_repeat.clone().filter(|r| REPEATS.contains(&r.as_str())),
             emoji: card.emoji.as_deref().and_then(clean_emoji),
             tags,
         };
@@ -2191,6 +2214,7 @@ mod tests {
                 color: Some("sky".into()),
                 emoji: Some("🛒".into()),
                 tags: vec!["#Mercado".into(), " ".into()],
+                ..Default::default()
             })
             .unwrap();
         let card = s.note_card(&id).unwrap();
@@ -2204,6 +2228,38 @@ mod tests {
         let other = s.create_from_card(&CardInput { color: Some("laranja".into()), ..Default::default() }).unwrap();
         assert_eq!(s.note_card(&other).unwrap().color, "none");
         assert!(s.note_card("nao-existe").is_err());
+    }
+
+    #[test]
+    fn card_carries_reminder_and_status_both_ways() {
+        let s = Store::memory();
+        let at = 1_790_000_000_000;
+        let id = s
+            .create_from_card(&CardInput {
+                title: "Consulta".into(),
+                reminder_at: Some(at),
+                reminder_repeat: Some("month".into()),
+                reminder_doing: true,
+                ..Default::default()
+            })
+            .unwrap();
+        let card = s.note_card(&id).unwrap();
+        assert_eq!(card.reminder_at, Some(at));
+        assert_eq!(card.reminder_repeat.as_deref(), Some("month"));
+        assert!(card.reminder_doing && !card.reminder_done && !card.status_on);
+        // Status sem lembrete (posto pelo menu) também vai e volta; repetição estranha não entra.
+        let other = s
+            .create_from_card(&CardInput { status_on: true, reminder_done: true, reminder_repeat: Some("sempre".into()), ..Default::default() })
+            .unwrap();
+        let card = s.note_card(&other).unwrap();
+        assert!(card.status_on && card.reminder_done);
+        assert_eq!(card.reminder_at, None);
+        assert_eq!(card.reminder_repeat, None);
+        // No JSON, como o Atrio escreve (camelCase).
+        let json = serde_json::to_value(&card).unwrap();
+        assert_eq!(json["statusOn"], true);
+        let back: CardInput = serde_json::from_value(serde_json::json!({ "title": "x", "reminderAt": at, "files": [] })).unwrap();
+        assert_eq!(back.reminder_at, Some(at));
     }
 
     #[test]

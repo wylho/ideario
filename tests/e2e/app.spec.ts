@@ -2053,6 +2053,33 @@ test.describe('blocos no editor', () => {
   })
 })
 
+test('card do Atrio v2: colar traz lembrete e status; copiar leva os dois de volta', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write'])
+  // Um card como o Nodo copia: tópico com lembrete toda semana e em andamento.
+  await page.evaluate(() => {
+    const json = JSON.stringify({ atrio: 2, title: 'Revisar orçamento', markdown: 'Ver as contas', reminderAt: Date.now() + 86_400_000, reminderRepeat: 'week', reminderDoing: true })
+    const bin = String.fromCharCode(...new TextEncoder().encode(json))
+    const dt = new DataTransfer()
+    dt.setData('text/html', `<div data-atrio-card="${btoa(bin)}"><h3>Revisar orçamento</h3></div>`)
+    window.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }))
+  })
+  await expect(page.getByText('Card colado')).toBeVisible()
+  const card = cards(page).filter({ hasText: 'Revisar orçamento' })
+  await expect(card.getByRole('radio', { name: 'Em andamento' })).toHaveAttribute('aria-checked', 'true')
+
+  await card.click({ button: 'right' })
+  await page.getByRole('menuitem', { name: /Copiar como card/ }).click()
+  await expect(page.getByText('Copiado como card')).toBeVisible()
+  const payload = await page.evaluate(async () => {
+    const [item] = await navigator.clipboard.read()
+    const html = await (await item.getType('text/html')).text()
+    const raw = /data-atrio-card="([^"]+)"/.exec(html)![1]
+    return JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(raw), (c) => c.charCodeAt(0))))
+  })
+  expect(payload).toMatchObject({ atrio: 2, title: 'Revisar orçamento', reminderRepeat: 'week', reminderDoing: true, reminderDone: false })
+  expect(typeof payload.reminderAt).toBe('number')
+})
+
 test('configurações: continuar aberto ao fechar a janela, com o nome do lugar de cada sistema', async ({ page }) => {
   await openSettings(page)
   const sw = page.locator('#segundo-plano')

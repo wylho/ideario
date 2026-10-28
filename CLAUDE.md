@@ -202,6 +202,13 @@ Single-context: `GLOSSARY.md` na raiz (quando houver); as decisões são as do `
   tauri-driver), desempenho (`tests/native/perf.mjs`, build de release) e `npm run tauri build`.
 - Site (`site/`, Cloudflare Pages em ideario.pages.dev) e `README.md` têm o mesmo conteúdo: ao mudar um, mudar o outro
   (skill `sync-site`; prints por `scripts/site-shots.mjs`).
+- **Atrio 0.24.0: card na área de transferência v2** (tarefa 03 do roteiro; escolha do usuário: os arquivos vão
+  junto): "Copiar como card" leva lembrete, status e os **arquivos dos anexos** (até 25 MB por cópia; acima disso o
+  aviso diz o que ficou de fora). `menus.ts` `copyCard` busca os bytes por `api.mediaUrl` (`attachCardFiles` do
+  Atrio); colar (`App.svelte`) importa os arquivos primeiro (`importCardFiles` + `api.importFile`) e só então cria a
+  nota. Núcleo: `Card`/`CardInput` com lembrete e status em camelCase (`note_card`, `create_from_card`; repetição
+  desconhecida não entra), teste `card_carries_reminder_and_status_both_ways`; o mock acompanha. e2e "card do Atrio
+  v2".
 - **Atrio 0.23.0** (tarefa 02 do roteiro em `atrio/.scratch/roteiro/`): o card aberto usa o `CardDialog` do Atrio (o
   mesmo do Nodo; antes o `Editor.svelte` montava o próprio `Dialog` do bits-ui, igual por fora). O fechar do Ideario
   já esperava o `settle` e já parava os atalhos (`app.editor`); a `CardSession`/`cardOpen()` do Atrio levaram a

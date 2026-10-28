@@ -12,7 +12,7 @@ import { SEP, type MenuEntry } from './menu'
 import { quickTimes, snoozeTimes } from './reminders'
 import { reminderSet } from './notify.svelte'
 import { statusOf, type AttachmentRow, type Category, type NoteColor, type NotePatch, type NoteSummary } from './types'
-import { t, tn, writeCard } from '@wylho/atrio'
+import { attachCardFiles, t, tn, writeCard } from '@wylho/atrio'
 import { STATUS, changeStatus, keepStatus, statusMenu } from './status'
 
 export const NOTE_COLORS: { id: NoteColor; label: string; css: string }[] = [
@@ -36,10 +36,21 @@ async function copy(text: string, done: string) {
 }
 
 /** Copia a nota como card do Atrio: o Nodo cola como nó com a nota, e outra janela do Ideario como nota nova. */
+/** Os bytes de um anexo, para irem junto com o card copiado (o Nodo cola com as fotos e os arquivos). */
+const fetchAttachment = (hash: string) => fetch(api.mediaUrl(hash)).then((r) => (r.ok ? r.blob() : null), () => null)
+
 export async function copyCard(id: string) {
+  let skipped: string[] = []
   try {
-    await writeCard(await api.noteCard(id))
-    app.say(t('Copiado como card'))
+    // A cópia começa no gesto; os arquivos dos anexos entram em seguida (até o limite do Atrio).
+    await writeCard(
+      api.noteCard(id).then(async (card) => {
+        const out = await attachCardFiles([card], fetchAttachment)
+        skipped = out.skipped
+        return out.cards[0]
+      }),
+    )
+    app.say(skipped.length ? t('Copiado como card, sem: {nomes}', { nomes: skipped.join(', ') }) : t('Copiado como card'))
   } catch {
     app.say(t('Não foi possível copiar'))
   }

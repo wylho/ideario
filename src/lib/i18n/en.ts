@@ -163,6 +163,7 @@ export const EN: Record<string, string> = {
   'Copiar como card': 'Copy as card',
   'cola no Nodo': 'pastes into Nodo',
   'Copiado como card': 'Copied as card',
+  'Copiado como card, sem: {nomes}': 'Copied as card, without: {nomes}',
   'Copiar ID': 'Copy ID',
   'Fazer uma cópia': 'Make a copy',
   'Cópia criada': 'Copy created',

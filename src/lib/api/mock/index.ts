@@ -715,7 +715,11 @@ export const mockApi: Api = {
       if (b.kind === 'table') return b.rows.map((r, i) => `| ${r.join(' | ')} |` + (i === 0 && b.header ? `\n|${r.map(() => '---|').join('')}` : '')).join('\n')
       return 'text' in b ? b.text : ''
     }).join('\n')
-    return done({ title: n.title, markdown, color: n.color, emoji: n.emoji, tags: [...n.tags] })
+    return done({
+      title: n.title, markdown, color: n.color, emoji: n.emoji, tags: [...n.tags],
+      reminderAt: n.reminderAt, reminderRepeat: n.reminderRepeat, reminderDone: n.reminderDone,
+      reminderDoing: n.reminderDoing, statusOn: n.statusOn,
+    })
   },
 
   createFromCard(card) {
@@ -724,8 +728,9 @@ export const mockApi: Api = {
     saveNote({
       id, title: card.title.trim(), body: mockMarkdown(card.markdown) as NoteInput['body'], categoryId: null,
       color: (card.color && colors.includes(card.color) ? card.color : 'none') as NoteInput['color'],
-      pinned: false, archived: false, trashedAt: null, reminderAt: null, reminderDone: false, reminderDoing: false,
-      statusOn: false, reminderRepeat: null, emoji: card.emoji ?? null,
+      pinned: false, archived: false, trashedAt: null, reminderAt: card.reminderAt ?? null,
+      reminderDone: !!card.reminderDone, reminderDoing: !!card.reminderDoing, statusOn: !!card.statusOn,
+      reminderRepeat: card.reminderRepeat ?? null, emoji: card.emoji ?? null,
       tags: (card.tags ?? []).map((t) => t.trim().replace(/^#/, '').toLowerCase()).filter(Boolean),
     })
     return done(id)
