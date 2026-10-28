@@ -177,6 +177,8 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
   tauri-driver), desempenho (`tests/native/perf.mjs`, build de release) e `npm run tauri build`.
 - Site (`site/`, Cloudflare Pages em ideario.pages.dev) e `README.md` têm o mesmo conteúdo: ao mudar um, mudar o outro
   (skill `sync-site`; prints por `scripts/site-shots.mjs`).
+- **Versão 0.6.5** (28/10/2026, pedido do usuário: "depois que tiver tudo certinho, você pode fazer o release"): o PDF
+  da nota com o card no topo (abaixo).
 - **PDF da nota com o card no topo (Atrio 0.22.0)** (escolha do usuário, opção C; o título longo saía cortado no
   PDF porque no papel era o campo de texto): o topo do papel é o card da nota (cor, emoji, título inteiro, pílulas de
   categoria, lembrete, status e etiquetas), o texto embaixo, e o papel é sempre claro mesmo com o app no escuro. Tudo
