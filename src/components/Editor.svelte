@@ -4,11 +4,11 @@
   // A nota aberta no Ideario: a janela em volta do card do Atrio (`NoteEditor`, o mesmo card do Nodo), o Y.Doc com o
   // salvamento contínuo e o sync, e o que só o Ideario tem (fixar, arquivar, lixeira, exportar, modo documento).
   import { Editor as TipTap } from '@tiptap/core'
-  import { Dialog, DropdownMenu } from 'bits-ui'
+  import { DropdownMenu } from 'bits-ui'
   import { Archive, ArchiveRestore, ChevronRight, FileDown, Trash2 } from '@lucide/svelte'
   import { exportEntries, printNote } from '../lib/exporting'
   import { bareUrl, fillPreview, insertLinkCard, NoteEditor } from '@wylho/atrio/editor'
-  import { CardTopBar, features, type CardHost } from '@wylho/atrio'
+  import { CardDialog, CardTopBar, features, type CardHost } from '@wylho/atrio'
   import { isDocNote, setDocNote } from '../lib/docmode'
   import { api } from '../lib/api'
   import { download, newCategory } from '../lib/menus'
@@ -270,10 +270,7 @@
 
 
 {#if meta}
-  <Dialog.Root open onOpenChange={(o) => !o && close()}>
-    <Dialog.Portal>
-      <Dialog.Overlay class="overlay ed-overlay" />
-      <Dialog.Content class="editor c-{meta.color}" data-doc={docMode && app.wide ? '' : undefined} aria-describedby={undefined} onOpenAutoFocus={(e) => e.preventDefault()}>
+  <CardDialog color={meta.color} doc={docMode && app.wide} onclose={() => void close()}>
         {@const m = meta}
         <NoteEditor
           bind:this={card}
@@ -328,9 +325,7 @@
             </CardTopBar>
           {/snippet}
         </NoteEditor>
-      </Dialog.Content>
-    </Dialog.Portal>
-  </Dialog.Root>
+  </CardDialog>
 {/if}
 
 <!-- Nota na lixeira: o menu do card só tem restaurar e excluir. -->

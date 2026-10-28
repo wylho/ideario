@@ -202,6 +202,10 @@ Single-context: `GLOSSARY.md` na raiz (quando houver); as decisões são as do `
   tauri-driver), desempenho (`tests/native/perf.mjs`, build de release) e `npm run tauri build`.
 - Site (`site/`, Cloudflare Pages em ideario.pages.dev) e `README.md` têm o mesmo conteúdo: ao mudar um, mudar o outro
   (skill `sync-site`; prints por `scripts/site-shots.mjs`).
+- **Atrio 0.23.0** (tarefa 02 do roteiro em `atrio/.scratch/roteiro/`): o card aberto usa o `CardDialog` do Atrio (o
+  mesmo do Nodo; antes o `Editor.svelte` montava o próprio `Dialog` do bits-ui, igual por fora). O fechar do Ideario
+  já esperava o `settle` e já parava os atalhos (`app.editor`); a `CardSession`/`cardOpen()` do Atrio levaram a
+  mesma regra ao Nodo.
 - **Versão 0.6.5 lançada** (28/10/2026, Release `v0.6.5`, pedido do usuário: "depois que tiver tudo certinho, você pode fazer o release"): o PDF
   da nota com o card no topo (abaixo).
 - **PDF da nota com o card no topo (Atrio 0.22.0)** (escolha do usuário, opção C; o título longo saía cortado no
