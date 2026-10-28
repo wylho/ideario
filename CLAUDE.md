@@ -11,6 +11,12 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
   a mudança se faz no Atrio, sobe a tag e os **dois** apps sobem juntos (nunca deixar um app numa tag velha). Mesmo
   quando o usuário fala de um app só, se o assunto é peça do Atrio, o caminho é o Atrio. Plano em
   `atrio/docs/UNIFICACAO.md`.
+- **Skills do Matt Pocock (pedido do usuário, 28/10/2026): nos três projetos e em todo app novo.** O plugin
+  `mattpocock-skills@claude-plugins-official` fica ligado no `.claude/settings.json` do repositório (toda sessão nova já
+  o tem). Usar as skills dele no trabalho: `tdd`, `diagnosing-bugs`, `code-review`, `to-spec`/`to-tickets`/`triage`,
+  `implement`, `prototype`, `improve-codebase-architecture`, `domain-modeling`, `grill-me`. Elas convivem com as skills
+  do usuário (`rust-testing`, `rust-patterns`, `sync-site`, `atrio-hub`), que valem quando falam de algo mais
+  específico. App novo: copiar o `.claude/settings.json` e o `docs/agents/` do Atrio e pôr aqui o bloco "Agent skills".
 - **Local-first**: a UI lê e escreve só no SQLite local. Rede apenas em segundo plano. Nada de spinner para abrir nota ou lista.
 - Notas, Lembretes, Arquivos e Moodboard são **visões do mesmo banco**. Não duplicar dados.
 - Cada nota é um **Y.Doc** (Yjs/yrs). As colunas SQL são uma projeção derivada dele.
@@ -99,6 +105,24 @@ App estilo Google Keep, multiplataforma, rápido como um bloco de notas e com sy
 - **Licença:** **GPL-3.0-or-later**, a mesma do Nodo e do Atrio (escolha do usuário, 22/10/2026), no arquivo
   `LICENSE` (e no `license` do `package.json` e do `src-tauri/Cargo.toml`). O site e o README chamam o Ideario de
   grátis e de código aberto; a licença aparece no rodapé do site, nos termos e no fim do README.
+
+
+## Agent skills
+
+### Issue tracker
+
+Tarefas e especificações em arquivos Markdown dentro do repositório, em `.scratch/<assunto>/` (escolha do usuário),
+e sobem no commit como o resto. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Os cinco estados padrão (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`), numa linha
+`Status:` no topo de cada arquivo. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: `GLOSSARY.md` na raiz (quando houver); as decisões são as do `CLAUDE.md` ("Decisões tomadas"). See
+`docs/agents/domain.md`.
 
 ## Estado atual
 - **Fases 0 a 5 concluídas (e a importação do Keep).** No app, a UI fala com o núcleo Rust (`src/lib/api/tauri.ts` → `src-tauri/src/commands.rs`):
