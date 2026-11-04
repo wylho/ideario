@@ -230,6 +230,9 @@ Single-context: `GLOSSARY.md` na raiz (quando houver); as decisões são as do `
   mesmo do Nodo; antes o `Editor.svelte` montava o próprio `Dialog` do bits-ui, igual por fora). O fechar do Ideario
   já esperava o `settle` e já parava os atalhos (`app.editor`); a `CardSession`/`cardOpen()` do Atrio levaram a
   mesma regra ao Nodo.
+- **Versão 0.7.0 lançada** (04/11/2026, Release `v0.7.0`, pedido do usuário: "pode fazer o release dos dois apps"): prompt,
+  link na palavra e a lista Links, card numa nova janela, card na área de transferência v2 (Atrio 0.26.3). Site e README
+  na 0.7 com o print `prompt.webp` (`scripts/site-shots.mjs` monta a nota pelo editor, `insertContent`).
 - **Versão 0.6.5 lançada** (28/10/2026, Release `v0.6.5`, pedido do usuário: "depois que tiver tudo certinho, você pode fazer o release"): o PDF
   da nota com o card no topo (abaixo).
 - **PDF da nota com o card no topo (Atrio 0.22.0)** (escolha do usuário, opção C; o título longo saía cortado no
