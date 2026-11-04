@@ -51,9 +51,16 @@
       {/each}
     </ul>
   {/if}
+  <!-- Na visão Links, o + salva um link (pede o endereço); nas outras, abre o leque. -->
+  {#if app.view === 'links'}
+  <button class="fab" onclick={() => app.askLink()} aria-label={t('Salvar link')} title={t('Salvar link')}>
+    <Plus size={26} strokeWidth={2.2} />
+  </button>
+  {:else}
   <button class="fab" onclick={() => (open = !open)} aria-label={open ? t('Fechar') : t('Criar')} aria-expanded={open} aria-haspopup="menu" title={t('Criar (Ctrl+N: nota)')}>
     <Plus size={26} strokeWidth={2.2} />
   </button>
+  {/if}
   <input bind:this={photoInput} type="file" accept="image/*" multiple hidden onchange={withFiles} />
   <input bind:this={fileInput} type="file" multiple hidden onchange={withFiles} />
 </div>

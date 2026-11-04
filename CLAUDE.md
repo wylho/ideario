@@ -230,6 +230,16 @@ Single-context: `GLOSSARY.md` na raiz (quando houver); as decisões são as do `
   mesmo do Nodo; antes o `Editor.svelte` montava o próprio `Dialog` do bits-ui, igual por fora). O fechar do Ideario
   já esperava o `settle` e já parava os atalhos (`app.editor`); a `CardSession`/`cardOpen()` do Atrio levaram a
   mesma regra ao Nodo.
+- **Visão Links (alternativa ao Raindrop; pedido do usuário, prévia aprovada, spec em `.scratch/visao-links/`)**, ainda
+  não lançada (site e README entram depois do release que o usuário autorizar): os cartões de link e os links na palavra
+  das notas ativas, um por endereço, com as notas onde cada um está. Núcleo: `links.rs` (achar, juntar, tipo pelo
+  endereço, preencher a prévia), `Store::list_links`/`save_link`/`fill_link`, comandos `list_links` e `save_link` (a nota
+  nasce na hora em A fazer; a prévia da página vem num thread e avisa as janelas). MCP: `list_links` e `save_link`.
+  Interface: `LinksView.svelte` (Cards, Lista, Títulos, Mural; agrupar por data, tag, site ou categoria; prévia com o
+  card de cada nota; o status é o `StatusToggle` do card), `LinksMenu.svelte` (Site, Mais filtros, Ver como), o + da
+  visão salva um link (`app.askLink`). O diálogo de texto aceita endereços longos (`maxLength`; antes cortava em 60, também
+  no ⌘K). Abas de baixo com sete visões (`TabBar.svelte`). Mock: `mock/links.ts` e 5 notas de exemplo com links (os
+  e2e que contavam notas foram atualizados). e2e "visão Links".
 - **Versão 0.7.0 lançada** (04/11/2026, Release `v0.7.0`, pedido do usuário: "pode fazer o release dos dois apps"): prompt,
   link na palavra e a lista Links, card numa nova janela, card na área de transferência v2 (Atrio 0.26.3). Site e README
   na 0.7 com o print `prompt.webp` (`scripts/site-shots.mjs` monta a nota pelo editor, `insertContent`).

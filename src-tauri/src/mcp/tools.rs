@@ -410,6 +410,38 @@ fn defs() -> Vec<Def> {
             destructive: false,
         },
         Def {
+            name: "list_links",
+            title: "Links",
+            description: "Os links das notas, como na visão Links do app: cartões de link e links na palavra, um por endereço, com \
+                          título, site, descrição, tipo (article, video, audio, image, doc, code), as tags e as notas onde está \
+                          (cada uma com o status: todo, doing, done). Use para achar algo que a pessoa salvou para ler depois.",
+            params: json!({
+                "query": s("busca no título, endereço, site, descrição ou título da nota"),
+                "kind": one_of(&["article", "video", "audio", "image", "doc", "code"], "tipo"),
+                "site": s("só deste site (ex.: youtube.com)"),
+                "tag": s("só com esta tag (sem #)"),
+                "status": one_of(&["todo", "doing", "done"], "só os que estão numa nota com este status (todo = ler depois)"),
+                "limit": n("quantos (padrão 50)"),
+            }),
+            required: &[],
+            read_only: true,
+            destructive: false,
+        },
+        Def {
+            name: "save_link",
+            title: "Salvar link",
+            description: "Salva um endereço como na visão Links: nota nova com o cartão do link (título, descrição e imagem da \
+                          página) e status a fazer (ler depois). Use quando a pessoa pedir para guardar um link.",
+            params: json!({
+                "url": s("endereço (http ou https)"),
+                "category": s("nome ou id de uma categoria existente"),
+                "tags": strings("tags (sem #)"),
+            }),
+            required: &["url"],
+            read_only: false,
+            destructive: false,
+        },
+        Def {
             name: "get_attachment",
             title: "Ver anexo",
             description: "Mostra o anexo: foto como imagem, texto (txt, md, csv, json…) como texto; os outros, os dados e onde está o arquivo no computador.",
@@ -677,6 +709,8 @@ fn run(core: &Core, name: &str, a: &Args) -> Result<Out> {
             Ok(Out::Text(format!("#{tag} tirada de {n} nota(s).")))
         }),
         "list_attachments" => list_attachments(core, a),
+        "list_links" => list_links(core, a),
+        "save_link" => save_link(core, a),
         "get_attachment" => get_attachment(core, a),
         "attach_file" => attach(core, a),
         "export_attachment" => export(core, a),
@@ -1548,6 +1582,65 @@ fn list_attachments(core: &Core, a: &Args) -> Result<Out> {
                 .collect()
         };
         Ok(Out::Json(Value::Array(rows)))
+    })
+}
+
+fn list_links(core: &Core, a: &Args) -> Result<Out> {
+    let status = a.str("status").map(|v| reminders::Status::parse(v).ok_or("status: use todo, doing ou done")).transpose()?;
+    core.with(|s| {
+        let limit = a.int("limit").unwrap_or(50).clamp(1, 500) as usize;
+        let list = s.list_links(&Filter::default(), a.str("query").unwrap_or(""))?;
+        let notes: HashMap<&str, &crate::store::NoteSummary> = list.notes.iter().map(|n| (n.id.as_str(), n)).collect();
+        let tag = a.str("tag").map(|t| t.trim().trim_start_matches('#').to_lowercase());
+        let site = a.str("site").map(|x| x.trim().trim_start_matches("www.").to_lowercase());
+        let has = |n: &crate::store::NoteSummary| n.reminder_at.is_some() || n.status_on;
+        let st = |n: &crate::store::NoteSummary| reminders::Status::of(n.reminder_done, n.reminder_doing);
+        let name = |x: reminders::Status| match x {
+            reminders::Status::Todo => "todo",
+            reminders::Status::Doing => "doing",
+            reminders::Status::Done => "done",
+        };
+        let rows: Vec<Value> = list
+            .links
+            .iter()
+            .filter(|r| a.str("kind").map_or(true, |k| r.kind == k))
+            .filter(|r| site.as_deref().map_or(true, |x| r.site.to_lowercase() == x || crate::links::host(&r.url) == x))
+            .filter(|r| tag.as_deref().map_or(true, |t| r.tags.iter().any(|x| x == t)))
+            .filter(|r| status.map_or(true, |want| r.note_ids.iter().filter_map(|id| notes.get(id.as_str())).any(|n| has(n) && st(n) == want)))
+            .take(limit)
+            .map(|r| {
+                let in_notes: Vec<Value> = r
+                    .note_ids
+                    .iter()
+                    .filter_map(|id| notes.get(id.as_str()))
+                    .map(|n| {
+                        let mut v = json!({ "id": n.id, "title": n.label });
+                        if has(n) {
+                            v["status"] = json!(name(st(n)));
+                        }
+                        v
+                    })
+                    .collect();
+                json!({
+                    "url": r.url, "title": r.title, "site": r.site, "description": r.description, "kind": r.kind,
+                    "onWord": r.word, "tags": r.tags, "notes": in_notes,
+                })
+            })
+            .collect();
+        Ok(Out::Json(json!({ "links": rows })))
+    })
+}
+
+fn save_link(core: &Core, a: &Args) -> Result<Out> {
+    let url = a.need("url")?;
+    // A prévia é buscada antes de pegar o banco (rede fora da trava); sem rede, o cartão fica só com o endereço.
+    let preview = crate::link::fetch(url)?;
+    core.with(|s| {
+        let category = a.str("category").filter(|c| !c.is_empty()).map(|c| category_id(s, c)).transpose()?;
+        let id = s.save_link(url, category.as_deref(), &a.strings("tags").unwrap_or_default())?;
+        s.fill_link(&id, &preview)?;
+        s.log_external(Some(&id), false)?;
+        Ok(Out::Text(format!("Link salvo (status a fazer).\n{}", note_text(s, &id)?)))
     })
 }
 

@@ -1,10 +1,10 @@
-import { Bell, CalendarDays, Images, Paperclip, SquareKanban, StickyNote } from '@lucide/svelte'
+import { Bell, CalendarDays, Images, Link, Paperclip, SquareKanban, StickyNote } from '@lucide/svelte'
 import { t } from '@wylho/atrio'
 import type { View } from './types'
 
 // Os textos são getters: `t` lê o idioma atual (reativo), então nada fica congelado na hora do import (e nada de
 // espalhar com `...`, que leria os getters uma vez só). `{onde}` é o filtro ativo (categoria, tags).
-type Kind = 'notes' | 'reminders' | 'files' | 'images'
+type Kind = 'notes' | 'reminders' | 'files' | 'images' | 'links'
 const TEXTS: Record<Kind, { none: () => string; noneIn: (onde: string) => string; search: () => string; searchIn: (onde: string) => string; seeAll: () => string; filterOn: (onde: string) => string }> = {
   notes: {
     none: () => t('Nenhuma nota'),
@@ -29,6 +29,14 @@ const TEXTS: Record<Kind, { none: () => string; noneIn: (onde: string) => string
     searchIn: (onde) => t('Buscar arquivos em {onde}', { onde }),
     seeAll: () => t('Ver arquivos de tudo'),
     filterOn: (onde) => t('O filtro continua ativo. Troque a visão para ver o que há em {onde}, ou veja arquivos de tudo.', { onde }),
+  },
+  links: {
+    none: () => t('Nenhum link'),
+    noneIn: (onde) => t('Nenhum link em {onde}', { onde }),
+    search: () => t('Buscar links'),
+    searchIn: (onde) => t('Buscar links em {onde}', { onde }),
+    seeAll: () => t('Ver links de tudo'),
+    filterOn: (onde) => t('O filtro continua ativo. Troque a visão para ver o que há em {onde}, ou veja links de tudo.', { onde }),
   },
   images: {
     none: () => t('Nenhuma imagem'),
@@ -64,6 +72,8 @@ export const VIEWS = [
   view('kanban', () => t('Kanban'), 'reminders', SquareKanban),
   view('files', () => t('Arquivos'), 'files', Paperclip),
   view('moodboard', () => t('Moodboard'), 'images', Images),
+  // Os links das notas num lugar só, como num gerenciador de favoritos (cartões de link e links na palavra).
+  view('links', () => t('Links'), 'links', Link),
 ]
 
 export const viewInfo = (v: View) => VIEWS.find((x) => x.id === v)!

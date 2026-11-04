@@ -2,7 +2,7 @@
 // Visão (como ver) e filtro (o que ver) são independentes: trocar um nunca desfaz o outro.
 import { SvelteSet } from 'svelte/reactivity'
 import { api } from './api'
-import type { AttachmentRow, NoteSummary, Box, Category, FileGroup, FileSort, Filter, Millis, NoteSort, OrphanCounts, SharedIn, SyncState, TagCount, Tone, View, ViewCounts } from './types'
+import type { AttachmentRow, NoteSummary, Box, Category, FileGroup, FileSort, Filter, LinkGroup, LinkKind, LinkLayout, LinkSort, Millis, NoteSort, OrphanCounts, ReminderStatus, SharedIn, SyncState, TagCount, Tone, View, ViewCounts } from './types'
 import { NO_CATEGORY, NO_TAGS } from './types'
 import { uuidv7 } from './uuid'
 import { quickTimes } from './reminders'
@@ -17,6 +17,8 @@ export interface NameDialog {
   /** Cor inicial; ausente = sem escolha de cor. */
   color?: string
   confirm: string
+  /** Tamanho máximo do texto (padrão 60, um nome). Endereços pedem mais. */
+  maxLength?: number
   submit: (name: string, color: string | undefined) => void
 }
 export interface ConfirmAsk {
@@ -100,6 +102,17 @@ function sortCategories(list: Category[], mode: CategorySort): Category[] {
   return out
 }
 
+const LINKS_LAYOUT_KEY = 'ideario.linksLayout'
+const LINK_LAYOUTS: LinkLayout[] = ['cards', 'list', 'heads', 'mural']
+function readLinksLayout(): LinkLayout {
+  try {
+    const v = localStorage.getItem(LINKS_LAYOUT_KEY) as LinkLayout | null
+    return v && LINK_LAYOUTS.includes(v) ? v : 'cards'
+  } catch {
+    return 'cards'
+  }
+}
+
 const SIDEBAR_KEY = 'ideario.sidebar'
 function readSidebar() {
   try {
@@ -125,6 +138,46 @@ class AppState {
   filesLayout = $state<'grid' | 'list'>('list')
   /** Arquivos: tipo mostrado (null = todos). */
   filesKind = $state<FileGroup | null>(null)
+  /** Links: jeito de ver (guardado no aparelho; Cards ao abrir), ordem, filtros da própria visão e agrupar. As
+   *  categorias e as tags são o filtro de sempre (`filter`), o mesmo das outras visões. */
+  linksLayout = $state<LinkLayout>(readLinksLayout())
+  linksSort = $state<LinkSort>('recent')
+  linksKind = $state<LinkKind | null>(null)
+  linksSite = $state<string | null>(null)
+  linksStatus = $state<ReminderStatus | null>(null)
+  linksOrigin = $state<'card' | 'word' | null>(null)
+  linksGroup = $state<LinkGroup>('none')
+  /** Os sites dos links na tela (com quantos), para o menu Site da barra; a visão Links preenche. */
+  linkSites = $state.raw<{ site: string; count: number }[]>([])
+
+  setLinksLayout(v: LinkLayout) {
+    this.linksLayout = v
+    try {
+      localStorage.setItem(LINKS_LAYOUT_KEY, v)
+    } catch {
+      // sem armazenamento: vale só nesta sessão
+    }
+  }
+
+  /** "+" da visão Links: pede o endereço e salva o link numa nota nova (status a fazer), na categoria e nas tags do
+   *  filtro. A nota aparece na hora; o título e a imagem da página chegam depois. */
+  askLink() {
+    this.askName({
+      title: t('Salvar link'),
+      label: t('Endereço (http ou https)'),
+      value: '',
+      confirm: t('Salvar'),
+      maxLength: 2048,
+      submit: (url) => {
+        const u = url.trim()
+        api.saveLink({ url: /^[a-z][a-z0-9+.-]*:/i.test(u) ? u : `https://${u}`, categoryId: this.filter.categoryId, tags: [...this.filter.tags] }).then(
+          () => this.say(t('Link salvo em A fazer')),
+          (e) => this.say(e instanceof Error ? e.message : String(e)),
+        )
+      },
+    })
+  }
+
   /** Moodboard: tom mostrado (null = todos). */
   moodTone = $state<Tone | null>(null)
   /** Moodboard com as fotos das notas arquivadas também. */

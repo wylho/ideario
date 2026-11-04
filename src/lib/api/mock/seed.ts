@@ -1,6 +1,6 @@
 // Dados de exemplo da Fase 0, portados do protótipo.
 import type { AttachmentKind, NoteColor, RichDoc, RichNode, Tone } from '../../types'
-import type { FakeImage } from './fake-images'
+import { fakeImageSrc, type FakeImage } from './fake-images'
 import { i18n } from '@wylho/atrio'
 
 const HOUR = 3_600_000
@@ -114,6 +114,20 @@ const check = (items: [string, boolean][]): RichNode => ({
   type: 'taskList',
   content: items.map(([t, done]) => ({ type: 'taskItem', attrs: { checked: done }, content: [p(t)] })),
 })
+
+
+// Links (visão Links): cartão de link com a prévia da página (a imagem é um desenho de exemplo) e link na palavra.
+const linkCard = (url: string, title: string, description: string, site: string, art?: FakeImage): RichNode => ({
+  type: 'linkCard',
+  attrs: { url, title, description, site, image: art ? fakeImageSrc(art) : null },
+})
+const a = (text: string, href: string): RichNode => ({ type: 'text', text, marks: [{ type: 'link', attrs: { href } }] })
+const ART = {
+  luz: { kind: 'landscape', w: 640, h: 360, pal: ['#F2D3A2', '#E8A04A', '#FBEBD0', '#7A5A3A', '#3D2E22'] },
+  tipo: { kind: 'type', w: 640, h: 360, pal: ['#EEEAE0', '#1A1A1A', '#DAD3C2', '#C2416B', '#8F8B80'] },
+  emb: { kind: 'swatch', w: 640, h: 360, pal: ['#C2416B', '#F6E9D6', '#E8A04A', '#2F6FD6', '#1A1A1A'] },
+  along: { kind: 'blocks', w: 640, h: 360, pal: ['#E1EEDD', '#2F9E5C', '#E8A400', '#16201C', '#FFFFFF'] },
+} satisfies Record<string, FakeImage>
 
 function at(dayOffset: number, h: number, m = 0) {
   const d = new Date()
@@ -271,6 +285,30 @@ function seedNotesPt(): SeedNote[] {
       id: 'n25', title: 'Rascunho antigo de post', categoryId: 'cat-lumen', tags: [], color: 'none', pinned: false,
       reminderAt: null, updatedAt: hoursAgo(400), trashedDaysAgo: 11,
       body: doc(p('Versão descartada do texto do cupom.')),
+    },
+    // Links salvos (visão Links): notas que são só o cartão do link, com status a fazer = ler depois.
+    {
+      id: 'n26', title: '', categoryId: 'cat-curso', tags: ['estudo'], color: 'none', pinned: false, reminderAt: null, statusOn: true, updatedAt: hoursAgo(5),
+      body: doc(linkCard('https://www.youtube.com/watch?v=luz-natural', 'Luz natural em retratos dentro de casa', 'Janela lateral, rebatedor improvisado e o horário certo. Vídeo de 14 minutos.', 'YouTube', ART.luz), { type: 'paragraph' }),
+    },
+    {
+      id: 'n27', title: '', categoryId: 'cat-lumen', tags: ['tipografia'], color: 'none', pinned: false, reminderAt: null, statusOn: true, reminderDoing: true, updatedAt: hoursAgo(28),
+      body: doc(linkCard('https://tipografiapratica.com/variavel-na-tela', 'Tipografia variável: como escolher para a tela', 'Eixos de peso e largura, legibilidade em tamanho pequeno e desempenho.', 'Tipografia Prática', ART.tipo), { type: 'paragraph' }),
+    },
+    {
+      id: 'n28', title: '', categoryId: 'cat-aurora', tags: ['embalagem', 'referência'], color: 'none', pinned: false, reminderAt: null, statusOn: true, updatedAt: hoursAgo(52),
+      body: doc(linkCard('https://estudos-de-design.org/tendencias-embalagem-2026.pdf', 'Tendências de embalagem 2026', 'Relatório com 40 páginas: materiais, cores e acabamentos que voltaram.', 'Estudos de Design', ART.emb), { type: 'paragraph' }),
+    },
+    {
+      id: 'n29', title: '', categoryId: 'cat-bemestar', tags: [], color: 'none', pinned: false, reminderAt: null, statusOn: true, reminderDone: true, updatedAt: hoursAgo(80),
+      body: doc(linkCard('https://www.youtube.com/watch?v=alongamento-10', 'Alongamento de 10 minutos para quem trabalha sentado', 'Pescoço, ombros e lombar, sem equipamento.', 'YouTube', ART.along), { type: 'paragraph' }),
+    },
+    {
+      id: 'n30', title: 'Referências do app', categoryId: 'cat-lumen', tags: ['app'], color: 'none', pinned: false, reminderAt: null, updatedAt: hoursAgo(100),
+      body: doc(
+        p('Antes de mexer na lista: ler o ', a('guia de tipografia variável', 'https://tipografiapratica.com/variavel-na-tela'), ' e conferir o ', a('contraste das cores', 'https://contraste.app/verificar'), '.'),
+        p('A grade de cards pode vir do ', a('masonry-grid', 'https://github.com/exemplo/masonry-grid'), '.'),
+      ),
     },
   ]
 }
@@ -470,6 +508,30 @@ function seedNotesEn(): SeedNote[] {
       id: 'n25', title: 'Old post draft', categoryId: 'cat-lumen', tags: [], color: 'none', pinned: false,
       reminderAt: null, updatedAt: hoursAgo(400), trashedDaysAgo: 11,
       body: doc(p('Discarded version of the coupon copy.')),
+    },
+    // Saved links (Links view): notes that are just the link card, with status to do = read later.
+    {
+      id: 'n26', title: '', categoryId: 'cat-curso', tags: ['study'], color: 'none', pinned: false, reminderAt: null, statusOn: true, updatedAt: hoursAgo(5),
+      body: doc(linkCard('https://www.youtube.com/watch?v=luz-natural', 'Natural light for indoor portraits', 'A side window, a makeshift reflector and the right time of day. A 14-minute video.', 'YouTube', ART.luz), { type: 'paragraph' }),
+    },
+    {
+      id: 'n27', title: '', categoryId: 'cat-lumen', tags: ['typography'], color: 'none', pinned: false, reminderAt: null, statusOn: true, reminderDoing: true, updatedAt: hoursAgo(28),
+      body: doc(linkCard('https://tipografiapratica.com/variavel-na-tela', 'Variable fonts: choosing one for the screen', 'Weight and width axes, legibility at small sizes and performance.', 'Practical Type', ART.tipo), { type: 'paragraph' }),
+    },
+    {
+      id: 'n28', title: '', categoryId: 'cat-aurora', tags: ['packaging', 'reference'], color: 'none', pinned: false, reminderAt: null, statusOn: true, updatedAt: hoursAgo(52),
+      body: doc(linkCard('https://estudos-de-design.org/tendencias-embalagem-2026.pdf', 'Packaging trends 2026', 'A 40-page report: materials, colors and finishes that came back.', 'Design Studies', ART.emb), { type: 'paragraph' }),
+    },
+    {
+      id: 'n29', title: '', categoryId: 'cat-bemestar', tags: [], color: 'none', pinned: false, reminderAt: null, statusOn: true, reminderDone: true, updatedAt: hoursAgo(80),
+      body: doc(linkCard('https://www.youtube.com/watch?v=alongamento-10', 'A 10-minute stretch for desk workers', 'Neck, shoulders and lower back, no equipment.', 'YouTube', ART.along), { type: 'paragraph' }),
+    },
+    {
+      id: 'n30', title: 'App references', categoryId: 'cat-lumen', tags: ['app'], color: 'none', pinned: false, reminderAt: null, updatedAt: hoursAgo(100),
+      body: doc(
+        p('Before touching the list: read the ', a('variable fonts guide', 'https://tipografiapratica.com/variavel-na-tela'), ' and check the ', a('color contrast', 'https://contraste.app/verificar'), '.'),
+        p('The card grid could come from ', a('masonry-grid', 'https://github.com/exemplo/masonry-grid'), '.'),
+      ),
     },
   ]
 }

@@ -6,7 +6,8 @@
   // Celular e janela média: abas embaixo, perto do dedo. Só Lembretes mostra quantos estão pendentes.
 </script>
 
-<nav class="tabbar" aria-label={t('Visão')}>
+<!-- Uma coluna por visão (o CSS do Atrio supõe seis; com Links são sete). -->
+<nav class="tabbar" class:many={VIEWS.length > 6} aria-label={t('Visão')} style:grid-template-columns="repeat({VIEWS.length}, minmax(0, 1fr))">
   {#each VIEWS as v (v.id)}
     {@const { id, label, Icon } = v}
     {@const n = id === 'reminders' ? app.counts.reminders : 0}
@@ -19,3 +20,8 @@
     </button>
   {/each}
 </nav>
+
+<style>
+  /* Sete abas num celular estreito: letra um pouco menor, e reticências se ainda não couber. */
+  .tabbar.many :global(button) { font-size: 9px; letter-spacing: -.02em; overflow: hidden; text-overflow: ellipsis; }
+</style>

@@ -64,7 +64,7 @@
           <label class="field">
             <span>{d.label}</span>
             <!-- svelte-ignore a11y_autofocus -->
-            <input bind:value={name} autocomplete="off" spellcheck="false" autofocus maxlength="60" />
+            <input bind:value={name} autocomplete="off" spellcheck="false" autofocus maxlength={d.maxLength ?? 60} />
           </label>
           {#if color !== undefined}
             <div class="color-pick" role="radiogroup" aria-label={t('Cor')}>

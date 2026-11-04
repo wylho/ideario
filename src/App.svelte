@@ -20,6 +20,7 @@
   import KanbanView from './components/KanbanView.svelte'
   import FilesView from './components/FilesView.svelte'
   import MoodboardView from './components/MoodboardView.svelte'
+  import LinksView from './components/LinksView.svelte'
   import Lightbox from './components/Lightbox.svelte'
   import FabMenu from './components/FabMenu.svelte'
   import PullRefresh from './components/PullRefresh.svelte'
@@ -127,6 +128,8 @@
         <KanbanView />
       {:else if app.view === 'files'}
         <FilesView />
+      {:else if app.view === 'links'}
+        <LinksView />
       {:else}
         <MoodboardView />
       {/if}

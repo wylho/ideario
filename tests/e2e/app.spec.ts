@@ -78,7 +78,7 @@ test('busca ignora acentos e exige todos os termos', async ({ page }) => {
   await page.locator('#busca').fill('trabalho')
   await expect(page.locator('.empty h3')).toHaveText('Nada encontrado')
   await page.locator('#busca').fill('referencia')
-  await expect(cards(page)).toHaveCount(3)
+  await expect(cards(page)).toHaveCount(5)
 })
 
 test('filtro por tag e por categoria; o "+" herda o filtro', async ({ page }) => {
@@ -90,13 +90,13 @@ test('filtro por tag e por categoria; o "+" herda o filtro', async ({ page }) =>
   await back(page)
   await page.locator('.filter-row').getByRole('button', { name: 'Limpar' }).click()
 
-  await drawerItem(page, 'Bem-estar 2')
-  await expect(cards(page)).toHaveCount(2)
+  await drawerItem(page, 'Bem-estar 3')
+  await expect(cards(page)).toHaveCount(3)
   await newNote(page)
   await expect(page.locator('#categoria')).toContainText('Bem-estar')
   await page.keyboard.type('Levar documentos')
   await back(page)
-  await expect(cards(page)).toHaveCount(3)
+  await expect(cards(page)).toHaveCount(4)
 })
 
 test('fixar, cor, arquivar, lixeira e restaurar', async ({ page }) => {
@@ -321,8 +321,8 @@ test.describe('responsivo', () => {
     await expect(page.getByLabel('Abrir menu')).toHaveCount(0)
     await expect(cols(page)).toHaveAttribute('data-cols', '4')
 
-    await page.locator('.sidebar').getByRole('button', { name: 'Bem-estar 2' }).click()
-    await expect(cards(page)).toHaveCount(2)
+    await page.locator('.sidebar').getByRole('button', { name: 'Bem-estar 3' }).click()
+    await expect(cards(page)).toHaveCount(3)
 
     await cards(page).first().click()
     const box = (await page.locator('.editor').boundingBox())!
@@ -385,7 +385,7 @@ test.describe('visão × filtro', () => {
 
   test('o filtro continua ao trocar de visão', async ({ page }) => {
     await chip(page, 'Lumen').click()
-    await expect(cards(page)).toHaveCount(4)
+    await expect(cards(page)).toHaveCount(6)
     await tab(page, 'Lembretes')
     await expect(page.locator('.r-title')).toHaveText(['Post de lançamento do app', 'Ideias de campanha Q4'])
     await tab(page, 'Arquivos')
@@ -435,12 +435,12 @@ test.describe('visão × filtro', () => {
     await tab(page, 'Moodboard')
     await expect(page.locator('.scope-pill')).toHaveCount(0)
     await tab(page, 'Notas')
-    await expect(cards(page)).toHaveCount(21)
+    await expect(cards(page)).toHaveCount(26)
   })
 
   test('desktop: barra de visões com contagens e título da categoria', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 800 })
-    await page.locator('.sidebar').getByRole('button', { name: 'Lumen 4' }).click()
+    await page.locator('.sidebar').getByRole('button', { name: 'Lumen 6' }).click()
     await expect(page.locator('.filter-title')).toContainText('Lumen')
     await expect(page.locator('.view-switch .lens', { hasText: 'Lembretes' }).locator('.n')).toHaveText('2')
     await page.locator('.view-switch .lens', { hasText: 'Arquivos' }).click()
@@ -462,9 +462,9 @@ test('desktop: barra superior fixa; lateral fechada vira pílulas de categoria e
   expect(await page.getByLabel('Expandir barra lateral').boundingBox()).toEqual(menu)
   expect(await page.locator('.view-switch').boundingBox()).toEqual(visoes)
   // Fechada, as categorias aparecem em pílulas acima das notas (como na janela média).
-  await expect(page.locator('.sidebar').getByRole('button', { name: 'Bem-estar 2' })).toBeHidden()
+  await expect(page.locator('.sidebar').getByRole('button', { name: 'Bem-estar 3' })).toBeHidden()
   await page.locator('.filter-row .chip', { hasText: 'Bem-estar' }).click()
-  await expect(cards(page)).toHaveCount(2)
+  await expect(cards(page)).toHaveCount(3)
   await page.reload()
   await expect(page.getByLabel('Expandir barra lateral')).toBeVisible()
   await expect(page.locator('.filter-row')).toBeVisible()
@@ -533,7 +533,7 @@ test('nota sem título aparece pela primeira linha em Lembretes e Arquivos', asy
 test('pílula de categoria no card filtra pela categoria', async ({ page }) => {
   await cards(page).filter({ hasText: 'Horários e estacionamento' }).locator('.pill.cat').click()
   await expect(page.locator('.filter-row .chip.on', { hasText: 'Bem-estar' })).toHaveCount(1)
-  await expect(cards(page)).toHaveCount(2)
+  await expect(cards(page)).toHaveCount(3)
 })
 
 test('clicar na pílula do lembrete abre o menu do lembrete; o X remove', async ({ page }) => {
@@ -1710,13 +1710,14 @@ test.describe('seleção múltipla', () => {
     await expect(page.locator('.sel-count')).toHaveText('1 selecionada')
     await list.nth(3).locator('.card-check').click({ modifiers: ['Shift'] })
     await expect(page.locator('.sel-count')).toHaveText('4 selecionadas')
-    const titles = await list.locator('h3').evaluateAll((els) => els.slice(0, 4).map((e) => e.textContent))
+    // pelo id: nem toda nota tem título (um link salvo é só o cartão)
+    const ids = await list.evaluateAll((els) => els.slice(0, 4).map((e) => e.getAttribute('data-note-id')))
     await page.getByRole('button', { name: 'Arquivar', exact: true }).click()
     await expect(page.locator('.toast span')).toHaveText('4 notas arquivadas')
     await expect(page.locator('.sel-count')).toHaveCount(0)
-    for (const t of titles) await expect(page.locator('.card h3', { hasText: t! })).toHaveCount(0)
+    for (const id of ids) await expect(page.locator(`.card[data-note-id="${id}"]`)).toHaveCount(0)
     await page.locator('.toast').getByRole('button', { name: 'Desfazer' }).click()
-    for (const t of titles) await expect(page.locator('.card h3', { hasText: t! }).first()).toBeVisible()
+    for (const id of ids) await expect(page.locator(`.card[data-note-id="${id}"]`)).toBeVisible()
   })
 
   test('Ctrl+clique seleciona; com seleção ativa o clique marca em vez de abrir; Esc limpa', async ({ page }) => {
@@ -2261,7 +2262,7 @@ test.describe('categorias e tags', () => {
     await expect(lumen).toHaveCount(0)
     await expect(page.locator('.card', { hasText: 'Ideias de campanha Q4' })).toHaveCount(1)
     await page.locator('.toast').getByRole('button', { name: 'Desfazer' }).click()
-    await expect(side(page).locator('.d-item', { hasText: 'Lumen' }).locator('.count')).toHaveText('4')
+    await expect(side(page).locator('.d-item', { hasText: 'Lumen' }).locator('.count')).toHaveText('6')
   })
 
   test('renomear e tirar uma tag em todas as notas', async ({ page }) => {
@@ -2512,7 +2513,7 @@ test.describe('Calendário e Kanban', () => {
     await lens(page, 'Kanban').click()
     const col = (name: string) => page.locator('.kb-col', { hasText: name })
     await expect(page.locator('.kb-head')).toHaveText([/A fazer/, /Em andamento/, /Concluído/])
-    await expect(col('Em andamento').locator('.kb-card')).toHaveCount(2)
+    await expect(col('Em andamento').locator('.kb-card')).toHaveCount(3)
     // seletor de cores: vermelho → amarelo
     const card = () => page.locator('.kb-card', { hasText: 'Comprar pilha' })
     await card().getByRole('radio', { name: 'Em andamento' }).click()
@@ -2656,4 +2657,70 @@ test.describe('idioma', () => {
     await expect(page.locator('.toast span')).toHaveText('Note archived')
     await expect(page.locator('.toast').getByRole('button', { name: 'Undo' })).toBeVisible()
   })
+})
+
+test('visão Links: um endereço por linha, filtros, status do card, tags e salvar um link', async ({ page }) => {
+  await tab(page, 'Links')
+  // 6 endereços: 4 cartões salvos e 2 links na palavra; o guia de tipografia está em 2 notas (uma linha só)
+  await expect(page.locator('.stats b').first()).toHaveText('6')
+  await expect(page.locator('.lk-card')).toHaveCount(6)
+  await expect(page.locator('.lk-card', { hasText: 'Tipografia variável' }).locator('.lk-many')).toHaveText('em 2 notas')
+  // tipo (o filtro da barra) e o chip para tirar
+  await page.getByRole('button', { name: /^Tipo de link/ }).click()
+  await page.getByRole('menuitemradio', { name: 'Vídeos' }).click()
+  await expect(page.locator('.lk-card')).toHaveCount(2)
+  await page.getByRole('button', { name: 'Tirar o filtro Vídeos' }).click()
+  await expect(page.locator('.lk-card')).toHaveCount(6)
+  // o status é o da nota, no seletor do card: o vídeo de alongamento está concluído; passar a em andamento muda a nota
+  const along = page.locator('.lk-card', { hasText: 'Alongamento' })
+  await expect(along.getByRole('radio', { name: 'Concluído' })).toHaveAttribute('aria-checked', 'true')
+  await along.getByRole('radio', { name: 'Em andamento' }).click()
+  await expect(along.getByRole('radio', { name: 'Em andamento' })).toHaveAttribute('aria-checked', 'true')
+  // filtro de status, origem e agrupar por tag ficam no menu de filtros (no celular, também site e ver como)
+  await page.getByRole('button', { name: 'Mais filtros' }).click()
+  await page.getByRole('menuitemradio', { name: 'A fazer' }).click()
+  await expect(page.locator('.lk-card')).toHaveCount(2)
+  await page.getByRole('button', { name: 'Tirar o filtro A fazer' }).click()
+  await page.getByRole('button', { name: 'Mais filtros' }).click()
+  await page.getByRole('menuitemradio', { name: 'Link na palavra' }).click()
+  await expect(page.locator('.lk-card')).toHaveCount(2)
+  await expect(page.locator('.lk-card .pill.word')).toHaveCount(2)
+  await page.getByRole('button', { name: 'Tirar o filtro Link na palavra' }).click()
+  await page.getByRole('button', { name: 'Mais filtros' }).click()
+  await page.getByRole('menuitemradio', { name: 'Por tag' }).click()
+  await expect(page.locator('.lk-group', { hasText: '#app' })).toContainText('3')
+  // a tag de um link filtra a tela (o filtro de sempre) e deixa de virar grupo
+  await page.locator('.lk-card', { hasText: 'masonry-grid' }).getByRole('button', { name: '#app' }).click()
+  await expect(page.locator('.lk-card')).toHaveCount(3)
+  await expect(page.locator('.lk-group', { hasText: '#app' })).toHaveCount(0)
+  // com o filtro, valem as notas que passam nele: as tags dos links são as delas
+  await expect(page.locator('.lk-group', { hasText: 'Sem outra tag' })).toContainText('3')
+  // ver como: Títulos (por data, mesmo sem escolher grupo) e a escolha fica no aparelho
+  await page.getByRole('button', { name: 'Mais filtros' }).click()
+  await page.getByRole('menuitemradio', { name: 'Sem grupos' }).click()
+  await page.getByRole('button', { name: 'Mais filtros' }).click()
+  await page.getByRole('menuitemradio', { name: 'Títulos' }).click()
+  await expect(page.locator('.lk-head')).toHaveCount(3)
+  expect(await page.evaluate(() => localStorage.getItem('ideario.linksLayout'))).toBe('heads')
+  // a prévia (Espaço) mostra o card da nota onde o link está (com o filtro #app, só a que tem #app)
+  await page.locator('.lk-head', { hasText: 'Tipografia variável' }).focus()
+  await page.keyboard.press(' ')
+  await expect(page.locator('.lk-panel h5', { hasText: 'Na nota' })).toBeVisible()
+  await expect(page.locator('.lk-panel .card')).toHaveCount(1)
+  await expect(page.locator('.lk-panel .card')).toContainText('Referências do app')
+  await page.keyboard.press('Escape')
+  await expect(page.locator('.lk-panel')).toHaveCount(0)
+
+  // salvar um link: o + pede o endereço; a nota nasce em A fazer, com a tag do filtro, e a prévia chega depois
+  await page.getByRole('button', { name: 'Salvar link' }).click()
+  await page.getByLabel('Endereço (http ou https)').fill('exemplo.com/um-artigo-bem-comprido-sobre-cores-e-contraste-na-tela-do-celular')
+  await page.getByRole('button', { name: 'Salvar', exact: true }).click()
+  await expect(page.locator('.toast')).toContainText('Link salvo em A fazer')
+  const saved = page.locator('.lk-head', { hasText: 'Página de exemplo.com' })
+  await expect(saved).toBeVisible()
+  await expect(saved.getByRole('radio', { name: 'A fazer' })).toHaveAttribute('aria-checked', 'true')
+  await saved.focus()
+  await page.keyboard.press(' ')
+  await expect(page.locator('.lk-url')).toHaveText('https://exemplo.com/um-artigo-bem-comprido-sobre-cores-e-contraste-na-tela-do-celular')
+  await expect(page.locator('.lk-panel .lk-pills .pill.tag', { hasText: '#app' })).toBeVisible()
 })

@@ -1535,6 +1535,75 @@ impl Store {
         self.attachment_rows("active", filter, "", None, |r, q| q.is_empty() || fold(&format!("{} {}", r.a.name, r.note_title)).contains(q), query)
     }
 
+    /// Visão Links: um endereço por linha (cartões de link e links na palavra das notas ativas que passam no filtro),
+    /// com as notas onde cada um está. A busca olha título, endereço, site, descrição e o título das notas.
+    pub fn list_links(&self, filter: &Filter, query: &str) -> Result<crate::links::LinkList> {
+        use crate::links;
+        let mut args = Vec::new();
+        let w = Self::where_clause("active", filter, "", &mut args);
+        // `link` pega a marca do link na palavra e o `linkCard`: as notas sem nenhum nem são lidas.
+        let notes = self.summaries(
+            &format!("SELECT {} FROM notes n WHERE {w} AND n.body_json LIKE '%link%' ORDER BY n.updated_at DESC", Self::SUMMARY_COLS),
+            &args,
+        )?;
+        let mut found = Vec::with_capacity(notes.len());
+        {
+            let mut st = self.conn.prepare_cached("SELECT body_json FROM notes WHERE id = ?1").map_err(err)?;
+            for n in &notes {
+                let body: String = st.query_row([&n.id], |r| r.get(0)).map_err(err)?;
+                found.push(links::extract(&serde_json::from_str(&body).unwrap_or(Value::Null)));
+            }
+        }
+        let mut rows = links::group(notes.iter().zip(found).map(|(n, f)| (n.id.as_str(), n.tags.as_slice(), n.updated_at, f)));
+        let q = fold(query.trim());
+        if !q.is_empty() {
+            let label = |id: &str| notes.iter().find(|n| n.id == id).map(|n| n.label.as_str()).unwrap_or("");
+            rows.retain(|r| {
+                let titles: Vec<&str> = r.note_ids.iter().map(|id| label(id)).collect();
+                fold(&format!("{} {} {} {} {}", r.title, r.url, r.site, r.description.as_deref().unwrap_or(""), titles.join(" "))).contains(&q)
+            });
+        }
+        let used: HashSet<String> = rows.iter().flat_map(|r| r.note_ids.iter().cloned()).collect();
+        let notes = notes.into_iter().filter(|n| used.contains(&n.id)).collect();
+        Ok(links::LinkList { links: rows, notes })
+    }
+
+    /// Salva um link: nota nova com o cartão (a prévia da página chega depois, por `fill_link`), já com status
+    /// "a fazer" (ler depois), na categoria e com as tags pedidas. Devolve o id.
+    pub fn save_link(&self, url: &str, category_id: Option<&str>, tags: &[String]) -> Result<String> {
+        let u = crate::link::valid_url(url).ok_or("endereço inválido (use http ou https)")?;
+        let input = NoteInput {
+            id: uuid::Uuid::now_v7().to_string(),
+            title: String::new(),
+            body: crate::links::card_body(u.as_str(), None, None, None, None),
+            category_id: category_id.filter(|c| *c != NO_CATEGORY).map(str::to_string),
+            color: "none".into(),
+            pinned: false,
+            archived: false,
+            trashed_at: None,
+            reminder_at: None,
+            reminder_done: false,
+            reminder_doing: false,
+            status_on: true,
+            reminder_repeat: None,
+            emoji: None,
+            tags: atrio::text::clean_tags(&tags.iter().filter(|t| *t != NO_TAGS).cloned().collect::<Vec<_>>()),
+        };
+        self.save_note(&input)?;
+        Ok(input.id)
+    }
+
+    /// Põe a prévia da página nos cartões deste endereço da nota (só o que falta). Devolve se a nota mudou.
+    pub fn fill_link(&self, id: &str, preview: &crate::link::LinkPreview) -> Result<bool> {
+        let Some(mut n) = self.note_input(id)? else { return Ok(false) };
+        let p = preview;
+        if !crate::links::fill(&mut n.body, &p.url, p.title.as_deref(), p.description.as_deref(), p.site.as_deref(), p.image.as_deref()) {
+            return Ok(false);
+        }
+        self.save_note(&n)?;
+        Ok(true)
+    }
+
     /// Fotos das notas ativas que passam no filtro e na busca, para o Moodboard.
     /// Fotos para o Moodboard; com `archived`, as das notas arquivadas também.
     pub fn list_images(&self, filter: &Filter, query: &str, tone: Option<&str>, archived: bool) -> Result<Vec<AttachmentRow>> {
@@ -2202,6 +2271,69 @@ mod tests {
 
     fn titles(v: &[NoteSummary]) -> Vec<&str> {
         v.iter().map(|n| n.label.as_str()).collect()
+    }
+
+    #[test]
+    fn links_view_lists_each_address_once_with_its_notes() {
+        let s = Store::memory();
+        let card = |url: &str, title: &str| json!({"type":"linkCard","attrs":{"url":url,"title":title,"site":"Exemplo"}});
+        let word = |t: &str, href: &str| json!({"type":"paragraph","content":[{"type":"text","text":t,"marks":[{"type":"link","attrs":{"href":href}}]}]});
+        let mut a = note("a", "Leituras", "");
+        a.body = json!({"type":"doc","content":[card("https://exemplo.com/artigo", "Um artigo"), word("vídeo", "https://youtube.com/watch?v=1")]});
+        a.tags = vec!["estudo".into()];
+        a.status_on = true;
+        let mut b = note("b", "Projeto", "");
+        b.body = json!({"type":"doc","content":[word("o artigo", "https://exemplo.com/artigo/")]});
+        let mut c = note("c", "Sem link nenhum", "texto qualquer");
+        c.tags = vec!["estudo".into()];
+        let mut gone = note("d", "Na lixeira", "");
+        gone.body = json!({"type":"doc","content":[card("https://lixo.com", "Lixo")]});
+        gone.trashed_at = Some(1);
+        for n in [&a, &b, &c, &gone] {
+            s.save_note(n).unwrap();
+        }
+        let all = s.list_links(&Filter::default(), "").unwrap();
+        let urls: Vec<(&str, &str, bool, &str)> = all.links.iter().map(|r| (r.title.as_str(), r.kind, r.word, r.site.as_str())).collect();
+        assert_eq!(urls.len(), 2, "o mesmo endereço em duas notas é uma linha; a lixeira fica de fora: {urls:?}");
+        let art = all.links.iter().find(|r| r.title == "Um artigo").unwrap();
+        let mut ids = art.note_ids.clone();
+        ids.sort();
+        assert_eq!(ids, vec!["a", "b"]);
+        assert!(!art.word);
+        assert_eq!(all.links.iter().find(|r| r.kind == "video").map(|r| r.title.as_str()), Some("vídeo"));
+        let mut notes: Vec<&str> = all.notes.iter().map(|n| n.id.as_str()).collect();
+        notes.sort();
+        assert_eq!(notes, vec!["a", "b"], "só as notas que têm link vêm junto");
+        // filtro do app (tag) e busca (título da nota, endereço)
+        let tagged = s.list_links(&Filter { category_id: None, tags: vec!["estudo".into()] }, "").unwrap();
+        assert_eq!(tagged.links.len(), 2);
+        assert_eq!(tagged.links.iter().find(|r| r.title == "Um artigo").unwrap().note_ids, vec!["a"]);
+        assert_eq!(s.list_links(&Filter::default(), "projeto").unwrap().links.len(), 1);
+        assert_eq!(s.list_links(&Filter::default(), "youtube").unwrap().links.len(), 1);
+        assert!(s.list_links(&Filter::default(), "nada disso").unwrap().links.is_empty());
+    }
+
+    #[test]
+    fn saved_link_is_a_new_note_to_do_and_gets_the_preview_later() {
+        let s = Store::memory();
+        assert!(s.save_link("ftp://exemplo.com", None, &[]).is_err());
+        let id = s.save_link(" https://exemplo.com/artigo ", None, &["#Leitura".into()]).unwrap();
+        let n = s.note_input(&id).unwrap().unwrap();
+        assert!(n.status_on && !n.reminder_done && !n.reminder_doing, "entra em a fazer");
+        assert_eq!(n.tags, vec!["leitura"]);
+        let row = &s.list_links(&Filter::default(), "").unwrap().links[0];
+        assert_eq!((row.title.as_str(), row.site.as_str()), ("https://exemplo.com/artigo", "exemplo.com"));
+        let p = crate::link::LinkPreview {
+            url: "https://exemplo.com/artigo".into(),
+            title: Some("Um artigo".into()),
+            description: Some("Resumo".into()),
+            site: Some("Exemplo".into()),
+            image: None,
+        };
+        assert!(s.fill_link(&id, &p).unwrap());
+        let row = &s.list_links(&Filter::default(), "").unwrap().links[0];
+        assert_eq!((row.title.as_str(), row.site.as_str(), row.description.as_deref()), ("Um artigo", "Exemplo", Some("Resumo")));
+        assert!(!s.fill_link(&id, &p).unwrap(), "a segunda vez não muda nada");
     }
 
     #[test]

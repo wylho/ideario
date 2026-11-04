@@ -14,6 +14,7 @@ mod export;
 mod gtk_look;
 mod keep;
 mod link;
+mod links;
 /// Corpo da nota ↔ Markdown e regras de texto: os mesmos do Nodo, da crate do Atrio.
 use atrio::markdown;
 mod mcp;
@@ -178,6 +179,8 @@ pub fn run() {
             commands::list_notes,
             commands::list_reminders,
             commands::list_attachments,
+            commands::list_links,
+            commands::save_link,
             commands::list_images,
             commands::view_counts,
             commands::list_categories,

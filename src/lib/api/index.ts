@@ -2,7 +2,7 @@
 // no navegador (`npm run dev`, prévia) e nos testes e2e, um mock em memória com dados de exemplo.
 import type { ClipCard } from '@wylho/atrio'
 import type {
-  Attachment, AttachmentKind, AttachmentRow, KeepReport, ExportReport, LinkPreview, BackupManifest, BackupReport, BackupStatus, RestoreReport, Box, McpInfo, OrphanCounts, Millis, Category, Filter, NoteDetail, NoteInput, NotePatch, NoteSort, NoteSummary, Settings, SyncState, SyncStatus, TagCount, Tone, UpdateInfo, SharedIn, ViewCounts, ReminderStatus,
+  Attachment, AttachmentKind, AttachmentRow, LinkList, KeepReport, ExportReport, LinkPreview, BackupManifest, BackupReport, BackupStatus, RestoreReport, Box, McpInfo, OrphanCounts, Millis, Category, Filter, NoteDetail, NoteInput, NotePatch, NoteSort, NoteSummary, Settings, SyncState, SyncStatus, TagCount, Tone, UpdateInfo, SharedIn, ViewCounts, ReminderStatus,
 } from '../types'
 import { invoke, isTauri } from '@tauri-apps/api/core'
 import { mockApi } from './mock'
@@ -13,6 +13,10 @@ export interface Api {
   listReminders(p: { filter: Filter; query: string; includeDone: boolean }): Promise<NoteSummary[]>
   /** Todos os anexos (fotos e arquivos) das notas ativas que passam no filtro. */
   listAttachments(p: { filter: Filter; query: string }): Promise<AttachmentRow[]>
+  /** Visão Links: um endereço por linha (cartões e links na palavra das notas ativas que passam no filtro). */
+  listLinks(p: { filter: Filter; query: string }): Promise<LinkList>
+  /** Salva um link numa nota nova (status a fazer) e devolve o id na hora; a prévia da página chega depois. */
+  saveLink(p: { url: string; categoryId: string | null; tags: string[] }): Promise<string>
   /** Imagens das notas ativas que passam no filtro, para o Moodboard. */
   listImages(p: { filter: Filter; query: string; tone: Tone | null; archived?: boolean }): Promise<AttachmentRow[]>
   /** Contagem por visão para o filtro e a busca atuais (notas ativas). */

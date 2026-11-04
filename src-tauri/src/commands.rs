@@ -157,6 +157,28 @@ pub fn list_reminders(core: Core_, filter: Filter, query: String, include_done: 
     core.with(|s| s.list_reminders(&filter, &query, include_done))
 }
 
+/// Visão Links: um endereço por linha e as notas onde cada um está.
+#[tauri::command]
+pub fn list_links(core: Core_, filter: Filter, query: String) -> Result<crate::links::LinkList> {
+    core.with(|s| s.list_links(&filter, &query))
+}
+
+/// Salva um link numa nota nova e devolve o id na hora (local-first). A prévia da página (título, descrição, imagem)
+/// vem depois, em segundo plano; quando chega, as janelas juntam a nota e recarregam as listas.
+#[tauri::command]
+pub fn save_link(app: tauri::AppHandle, core: Core_, url: String, category_id: Option<String>, tags: Vec<String>) -> Result<String> {
+    let id = core.with(|s| s.save_link(&url, category_id.as_deref(), &tags))?;
+    let note = id.clone();
+    std::thread::spawn(move || {
+        let Ok(p) = crate::link::fetch(&url) else { return };
+        if let Ok(true) = app.state::<Core>().with(|s| s.fill_link(&note, &p)) {
+            let _ = app.emit("notes-synced", [&note]);
+            let _ = app.emit("core-changed", ());
+        }
+    });
+    Ok(id)
+}
+
 #[tauri::command]
 pub fn list_attachments(core: Core_, filter: Filter, query: String) -> Result<Vec<AttachmentRow>> {
     core.with(|s| s.list_attachments(&filter, &query))

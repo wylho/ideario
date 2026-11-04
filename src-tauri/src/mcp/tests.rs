@@ -401,3 +401,34 @@ fn a_note_without_a_reminder_can_have_a_status_and_shows_in_the_board() {
     assert!(tool(&core, "set_reminder_status", json!({ "id": id, "status": "none" }), true).contains("Status tirado"));
     assert!(!tool(&core, "list_board", json!({}), true).contains("Redesenhar o logo"));
 }
+
+#[test]
+fn links_are_listed_and_saved_like_the_links_view() {
+    let (core, _tmp) = setup();
+    tool(&core, "create_category", json!({ "name": "Leituras", "color": "azul" }), true);
+    tool(
+        &core,
+        "create_note",
+        json!({ "title": "Estudo", "content": "Ver o [vídeo](https://www.youtube.com/watch?v=1) e a [planilha](https://exemplo.com/vendas.xlsx)", "tags": ["estudo"] }),
+        true,
+    );
+    // Sem servidor nessa porta: o link entra só com o endereço (a prévia é o que der).
+    let saved = tool(&core, "save_link", json!({ "url": "http://127.0.0.1:9/artigo", "category": "leituras", "tags": ["ler"] }), true);
+    assert!(saved.contains("Link salvo"), "{saved}");
+    assert!(tool(&core, "save_link", json!({ "url": "nem é endereço" }), false).contains("endereço inválido"));
+
+    let all = json_of(&tool(&core, "list_links", json!({}), true));
+    assert_eq!(all["links"].as_array().unwrap().len(), 3, "{all}");
+    let video = json_of(&tool(&core, "list_links", json!({ "kind": "video" }), true));
+    assert_eq!(video["links"][0]["title"], "vídeo");
+    assert_eq!(video["links"][0]["onWord"], true);
+    assert_eq!(video["links"][0]["tags"], json!(["estudo"]));
+    let doc = json_of(&tool(&core, "list_links", json!({ "kind": "doc" }), true));
+    assert_eq!(doc["links"][0]["title"], "planilha");
+    // ler depois: o link salvo entra com status a fazer
+    let todo = json_of(&tool(&core, "list_links", json!({ "status": "todo" }), true));
+    assert_eq!(todo["links"].as_array().unwrap().len(), 1, "{todo}");
+    assert_eq!(todo["links"][0]["notes"][0]["status"], "todo");
+    assert_eq!(json_of(&tool(&core, "list_links", json!({ "tag": "#ler" }), true))["links"].as_array().unwrap().len(), 1);
+    assert_eq!(json_of(&tool(&core, "list_links", json!({ "site": "www.youtube.com" }), true))["links"].as_array().unwrap().len(), 1);
+}

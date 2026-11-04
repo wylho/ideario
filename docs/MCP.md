@@ -76,6 +76,7 @@ Onde fica o executável:
 | `list_categories`, `create_category`, `update_category`, `delete_category` | Categorias (nome e cor) |
 | `list_tags`, `rename_tag`, `delete_tag` | Tags, também as `#tags` escritas no texto |
 | `list_attachments`, `get_attachment` | Anexos; fotos voltam como imagem, textos como texto |
+| `list_links`, `save_link` | Os links das notas (como na visão Links: tipo, site, tags, status) e salvar um link novo (nota com o cartão, em A fazer) |
 | `attach_file`, `export_attachment` | Anexar um arquivo do computador; salvar uma cópia |
 | `import_keep` | Importar o zip do Google Takeout |
 | `export_note` | Exporta a nota em Markdown ou HTML (com anexos, um `.zip`) |

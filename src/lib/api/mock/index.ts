@@ -12,6 +12,7 @@ import { uuidv7 } from '../../uuid'
 import { nextOccurrence } from '../../reminders'
 import { NO_CATEGORY, NO_TAGS } from '../../types'
 import { noteToState, stateToNote } from './ydoc'
+import * as links from './links'
 import { mockMarkdown } from './markdown'
 import { partsOf } from '@wylho/atrio'
 import { fakeImageSrc } from './fake-images'
@@ -457,6 +458,44 @@ export const mockApi: Api = {
 
   listAttachments({ filter, query }) {
     return done(activeIn(filter).flatMap((n) => rowsFor(n, [...project(n.body).images, ...project(n.body).files, ...n.files])).filter(fileMatches(query)))
+  },
+
+  listLinks({ filter, query }) {
+    const live = activeIn(filter)
+    let rows = links.group(live.map((n) => ({ id: n.id, tags: tagsOf(n), updatedAt: n.updatedAt, found: links.extract(n.body as never) })))
+    const q = fold(query.trim())
+    if (q) {
+      const label = (id: string) => (notes.get(id) ? labelOf(notes.get(id)!) : '')
+      rows = rows.filter((r) => fold(`${r.title} ${r.url} ${r.site} ${r.description ?? ''} ${r.noteIds.map(label).join(' ')}`).includes(q))
+    }
+    const used = new Set(rows.flatMap((r) => r.noteIds))
+    return done({ links: rows, notes: live.filter((n) => used.has(n.id)).map(summarize) })
+  },
+
+  saveLink({ url, categoryId, tags }) {
+    let u: URL
+    try {
+      u = new URL(url.trim())
+    } catch {
+      return Promise.reject(new Error('endereço inválido (use http ou https)'))
+    }
+    if (!['http:', 'https:'].includes(u.protocol)) return Promise.reject(new Error('endereço inválido (use http ou https)'))
+    const id = uuidv7()
+    saveNote({
+      id, title: '', body: links.cardBody(u.toString()) as NoteInput['body'], categoryId: categoryId === NO_CATEGORY ? null : categoryId, color: 'none',
+      pinned: false, archived: false, trashedAt: null, reminderAt: null, reminderDone: false, reminderDoing: false, statusOn: true,
+      reminderRepeat: null, emoji: null, tags: tags.filter((t) => t !== NO_TAGS).map(normalizeTag).filter(Boolean),
+    })
+    // A prévia da página chega depois, como no app.
+    setTimeout(() => {
+      const n = notes.get(id)
+      if (!n) return
+      const body = structuredClone(n.body)
+      void mockApi.linkPreview(u.toString()).then((p) => {
+        if (links.fill(body as never, p)) saveNote({ ...n, body })
+      })
+    }, 300)
+    return done(id)
   },
 
   listImages({ filter, query, tone, archived }) {

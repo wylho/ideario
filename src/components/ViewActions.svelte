@@ -1,6 +1,7 @@
 <script lang="ts">
   import { t, tn } from '@wylho/atrio'
-  import { Archive, CheckCheck, ChevronLeft, ChevronRight, File as FileIcon, FileAudio, FileText, FileVideoCamera, Image, BrushCleaning } from '@lucide/svelte'
+  import { Archive, CheckCheck, ChevronLeft, ChevronRight, Code, File as FileIcon, FileAudio, FileText, FileVideoCamera, Image, BrushCleaning, Newspaper, Video, AudioLines } from '@lucide/svelte'
+  import LinksMenu from './LinksMenu.svelte'
   import SortMenu from './SortMenu.svelte'
   import LayoutToggle from './LayoutToggle.svelte'
   import FilterGroup from './FilterGroup.svelte'
@@ -8,7 +9,7 @@
   import { api } from '../lib/api'
   import { app, live } from '../lib/app.svelte'
   import { dayKey, shift } from '../lib/calendar'
-  import type { FileGroup, FileSort, NoteSort, Tone } from '../lib/types'
+  import type { FileGroup, FileSort, LinkKind, LinkSort, NoteSort, Tone } from '../lib/types'
 
   // Menu dinâmico: as ações da visão atual, sempre no mesmo lugar e com os mesmos botões
   // (filtro da visão → ordenar → lista/grade). Nada disso fica no meio do conteúdo.
@@ -32,6 +33,19 @@
     { id: 'image', get label() { return t('Imagens') }, icon: Image },
     { id: 'audio', get label() { return t('Áudio') }, icon: FileAudio },
     { id: 'video', get label() { return t('Vídeo') }, icon: FileVideoCamera },
+  ]
+  const LINK_KINDS: { id: LinkKind; label: string; icon: typeof FileIcon }[] = [
+    { id: 'article', get label() { return t('Artigos') }, icon: Newspaper },
+    { id: 'video', get label() { return t('Vídeos') }, icon: Video },
+    { id: 'audio', get label() { return t('Áudio') }, icon: AudioLines },
+    { id: 'image', get label() { return t('Imagens') }, icon: Image },
+    { id: 'doc', get label() { return t('Documentos') }, icon: FileText },
+    { id: 'code', get label() { return t('Código') }, icon: Code },
+  ]
+  const LINK_SORTS: { id: LinkSort; label: string }[] = [
+    { id: 'recent', get label() { return t('Mais recentes') } },
+    { id: 'title', get label() { return t('Título (A–Z)') } },
+    { id: 'site', get label() { return t('Site') } },
   ]
   const TONES: { id: Tone; label: string; swatch: string }[] = [
     { id: 'quente', get label() { return t('Quentes') }, swatch: '#D98E4A' },
@@ -91,6 +105,10 @@
   <FilterGroup label={t('Tipo de arquivo')} all={t('Todos os tipos')} options={KINDS} value={app.filesKind} onchange={(v) => (app.filesKind = v)} />
   <SortMenu heading={t('Ordenar arquivos')} options={FILE_SORTS} value={app.filesSort} onchange={(v) => (app.filesSort = v)} />
   <LayoutToggle value={app.filesLayout} onchange={(v) => (app.filesLayout = v)} />
+{:else if app.view === 'links'}
+  <FilterGroup label={t('Tipo de link')} all={t('Todos os tipos')} options={LINK_KINDS} value={app.linksKind} onchange={(v) => (app.linksKind = v)} />
+  <LinksMenu />
+  <SortMenu heading={t('Ordenar links')} options={LINK_SORTS} value={app.linksSort} onchange={(v) => (app.linksSort = v)} />
 {:else if app.view === 'moodboard'}
   <FilterGroup label={t('Tom das imagens')} all={t('Todos os tons')} options={TONES} value={app.moodTone} onchange={(v) => (app.moodTone = v)} />
   <button

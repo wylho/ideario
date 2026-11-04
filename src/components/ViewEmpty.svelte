@@ -23,7 +23,11 @@
     <h3>{where ? info.noneIn(where) : info.none}</h3>
     <p>{hint ?? (where ? info.filterOn(where) : t('Nada por aqui ainda.'))}</p>
     <div class="empty-acts">
+      {#if view === 'links'}
+      <button class="btn primary" onclick={() => app.askLink()}>{t('Salvar link')}</button>
+      {:else}
       <button class="btn primary" onclick={() => app.openNew()}>{#if reminderView}{where ? t('Novo lembrete em {onde}', { onde: where }) : t('Novo lembrete')}{:else}{where ? t('Nova nota em {onde}', { onde: where }) : t('Nova nota')}{/if}</button>
+      {/if}
       {#if where}<button class="btn ghost" onclick={() => app.clearFilter()}>{info.seeAll}</button>{/if}
     </div>
   {/if}

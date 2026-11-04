@@ -206,7 +206,38 @@ export interface ViewCounts {
   moodboard: number
 }
 
-export type View = 'notes' | 'reminders' | 'calendar' | 'kanban' | 'files' | 'moodboard'
+export type View = 'notes' | 'reminders' | 'calendar' | 'kanban' | 'files' | 'moodboard' | 'links'
+
+/** Tipo de um link, pelo endereço (site e extensão). */
+export type LinkKind = 'article' | 'video' | 'audio' | 'image' | 'doc' | 'code'
+
+/** Um endereço na visão Links (cartão de link ou link na palavra), com as notas onde ele está. */
+export interface LinkRow {
+  url: string
+  title: string
+  description: string | null
+  site: string
+  /** Miniatura da imagem da página (`data:`), só nos cartões que a têm. */
+  image: string | null
+  /** Só aparece como link na palavra (sem cartão em nenhuma nota). */
+  word: boolean
+  kind: LinkKind
+  /** As notas onde o endereço está, a mais recente primeiro. */
+  noteIds: string[]
+  /** As tags dessas notas (manuais e #tags do texto). */
+  tags: string[]
+  updatedAt: Millis
+}
+
+/** A visão Links: os endereços e as notas onde eles estão (o card de cada uma, com o status). */
+export interface LinkList {
+  links: LinkRow[]
+  notes: NoteSummary[]
+}
+
+export type LinkSort = 'recent' | 'title' | 'site'
+export type LinkLayout = 'cards' | 'list' | 'heads' | 'mural'
+export type LinkGroup = 'none' | 'date' | 'tag' | 'site' | 'category'
 
 /** Ordem das notas. 'custom' é a ordem livre, montada arrastando os cards. */
 export type NoteSort = 'custom' | 'updated' | 'created' | 'category' | 'title'
