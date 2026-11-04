@@ -202,6 +202,19 @@ Single-context: `GLOSSARY.md` na raiz (quando houver); as decisões são as do `
   tauri-driver), desempenho (`tests/native/perf.mjs`, build de release) e `npm run tauri build`.
 - Site (`site/`, Cloudflare Pages em ideario.pages.dev) e `README.md` têm o mesmo conteúdo: ao mudar um, mudar o outro
   (skill `sync-site`; prints por `scripts/site-shots.mjs`).
+- **Atrio 0.26.2: prompt, link na palavra e card numa nova janela** (pedido do usuário, spec em
+  `atrio/.scratch/prompt-links-janela/`). **Prompt**: um trecho do texto marcado como instrução para a IA (botão ✦ e
+  ⌘⇧P), entre colchetes e em laranja na tela (o Terracota do DS), `<prompt>…</prompt>` no Markdown; o MCP explica o
+  que é (`INSTRUCTIONS` em `mcp/mod.rs`). **Link na palavra** (botão e ⌘K, ⌘/Ctrl+clique abre) e a lista "Links" no
+  fim do card; colar/importar Markdown mantém o link. `PROJECTION_VERSION` 4 refaz as prévias (pedaços do prompt e do
+  link no card fechado); o mock usa o `partsOf` do Atrio. **Nova janela** (`lib/cardwindow.ts`): "Abrir em nova
+  janela" no menu do card e na barra do card aberto; a janela `card-<id>` carrega `index.html?card=<id>`, só o card
+  (`data-card-window` esconde o resto, `CardDialog` com `window`) e fecha junto com o card. Núcleo:
+  `tell_other_windows` (em `apply_note_update`, `update_note`, `set_reminder_status`) manda `notes-synced` e
+  `core-changed` às outras janelas, que juntam a nota na hora; fechar uma janela de card não a esconde na bandeja
+  (`background.rs`, só a `main`); `capabilities/default.json` vale também para `card-*` e pode criar janelas. e2e
+  "prompt e link na palavra" e "janela de um card". No `npm run dev` aparece um erro do TipTap ("different instances
+  of a keyed plugin"), que não vem do prompt nem do link e não aparece na versão compilada; a conferir.
 - **Atrio 0.24.0: card na área de transferência v2** (tarefa 03 do roteiro; escolha do usuário: os arquivos vão
   junto): "Copiar como card" leva lembrete, status e os **arquivos dos anexos** (até 25 MB por cópia; acima disso o
   aviso diz o que ficou de fora). `menus.ts` `copyCard` busca os bytes por `api.mediaUrl` (`attachCardFiles` do

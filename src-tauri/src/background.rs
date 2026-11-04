@@ -104,10 +104,11 @@ pub fn show<R: Runtime>(app: &AppHandle<R>) {
     }
 }
 
-/// Com o segundo plano ligado, fechar a janela só a esconde.
+/// Com o segundo plano ligado, fechar a janela principal só a esconde.
 pub fn on_window_event<R: Runtime>(window: &Window<R>, event: &WindowEvent) {
     if let WindowEvent::CloseRequested { api, .. } = event {
-        if window.state::<Background>().0.load(Ordering::Relaxed) {
+        // Só a janela principal: um card aberto numa janela só dele fecha de verdade.
+        if window.label() == "main" && window.state::<Background>().0.load(Ordering::Relaxed) {
             api.prevent_close();
             let _ = window.hide();
         }

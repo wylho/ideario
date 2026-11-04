@@ -5,6 +5,7 @@ import { applySystemFonts } from './lib/system-fonts'
 import { addMessages, setNotifier } from '@wylho/atrio'
 import { EN } from './lib/i18n/en'
 import { app } from './lib/app.svelte'
+import { cardWindowNote } from './lib/cardwindow'
 import './lib/theme.svelte'
 import './lib/background.svelte'
 import './lib/share.svelte'
@@ -23,6 +24,12 @@ document.addEventListener('contextmenu', (e) => {
   if ((e.target as Element).closest?.('input, textarea, [contenteditable="true"]')) return
   e.preventDefault()
 })
+
+// A janela de um card ("Abrir em nova janela"): só o card aparece (o CSS esconde o resto do app).
+if (cardWindowNote) {
+  document.documentElement.toggleAttribute('data-card-window', true)
+  app.openNote(cardWindowNote)
+}
 
 export default mount(App, { target: document.getElementById('app')! })
 

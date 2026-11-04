@@ -2053,6 +2053,40 @@ test.describe('blocos no editor', () => {
   })
 })
 
+test('prompt e link na palavra: no card aberto, na lista de links e no card fechado', async ({ page }) => {
+  await newNote(page)
+  await page.keyboard.type('Revisar o orçamento ')
+  // ⌘⇧P liga o prompt: o que se digita entra marcado, até desligar.
+  await page.keyboard.press('Control+Shift+P')
+  await page.keyboard.type('resuma em três tópicos')
+  await page.keyboard.press('Control+Shift+P')
+  await page.keyboard.type(' e ver o site')
+  await expect(page.locator('#corpo .ed-prompt')).toHaveText('resuma em três tópicos')
+  // ⌘K põe o link na palavra escolhida; ela entra na lista de links do fim do card.
+  for (let i = 0; i < 4; i++) await page.keyboard.press('Shift+ArrowLeft')
+  await page.keyboard.press('Control+k')
+  await page.getByLabel(/Endereço/).fill('exemplo.com/orcamento')
+  await page.keyboard.press('Enter')
+  await expect(page.locator('#corpo a[href="https://exemplo.com/orcamento"]')).toHaveText('site')
+  await expect(page.locator('.ed-links .ed-link-row').first()).toContainText('site')
+  await expect(page.locator('.ed-links .ed-link-row').first()).toContainText('exemplo.com')
+  await page.locator('#titulo').fill('Plano do mês')
+  await back(page)
+  const card = cards(page).filter({ hasText: 'Plano do mês' })
+  await expect(card.locator('.pv-prompt')).toHaveText('resuma em três tópicos')
+  await expect(card.locator('.pv-ilink')).toHaveText('site')
+})
+
+test('janela de um card (?card=<id>): só o card, que ocupa a janela', async ({ page }) => {
+  await page.goto('/?card=n10')
+  await expect(page.locator('.editor[data-window]')).toBeVisible()
+  await expect(page.locator('#titulo')).toHaveValue('Paleta outono')
+  await expect(page.locator('.shell')).toHaveCSS('visibility', 'hidden')
+  // Já está numa janela só dele: não oferece abrir outra.
+  await page.getByLabel('Mais opções').click()
+  await expect(page.getByRole('menuitem', { name: 'Abrir em nova janela' })).toHaveCount(0)
+})
+
 test('card do Atrio v2: colar traz lembrete e status; copiar leva os dois de volta', async ({ page, context }) => {
   await context.grantPermissions(['clipboard-read', 'clipboard-write'])
   // Um card como o Nodo copia: tópico com lembrete toda semana e em andamento.

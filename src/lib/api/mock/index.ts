@@ -13,6 +13,7 @@ import { nextOccurrence } from '../../reminders'
 import { NO_CATEGORY, NO_TAGS } from '../../types'
 import { noteToState, stateToNote } from './ydoc'
 import { mockMarkdown } from './markdown'
+import { partsOf } from '@wylho/atrio'
 import { fakeImageSrc } from './fake-images'
 import { DAY, SEED_ACCOUNT, SEED_CATEGORIES, SEED_FILES, SEED_IMAGES, seedNotes } from './seed'
 
@@ -119,6 +120,11 @@ function project(body: RichDoc): Projection {
   const extra: string[] = []
   const inline = (n: RichNode): string =>
     n.type === 'text' ? (n.text ?? '') : n.type === 'hardBreak' ? '\n' : (n.content ?? []).map(inline).join('')
+  // Prompt e link na palavra: os pedaços pela regra do Atrio (a mesma do núcleo, `atrio::projection`).
+  const withParts = (n: RichNode) => {
+    const parts = partsOf(n as Parameters<typeof partsOf>[0])
+    return parts.length ? { parts } : {}
+  }
   const clean = (s: string) => s.replace(/[ \t]+/g, ' ').replace(/ *\n */g, '\n').trim()
 
   const listItems = (list: RichNode, depth: number) => {
@@ -126,8 +132,9 @@ function project(body: RichDoc): Projection {
     ;(list.content ?? []).forEach((item, i) => {
       const [first, ...rest] = item.content ?? []
       const text = first ? clean(inline(first)) : ''
-      if (list.type === 'taskList') blocks.push({ kind: 'task', text, done: !!item.attrs?.checked, depth })
-      else if (text) blocks.push(list.type === 'orderedList' ? { kind: 'ordered', text, n: start + i, depth } : { kind: 'bullet', text, depth })
+      const parts = first ? withParts(first) : {}
+      if (list.type === 'taskList') blocks.push({ kind: 'task', text, done: !!item.attrs?.checked, depth, ...parts })
+      else if (text) blocks.push(list.type === 'orderedList' ? { kind: 'ordered', text, n: start + i, depth, ...parts } : { kind: 'bullet', text, depth, ...parts })
       rest.forEach((c) => block(c, depth + 1))
     })
   }
@@ -135,12 +142,12 @@ function project(body: RichDoc): Projection {
     switch (n.type) {
       case 'paragraph': {
         const text = clean(inline(n))
-        if (text) blocks.push({ kind: 'text', text })
+        if (text) blocks.push({ kind: 'text', text, ...withParts(n) })
         return
       }
       case 'heading': {
         const text = clean(inline(n))
-        if (text) blocks.push({ kind: 'heading', text })
+        if (text) blocks.push({ kind: 'heading', text, ...withParts(n) })
         return
       }
       case 'bulletList':

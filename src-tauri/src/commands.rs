@@ -278,10 +278,12 @@ pub fn get_note_state(core: Core_, id: String) -> Result<Response> {
 
 /// Atualização Yjs do editor (binária, id no cabeçalho `x-id`). Cria a nota se ela ainda não existe.
 #[tauri::command]
-pub fn apply_note_update(core: Core_, request: Request<'_>) -> Result<()> {
+pub fn apply_note_update(window: tauri::Window, core: Core_, request: Request<'_>) -> Result<()> {
     let update = body_bytes(&request).ok_or("atualização ausente")?;
     let id = request.headers().get("x-id").and_then(|v| v.to_str().ok()).ok_or("nota ausente")?;
-    core.with(|s| s.apply_update(id, &update))
+    core.with(|s| s.apply_update(id, &update))?;
+    tell_other_windows(&window, id);
+    Ok(())
 }
 
 /// Corpo binário do pedido. No desktop chega cru; no Android a ponte é o `postMessage`, que manda tudo em JSON: os
@@ -315,12 +317,15 @@ pub fn complete_reminder(core: Core_, id: String) -> Result<()> {
 
 /// Seletor de três cores: "todo" (vermelho), "doing" (amarelo), "done" (verde); "none" tira o status do menu.
 #[tauri::command]
-pub fn set_reminder_status(core: Core_, id: String, status: String) -> Result<()> {
+pub fn set_reminder_status(window: tauri::Window, core: Core_, id: String, status: String) -> Result<()> {
     if status == "none" {
-        return core.with(|s| crate::reminders::clear_status(s, &id));
+        core.with(|s| crate::reminders::clear_status(s, &id))?;
+    } else {
+        let status = crate::reminders::Status::parse(&status).ok_or("status desconhecido")?;
+        core.with(|s| crate::reminders::set_status(s, &id, status, crate::store::now(), &chrono::Local))?;
     }
-    let status = crate::reminders::Status::parse(&status).ok_or("status desconhecido")?;
-    core.with(|s| crate::reminders::set_status(s, &id, status, crate::store::now(), &chrono::Local))
+    tell_other_windows(&window, &id);
+    Ok(())
 }
 
 /// Kanban: notas com status (com lembrete ou com status posto pelo menu).
@@ -335,8 +340,24 @@ pub fn set_reminder_done(core: Core_, id: String, done: bool) -> Result<()> {
 }
 
 #[tauri::command]
-pub fn update_note(core: Core_, id: String, patch: Map<String, Value>) -> Result<()> {
-    core.with(|s| s.update_note(&id, &patch).map(|_| ()))
+pub fn update_note(window: tauri::Window, core: Core_, id: String, patch: Map<String, Value>) -> Result<()> {
+    core.with(|s| s.update_note(&id, &patch).map(|_| ()))?;
+    tell_other_windows(&window, &id);
+    Ok(())
+}
+
+/// Um card aberto numa janela só dele (ou a janela principal, se a mudança veio do card): as outras janelas recebem o
+/// mesmo aviso do sync e juntam a nota na hora, e as listas recarregam. A janela que gravou não recebe.
+fn tell_other_windows(window: &tauri::Window, id: &str) {
+    let me = window.label().to_string();
+    let others = |t: &tauri::EventTarget| match t {
+        tauri::EventTarget::Window { label }
+        | tauri::EventTarget::Webview { label }
+        | tauri::EventTarget::WebviewWindow { label } => label != &me,
+        _ => false,
+    };
+    let _ = window.emit_filter("notes-synced", [id], others);
+    let _ = window.emit_filter("core-changed", (), others);
 }
 
 #[tauri::command]

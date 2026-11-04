@@ -1,9 +1,10 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Permissões da janela principal. allow-close = o mesmo que o X da janela (com o segundo plano ligado, só esconde); os testes no app nativo usam.",
+  "description": "Permissões da janela principal e das janelas de card (\"Abrir em nova janela\", card-<id>). allow-close = o mesmo que o X da janela (com o segundo plano ligado, só esconde); os testes no app nativo usam.",
   "windows": [
-    "main"
+    "main",
+    "card-*"
   ],
   "permissions": [
     "core:default",
@@ -14,6 +15,8 @@
     "core:window:allow-set-background-color",
     "dialog:allow-open",
     "dialog:allow-save",
-    "core:window:allow-close"
+    "core:window:allow-close",
+    "core:window:allow-set-focus",
+    "core:webview:allow-create-webview-window"
   ]
 }

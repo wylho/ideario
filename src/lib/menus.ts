@@ -1,6 +1,7 @@
 // Menus de contexto de cada tipo de elemento. Um lugar só, para o mesmo item se comportar igual em todo o app.
 import {
   ArrowDown, ArrowUp, Archive, Hash, ArchiveRestore, Bell, BellOff, CircleCheck, Copy, Pencil, Download, ExternalLink, Files, Filter, FilterX, Image, Palette, Pin, PinOff, FileText, Play, Plus, Tag, Trash2, AlarmClock, Eye, EyeOff, Lock, LockOpen, KeyRound,
+  AppWindow,
 } from '@lucide/svelte'
 import { copyNoteId, shortId } from './noteid'
 import { api } from './api'
@@ -13,6 +14,7 @@ import { quickTimes, snoozeTimes } from './reminders'
 import { reminderSet } from './notify.svelte'
 import { statusOf, type AttachmentRow, type Category, type NoteColor, type NotePatch, type NoteSummary } from './types'
 import { attachCardFiles, t, tn, writeCard } from '@wylho/atrio'
+import { canOpenWindows, openCardWindow } from './cardwindow'
 import { STATUS, changeStatus, keepStatus, statusMenu } from './status'
 
 export const NOTE_COLORS: { id: NoteColor; label: string; css: string }[] = [
@@ -140,6 +142,7 @@ export function noteMenu(n: NoteSummary): MenuEntry[] {
     },
     SEP,
     { label: t('Copiar texto'), icon: Copy, onSelect: async () => copy(await api.noteText(n.id), t('Texto copiado')) },
+    ...(canOpenWindows ? [{ label: t('Abrir em nova janela'), icon: AppWindow, onSelect: () => void openCardWindow(n.id, n.title) }] : []),
     { label: t('Copiar como card'), icon: Copy, hint: t('cola no Nodo'), onSelect: () => void copyCard(n.id) },
     { label: t('Copiar ID'), icon: Hash, hint: shortId(n.id), onSelect: () => void copyNoteId(n.id, (m) => app.say(m)) },
     {

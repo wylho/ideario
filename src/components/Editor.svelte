@@ -9,6 +9,7 @@
   import { exportEntries, printNote } from '../lib/exporting'
   import { bareUrl, fillPreview, insertLinkCard, NoteEditor } from '@wylho/atrio/editor'
   import { CardDialog, CardTopBar, features, type CardHost } from '@wylho/atrio'
+  import { canOpenWindows, cardWindowNote, openCardWindow } from '../lib/cardwindow'
   import { isDocNote, setDocNote } from '../lib/docmode'
   import { api } from '../lib/api'
   import { download, newCategory } from '../lib/menus'
@@ -56,7 +57,7 @@
     clipboardImage: () => api.clipboardImage(),
     newCategory: (done) => newCategory(done),
     // O diálogo de nome do Ideario; fechar sem confirmar só deixa a pergunta sem resposta (nada é inserido).
-    askText: (o) => new Promise((resolve) => app.askName({ ...o, value: '', submit: resolve })),
+    askText: (o) => new Promise((resolve) => app.askName({ ...o, value: o.value ?? '', submit: resolve })),
     onReminderSet: () => void reminderSet(),
     afterImport: (added) => {
       // PDF e vídeo ganham prévia (primeira página, um quadro) em segundo plano.
@@ -187,6 +188,14 @@
     untrack(() => writeMeta(doc, snap))
   })
 
+  /** "Abrir em nova janela": salva e fecha aqui, e a nota abre numa janela só dela. */
+  async function inWindow() {
+    const title = meta?.title ?? ''
+    await close()
+    if (!closed) return
+    void openCardWindow(id, title)
+  }
+
   async function close(patch?: Partial<Meta>, msg?: string) {
     if (closed) return
     closed = true
@@ -270,7 +279,7 @@
 
 
 {#if meta}
-  <CardDialog color={meta.color} doc={docMode && app.wide} onclose={() => void close()}>
+  <CardDialog color={meta.color} doc={docMode && app.wide} window={cardWindowNote === id} onclose={() => void close()}>
         {@const m = meta}
         <NoteEditor
           bind:this={card}
@@ -297,6 +306,7 @@
               ondoc={toggleDoc}
               pinned={m.pinned}
               onpin={() => m && (m.pinned = !m.pinned)}
+              onwindow={canOpenWindows && !isNew ? () => void inWindow() : undefined}
               menu={wasTrashed ? trashMenu : undefined}
             >
               {#snippet label()}

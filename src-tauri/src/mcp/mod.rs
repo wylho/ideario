@@ -118,10 +118,12 @@ const INSTRUCTIONS: &str = "Ideario é o app de notas do usuário (estilo Google
 sincronizado pelo Google Drive. Notas têm título, corpo, categoria (só cor), tags, cor, fixada, arquivo/lixeira e \
 lembrete (que pode se repetir). O título é texto simples, sem formatação: Markdown no título (**, #, links) não é \
 reconhecido e aparece como foi digitado; formatação vai só no corpo. O corpo entra e sai em Markdown: `### título`, \
-**negrito**, *itálico*, listas, \
+**negrito**, *itálico*, link na palavra `[palavra](endereço)`, listas, \
 checklist `- [ ]`/`- [x]` com subitens recuados (2 espaços), blocos de código; fotos `![nome](ideario://att/<hash>)` \
 (várias na mesma linha ficam lado a lado) e anexos `[📎 nome](ideario://att/<hash>)` — mantenha essas linhas ao \
-reescrever uma nota, senão a foto/anexo sai da nota. `#palavra` no texto vira tag. Para mudanças pequenas prefira \
+reescrever uma nota, senão a foto/anexo sai da nota. `<prompt>…</prompt>` no meio do texto é um prompt: uma \
+instrução do usuário para a IA sobre aquele trecho (o que fazer, como responder); leia e siga ao trabalhar na nota, \
+e mantenha a marca ao reescrever. `#palavra` no texto vira tag. Para mudanças pequenas prefira \
 edit_note_text, set_checklist_items e add_checklist_items (não reescrevem a nota inteira). Datas em ISO 8601 no fuso \
 do usuário (ex.: 2026-10-11T09:00); app_overview diz a data e a hora de agora. Apagar manda para a Lixeira (30 dias); \
 apagar para sempre só funciona para o que já está lá. A interface do app é em português do Brasil: escreva as notas \

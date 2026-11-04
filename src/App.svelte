@@ -6,6 +6,7 @@
   import { copyCard } from './lib/menus'
   import { importCardFiles, readCard, t } from '@wylho/atrio'
   import { makePreviews } from './lib/previews.svelte'
+  import { cardWindowNote, closeThisWindow } from './lib/cardwindow'
   /** A área que rola (a lista de cada visão): o puxar para sincronizar fica nela. */
   let content = $state<HTMLElement | undefined>(undefined)
   import TopBar from './components/TopBar.svelte'
@@ -83,7 +84,15 @@
   }
 
   // Prévias de PDF e vídeo que ainda faltam: depois que a lista apareceu, em segundo plano.
-  setTimeout(makePreviews, 1500)
+  if (!cardWindowNote) setTimeout(makePreviews, 1500)
+
+  // Janela de um card: o card fechou (voltar, Esc, arquivar, lixeira), a janela fecha junto.
+  let cardShown = false
+  $effect(() => {
+    if (!cardWindowNote) return
+    if (app.editor) cardShown = true
+    else if (cardShown) void closeThisWindow()
+  })
 </script>
 
 <svelte:window onkeydown={onKeydown} oncopy={onCopy} onpaste={onPaste} />
@@ -158,6 +167,14 @@
   <Lightbox />
   <AppDialogs />
   <FileDrop />
-  <ReminderAlerts />
-  <UpdateNotice />
+  {#if !cardWindowNote}
+    <ReminderAlerts />
+    <UpdateNotice />
+  {/if}
 </div>
+
+<style>
+  /* Janela de um card: só o card (num portal, fora daqui) e os avisos; o resto do app fica escondido. */
+  :global(html[data-card-window] .shell) { visibility: hidden; }
+  :global(html[data-card-window] .shell .toast) { visibility: visible; }
+</style>
