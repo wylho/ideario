@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite'
 import { svelte } from '@sveltejs/vite-plugin-svelte'
+import { atrioOptimizeDeps } from '@wylho/atrio/vite'
 
 const host = process.env.TAURI_DEV_HOST
 
@@ -14,9 +15,9 @@ export default defineConfig({
     hmr: host ? { protocol: 'ws', host, port: 1421 } : undefined,
     watch: { ignored: ['**/src-tauri/**'] },
   },
-  // O Atrio vem como código-fonte (Svelte e `.svelte.ts` em TypeScript): passa pelo plugin do Svelte, não pelo
-  // pré-empacotamento, que não tira os tipos dos `.svelte.ts`.
-  optimizeDeps: { exclude: ['@wylho/atrio'] },
+  // O Atrio vem como código-fonte (Svelte e `.svelte.ts` em TypeScript): fica fora do pré-empacotamento, e o editor
+  // que ele usa entra junto, numa leva só (senão o `npm run dev` carrega duas cópias do ProseMirror).
+  optimizeDeps: atrioOptimizeDeps(),
   envPrefix: ['VITE_', 'TAURI_ENV_*'],
   build: {
     target: process.env.TAURI_ENV_PLATFORM === 'windows' ? 'chrome105' : 'safari15',

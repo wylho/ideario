@@ -213,8 +213,12 @@ Single-context: `GLOSSARY.md` na raiz (quando houver); as decisões são as do `
   `tell_other_windows` (em `apply_note_update`, `update_note`, `set_reminder_status`) manda `notes-synced` e
   `core-changed` às outras janelas, que juntam a nota na hora; fechar uma janela de card não a esconde na bandeja
   (`background.rs`, só a `main`); `capabilities/default.json` vale também para `card-*` e pode criar janelas. e2e
-  "prompt e link na palavra" e "janela de um card". No `npm run dev` aparece um erro do TipTap ("different instances
-  of a keyed plugin"), que não vem do prompt nem do link e não aparece na versão compilada; a conferir.
+  "prompt e link na palavra" e "janela de um card".
+- **Atrio 0.26.3: o editor no `npm run dev`** (pedido do usuário): o dev carregava duas cópias do ProseMirror (o
+  `@tiptap/core` empacotado pelo Vite com uma dentro, o resto do TipTap cru com outra), e o editor quebrava ("Adding
+  different instances of a keyed plugin"; o ⌘K não abria o diálogo). O `vite.config.ts` usa o `atrioOptimizeDeps()`
+  de `@wylho/atrio/vite`: o Atrio fora do pré-empacotamento e o editor inteiro dentro, numa leva só. A versão
+  compilada (app e e2e) nunca teve o problema.
 - **Atrio 0.24.0: card na área de transferência v2** (tarefa 03 do roteiro; escolha do usuário: os arquivos vão
   junto): "Copiar como card" leva lembrete, status e os **arquivos dos anexos** (até 25 MB por cópia; acima disso o
   aviso diz o que ficou de fora). `menus.ts` `copyCard` busca os bytes por `api.mediaUrl` (`attachCardFiles` do

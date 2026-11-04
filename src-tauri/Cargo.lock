@@ -260,8 +260,8 @@ checksum = "1505bd5d3d116872e7271a6d4e16d81d0c8570876c8de68093a09ac269d8aac0"
 
 [[package]]
 name = "atrio"
-version = "0.26.2"
-source = "git+https://github.com/wylho/atrio?tag=v0.26.2#5176963eddcf09aed80d52146a3bb6afb0018721"
+version = "0.26.3"
+source = "git+https://github.com/wylho/atrio?tag=v0.26.3#3217f8d6538aa7518794923e57753eae2fe570bf"
 dependencies = [
  "chrono",
  "fast_image_resize",
