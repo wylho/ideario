@@ -71,6 +71,46 @@ try {
     await shot(browser, 'notas', desk)
     await shot(browser, 'notas-escuro', { ...desk, dark: true })
     await shot(browser, 'nota', desk, openCard(L('Viagem para Paraty', 'Trip to Harbor Bay')))
+    // Prompt (instrução para a IA, em laranja) e link na palavra, com a lista de links no fim do card. O texto entra
+    // pelo próprio editor (TipTap) numa nota nova: digitado tecla a tecla, o salvamento da nota nova embaralhava.
+    await shot(browser, 'prompt', desk, async (p) => {
+      await p.keyboard.press('Control+n')
+      await p.locator('#corpo').waitFor()
+      await p.locator('#titulo').fill(L('Apresentação do trimestre', 'Quarterly presentation'))
+      await p.locator('#corpo').click()
+      await sleep(1500) // a nota nova nasce no primeiro salvamento
+      const text = (t, marks) => (marks ? { type: 'text', text: t, marks } : { type: 'text', text: t })
+      const prompt = [{ type: 'prompt' }]
+      const link = (href) => [{ type: 'link', attrs: { href } }]
+      const task = (...content) => ({ type: 'taskItem', attrs: { checked: false }, content: [{ type: 'paragraph', content }] })
+      const doc = [
+        {
+          type: 'paragraph',
+          content: [
+            text(L('Revisar os números de vendas ', 'Go over the sales numbers ')),
+            text(L('resuma em três tópicos e destaque o que passou da meta', 'sum them up in three bullet points and flag anything above target'), prompt),
+            text(L(' antes de montar os ', ' before putting together the ')),
+            text('slides', link(L('https://exemplo.com/slides-q3', 'https://example.com/q3-slides'))),
+            text(L('. A ', '. The ')),
+            text(L('planilha', 'spreadsheet'), link(L('https://exemplo.com/vendas', 'https://example.com/sales'))),
+            text(L(' tem os números de julho a setembro.', ' has the numbers from July to September.')),
+          ],
+        },
+        {
+          type: 'taskList',
+          content: [
+            task(text(L('Ensaiar a fala ', 'Rehearse the talk ')), text(L('cronometre e sugira cortes se passar de 10 minutos', 'time it and suggest cuts if it runs over 10 minutes'), prompt)),
+            task(text(L('Mandar a pauta para o time', 'Send the agenda to the team'))),
+          ],
+        },
+      ]
+      await p.locator('#corpo .ProseMirror, #corpo.ProseMirror').first().evaluate((el, doc) => {
+        const ed = el.editor
+        ed.chain().selectAll().insertContent(doc).run()
+      }, doc)
+      await sleep(800)
+      await p.locator('#corpo').evaluate((el) => (el.querySelector('.ProseMirror') ?? el).blur())
+    })
     await shot(browser, 'documento', desk, async (p) => {
       await openCard(L('Ideias de campanha Q4', 'Q4 campaign ideas'))(p)
       await p.getByRole('button', { name: L('Abrir como documento', 'Open as document') }).click()

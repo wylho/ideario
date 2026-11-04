@@ -13,7 +13,7 @@ Um app de notas grátis, de código aberto e local-first, com lembretes, calend�
 jeito que precisar. Abre num instante, funciona sem internet e guarda tudo no seu computador. Se quiser, sincroniza
 pelo seu próprio Google Drive.</p>
 
-<p align="center"><a href="#novidades-da-versão-04"><b>Novo na versão 0.4: calendário, kanban e um ícone novo →</b></a></p>
+<p align="center"><a href="#novidades-da-versão-07"><b>Novo na versão 0.7: prompts para o Claude, link na palavra e a nota numa nova janela →</b></a></p>
 
 <p align="center">
   <b>Windows · macOS · Linux · Android</b><br>
@@ -43,19 +43,23 @@ filtram qualquer visão.
 | **Arquivos** | PDFs, áudios, vídeos e documentos de todas as notas, com leitor de PDF. |
 | **Moodboard** | Todas as fotos num mural, com a paleta de cores de cada uma. |
 
-## Novidades da versão 0.4
+## Novidades da versão 0.7
 
-- **Calendário:** os lembretes no dia de cada um, por mês ou semana; arraste para mudar o dia.
-- **Kanban:** a fazer, em andamento e concluído; arraste o card entre as colunas.
-- **Status em três cores**: vermelho, amarelo e verde, em qualquer nota (com lembrete ele vem sozinho), também pelo Claude.
-- **Ícone novo.**
-- **Sincronização mais rápida:** as notas sobem para o Drive em paralelo, e mudar a ordem só envia o que mudou.
-- Títulos longos quebram linha, e a busca fica sempre no mesmo lugar da barra.
+- **Prompts:** marque um trecho da nota como instrução para o Claude (o botão ✦ ou Ctrl+Shift+P). Ele aparece em laranja, entre colchetes, e o Claude lê e segue.
+- **Link na palavra:** escolha a palavra e aperte Ctrl+K; Ctrl+clique abre. Todos os links da nota se juntam numa lista **Links** no fim, onde dá para adicionar outros.
+- **Abrir em nova janela:** a nota ganha uma janela só dela, ao lado da lista; o que muda aparece em todo lugar na hora.
+- **Copiar como card** agora leva o lembrete, o status e as fotos e arquivos (até 25 MB), também para o Nodo.
 
-Na 0.4.4: ícone sem placa no Linux e ajustes no celular (seleção e margens). Na 0.4.3: ícone novo e a bolinha de seleção dos cards mais discreta. Na 0.4.2: **status em qualquer nota**. Com lembrete ele aparece sozinho; sem lembrete, é só escolher no menu Status, e a nota entra no Kanban. Na 0.4.1: o ícone sem a borda azul no macOS.
+Na 0.6.5: o PDF da nota sai com o card no topo (cor, emoji, o título inteiro, categoria, lembrete, status e etiquetas), sempre em papel claro. Na 0.6.4: no celular, puxe a lista para baixo para sincronizar. Na 0.6.1 e na 0.6.3: a tabela da nota aparece no card fechado como um resumo (colunas e linhas).
 
 <details>
 <summary>Versões anteriores</summary>
+
+**0.6:** o Ideario em português e inglês (Configurações → Idioma); a licença passa a ser GPL-3.0-or-later.
+
+**0.5:** um editor de notas novo, o mesmo do Nodo; mude o status da nota no próprio card, sem abrir.
+
+**0.4:** calendário e kanban, status em três cores em qualquer nota, um ícone novo e sincronização mais rápida.
 
 **0.3:** editor com títulos, citações, código e tabelas; colar Markdown e prints direto na nota; um ID curto em cada nota
 para falar dela com o Claude.
@@ -125,6 +129,18 @@ nosso no meio, e as categorias protegidas por PIN ficam de fora. Cada nota tem u
 “na nota #a1b2c3d4, monta uma tabela com os gastos”. Guia: [`docs/MCP.md`](docs/MCP.md).
 
 <img src="site/img/pt/claude.webp" alt="Configurações do Ideario com a sincronização do Google Drive e o botão para ligar no Claude Desktop">
+
+### Prompts dentro das notas
+
+Cada parte da nota pode levar a sua instrução. Marque um trecho como prompt (o botão ✦ ou Ctrl+Shift+P) e ele aparece
+em laranja, entre colchetes: “resuma em três tópicos”, “cronometre e sugira cortes”. Quando o Claude lê a nota, sabe o
+que é texto e o que é instrução para ele.
+
+- Link na palavra: escolha, aperte Ctrl+K, e Ctrl+clique abre
+- A lista Links no fim da nota reúne todos os links, e dá para adicionar outros ali
+- Abra uma nota numa janela só dela, ao lado da lista
+
+<img src="site/img/pt/prompt.webp" alt="Nota com dois prompts para o Claude em laranja, entre colchetes, links em duas palavras e a lista de Links no fim">
 
 ## Do tamanho que a janela estiver
 

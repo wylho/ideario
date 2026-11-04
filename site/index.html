@@ -70,6 +70,7 @@
   "screenshot": [
     "https://ideario.pages.dev/img/notas.webp",
     "https://ideario.pages.dev/img/nota.webp",
+    "https://ideario.pages.dev/img/prompt.webp",
     "https://ideario.pages.dev/img/calendario.webp",
     "https://ideario.pages.dev/img/kanban.webp"
   ],
@@ -80,7 +81,11 @@
     "Works offline (local-first)",
     "Optional sync through your own Google Drive",
     "Google Keep import",
-    "Built-in MCP server for Claude"
+    "Built-in MCP server for Claude",
+    "Prompts for Claude inside the text of a note",
+    "Links on words, collected in a Links list",
+    "Open a note in its own window",
+    "English and Portuguese"
   ],
   "author": {
     "@type": "Person",
@@ -125,7 +130,7 @@
       <a class="btn primary" href="#baixar"><svg class="lucide" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg>Download free</a>
       <a class="btn soft" href="https://github.com/wylho/ideario"><svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg>View on GitHub</a>
     </div>
-    <p class="fine">Free and open source · <a href="#whats-new">New in version 0.4: calendar, kanban and a new icon<svg class="lucide" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></a></p>
+    <p class="fine">Free and open source · <a href="#whats-new">New in version 0.7: prompts for Claude, links on words and notes in their own window<svg class="lucide" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></a></p>
   </div>
 </section>
 
@@ -159,21 +164,22 @@
   <div class="wrap">
     <div class="section-head center">
       <span class="chip accent"><svg class="lucide" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"/><path d="M20 2v4"/><path d="M22 4h-4"/><circle cx="4" cy="20" r="2"/></svg>What’s new</span>
-      <h2>Version 0.4</h2>
-      <p>Calendar, kanban, a three-color status and a new icon.</p>
+      <h2>Version 0.7</h2>
+      <p>Prompts for Claude inside your notes, links on words and notes in their own window.</p>
     </div>
     <div class="box news">
   <ul>
-    <li><b>Calendar:</b> each reminder on its day, by month or week; drag it to change the day.</li>
-    <li><b>Kanban:</b> to do, in progress and done; drag cards between the columns.</li>
-    <li><b>Three-color status</b>: red, yellow and green, on any note (notes with a reminder get it automatically), also through Claude.</li>
-    <li><b>A new icon.</b></li>
-    <li><b>Faster sync:</b> notes upload to Drive in parallel, and reordering only sends what changed.</li>
-    <li>Long titles wrap, and search always stays in the same place in the toolbar.</li>
+    <li><b>Prompts:</b> mark part of a note as an instruction for Claude (the ✦ button or Ctrl+Shift+P). It shows in orange, between brackets, and Claude reads and follows it.</li>
+    <li><b>Links on words:</b> select a word and press Ctrl+K; Ctrl+click opens it. Every link in the note is gathered in a <b>Links</b> list at the end, where you can also add one.</li>
+    <li><b>Open in new window:</b> a note can get a window of its own, next to the list; changes show up everywhere right away.</li>
+    <li><b>Copy as card</b> now carries the reminder, the status and the photos and files (up to 25 MB), also into Nodo.</li>
   </ul>
-  <p class="muted">In 0.4.4: an icon without a backplate on Linux and phone tweaks (selection and margins). In 0.4.3: a new icon and a subtler selection dot on cards. In 0.4.2: <b>status on any note</b>. With a reminder it appears on its own; without one, just pick it from the Status menu and the note joins the kanban board. In 0.4.1: the icon without the blue border on macOS.</p>
+  <p class="muted">In 0.6.5: a note’s PDF opens with the card on top (color, emoji, the full title, category, reminder, status and tags), always on light paper. In 0.6.4: on the phone, pull the list down to sync. In 0.6.1 and 0.6.3: tables in a note show on the closed card as a summary (columns and rows).</p>
   <details>
     <summary>Earlier versions</summary>
+    <p><b>0.6:</b> Ideario in English and Portuguese (Settings → Language); the license is now GPL-3.0-or-later.</p>
+    <p><b>0.5:</b> a new note editor, shared with Nodo; change a note’s status right on its card, without opening it.</p>
+    <p><b>0.4:</b> calendar and kanban views, a three-color status on any note, a new icon and faster sync.</p>
     <p><b>0.3:</b> an editor with headings, quotes, code and tables; paste Markdown and screenshots straight into a
     note; a short ID on every note so you can refer to it when talking to Claude.</p>
     <p><b>0.2:</b> Android (preview); categories sorted by name, by note count or by hand; a sidebar that turns into
@@ -264,6 +270,20 @@
     say “in note #a1b2c3d4, build a table of the expenses”.</p>
         </div>
         <div class="media"><img src="/img/claude.webp" width="2880" height="1800" loading="lazy" alt="Ideario settings with Google Drive sync and the button to connect Claude Desktop"></div>
+      </div>
+      <div class="card wide">
+        <div>
+          <h3>Prompts inside your notes</h3>
+          <p>Each part of a note can carry its own instruction. Mark a passage as a prompt (the ✦ button or
+    Ctrl+Shift+P) and it shows in orange, between brackets: “sum them up in three bullet points”, “time it and suggest
+    cuts”. When Claude reads the note, it knows what is text and what is an instruction for it.</p>
+    <ul>
+      <li>Links on words: select, press Ctrl+K, and Ctrl+click opens</li>
+      <li>A Links list at the end of the note gathers every link, and you can add one there too</li>
+      <li>Open a note in its own window, next to the list</li>
+    </ul>
+        </div>
+        <div class="media"><img src="/img/prompt.webp" width="2880" height="1800" loading="lazy" alt="A note with two prompts for Claude in orange, between brackets, links on two words and the Links list at the end"></div>
       </div>
     </div>
   </div>

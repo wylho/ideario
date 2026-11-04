@@ -13,7 +13,7 @@ A free, open-source, local-first notes app with reminders, a calendar and a kanb
 you need. It opens instantly, works offline and keeps everything on your computer. If you want, it syncs through your own
 Google Drive. A private Google Keep alternative for Windows, macOS, Linux and Android.</p>
 
-<p align="center"><a href="#whats-new-in-version-04"><b>New in version 0.4: calendar, kanban and a new icon →</b></a></p>
+<p align="center"><a href="#whats-new-in-version-07"><b>New in version 0.7: prompts for Claude, links on words and notes in their own window →</b></a></p>
 
 <p align="center">
   <b>Windows · macOS · Linux · Android</b><br>
@@ -43,19 +43,23 @@ everywhere. Categories and tags filter any view.
 | **Files** | PDFs, audio, video and documents from all your notes, with a built-in PDF reader. |
 | **Moodboard** | All your photos on one board, each with its own color palette. |
 
-## What’s new in version 0.4
+## What’s new in version 0.7
 
-- **Calendar:** each reminder on its day, by month or week; drag it to change the day.
-- **Kanban:** to do, in progress and done; drag cards between the columns.
-- **Three-color status**: red, yellow and green, on any note (notes with a reminder get it automatically), also through Claude.
-- **A new icon.**
-- **Faster sync:** notes upload to Drive in parallel, and reordering only sends what changed.
-- Long titles wrap, and search always stays in the same place in the toolbar.
+- **Prompts:** mark part of a note as an instruction for Claude (the ✦ button or Ctrl+Shift+P). It shows in orange, between brackets, and Claude reads and follows it.
+- **Links on words:** select a word and press Ctrl+K; Ctrl+click opens it. Every link in the note is gathered in a **Links** list at the end, where you can also add one.
+- **Open in new window:** a note can get a window of its own, next to the list; changes show up everywhere right away.
+- **Copy as card** now carries the reminder, the status and the photos and files (up to 25 MB), also into Nodo.
 
-In 0.4.4: an icon without a backplate on Linux and phone tweaks (selection and margins). In 0.4.3: a new icon and a subtler selection dot on cards. In 0.4.2: **status on any note**. With a reminder it appears on its own; without one, just pick it from the Status menu and the note joins the kanban board. In 0.4.1: the icon without the blue border on macOS.
+In 0.6.5: a note’s PDF opens with the card on top (color, emoji, the full title, category, reminder, status and tags), always on light paper. In 0.6.4: on the phone, pull the list down to sync. In 0.6.1 and 0.6.3: tables in a note show on the closed card as a summary (columns and rows).
 
 <details>
 <summary>Earlier versions</summary>
+
+**0.6:** Ideario in English and Portuguese (Settings → Language); the license is now GPL-3.0-or-later.
+
+**0.5:** a new note editor, shared with Nodo; change a note’s status right on its card, without opening it.
+
+**0.4:** calendar and kanban views, a three-color status on any note, a new icon and faster sync.
 
 **0.3:** an editor with headings, quotes, code and tables; paste Markdown and screenshots straight into a note; a short
 ID on every note so you can refer to it when talking to Claude.
@@ -125,6 +129,18 @@ computer, with no server of ours in between, and PIN-protected categories stay o
 (#a1b2c3d4): copy it and say “in note #a1b2c3d4, build a table of the expenses”. Guide: [`docs/MCP.md`](docs/MCP.md).
 
 <img src="site/img/claude.webp" alt="Ideario settings with Google Drive sync and the button to connect Claude Desktop">
+
+### Prompts inside your notes
+
+Each part of a note can carry its own instruction. Mark a passage as a prompt (the ✦ button or Ctrl+Shift+P) and it
+shows in orange, between brackets: “sum them up in three bullet points”, “time it and suggest cuts”. When Claude reads
+the note, it knows what is text and what is an instruction for it.
+
+- Links on words: select, press Ctrl+K, and Ctrl+click opens
+- A Links list at the end of the note gathers every link, and you can add one there too
+- Open a note in its own window, next to the list
+
+<img src="site/img/prompt.webp" alt="A note with two prompts for Claude in orange, between brackets, links on two words and the Links list at the end">
 
 ## Fits any window size
 
