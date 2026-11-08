@@ -13,7 +13,7 @@ Um app de notas grátis, de código aberto e local-first, com lembretes, calend�
 jeito que precisar. Abre num instante, funciona sem internet e guarda tudo no seu computador. Se quiser, sincroniza
 pelo seu próprio Google Drive.</p>
 
-<p align="center"><a href="#novidades-da-versão-07"><b>Novo na versão 0.7: prompts para o Claude, link na palavra e a nota numa nova janela →</b></a></p>
+<p align="center"><a href="#novidades-da-versão-08"><b>Novo na versão 0.8: a visão Links, todos os links das suas notas num lugar só →</b></a></p>
 
 <p align="center">
   <b>Windows · macOS · Linux · Android</b><br>
@@ -29,7 +29,7 @@ pelo seu próprio Google Drive.</p>
   <img src="site/img/pt/notas.webp" alt="Tela principal do Ideario: notas coloridas em cards, com checklists, fotos, lembretes e categorias na lateral">
 </picture>
 
-## Uma nota, seis jeitos de ver
+## Uma nota, sete jeitos de ver
 
 Tudo começa numa nota. O resto são visões dela, e nada é copiado: mudou num lugar, mudou em todos. Categorias e tags
 filtram qualquer visão.
@@ -42,18 +42,22 @@ filtram qualquer visão.
 | **Kanban** | Toda nota com status, em três colunas: a fazer, em andamento e concluído. |
 | **Arquivos** | PDFs, áudios, vídeos e documentos de todas as notas, com leitor de PDF. |
 | **Moodboard** | Todas as fotos num mural, com a paleta de cores de cada uma. |
+| **Links** | Todos os links das suas notas num lugar só, como um gerenciador de favoritos: filtre por tipo, site, tag ou status, e leia depois. |
 
-## Novidades da versão 0.7
+## Novidades da versão 0.8
 
-- **Prompts:** marque um trecho da nota como instrução para o Claude (o botão ✦ ou Ctrl+Shift+P). Ele aparece em laranja, entre colchetes, e o Claude lê e segue.
-- **Link na palavra:** escolha a palavra e aperte Ctrl+K; Ctrl+clique abre. Todos os links da nota se juntam numa lista **Links** no fim, onde dá para adicionar outros.
-- **Abrir em nova janela:** a nota ganha uma janela só dela, ao lado da lista; o que muda aparece em todo lugar na hora.
-- **Copiar como card** agora leva o lembrete, o status e as fotos e arquivos (até 25 MB), também para o Nodo.
+- **Visão Links:** os cartões de link e os links na palavra de todas as notas, uma linha por endereço, com as notas onde cada um está.
+- **Quatro jeitos de ver:** cards com a imagem da página, lista, só os títulos ou um mural de imagens.
+- **Filtros:** por tipo (artigos, vídeos, áudio, imagens, documentos, código), por site, por tag e por status; agrupe por data, tag, site ou categoria.
+- **Ler depois:** o + da visão Links salva um endereço numa nota nova em A fazer, com o título e a imagem da página. O status é o da própria nota, nas três cores.
+- **O Claude** lista os seus links e salva links novos para você.
 
-Na 0.6.5: o PDF da nota sai com o card no topo (cor, emoji, o título inteiro, categoria, lembrete, status e etiquetas), sempre em papel claro. Na 0.6.4: no celular, puxe a lista para baixo para sincronizar. Na 0.6.1 e na 0.6.3: a tabela da nota aparece no card fechado como um resumo (colunas e linhas).
+Na 0.7: prompts para o Claude dentro do texto, link na palavra com a lista Links no fim de cada nota, a nota numa janela só dela e Copiar como card com fotos e arquivos.
 
 <details>
 <summary>Versões anteriores</summary>
+
+**0.6.1 a 0.6.5:** o PDF da nota com o card no topo, puxar para sincronizar no celular, a tabela no card fechado como resumo.
 
 **0.6:** o Ideario em português e inglês (Configurações → Idioma); a licença passa a ser GPL-3.0-or-later.
 
@@ -113,6 +117,22 @@ Todas as imagens de todas as notas num mural só, com a paleta de cores de cada 
 referência sem lembrar em que nota ela estava.
 
 <img src="site/img/pt/moodboard.webp" alt="Moodboard com as imagens das notas em mosaico e a paleta de cores de cada uma">
+
+## Todos os seus links num lugar só
+
+A visão Links junta todos os links das suas notas, como um gerenciador de favoritos: os cartões que você colou e os
+links na palavra. O mesmo endereço em várias notas é uma linha só. As categorias funcionam como coleções e as tags
+como tags.
+
+- Cards, lista, títulos ou um mural de imagens
+- Filtre por tipo, site, tag e status; agrupe por data, tag, site ou categoria
+- Salve um link no + e ele entra em A fazer, com o título e a imagem da página
+- O clique abre o site; a prévia mostra as notas onde ele está
+
+<picture>
+  <source srcset="site/img/pt/links-escuro.webp" media="(prefers-color-scheme: dark)">
+  <img src="site/img/pt/links.webp" alt="A visão Links: cartões de link com a imagem da página, título, site, tags e o status de três cores">
+</picture>
 
 ## Quando a nota cresce, vira documento
 

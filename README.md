@@ -13,7 +13,7 @@ A free, open-source, local-first notes app with reminders, a calendar and a kanb
 you need. It opens instantly, works offline and keeps everything on your computer. If you want, it syncs through your own
 Google Drive. A private Google Keep alternative for Windows, macOS, Linux and Android.</p>
 
-<p align="center"><a href="#whats-new-in-version-07"><b>New in version 0.7: prompts for Claude, links on words and notes in their own window →</b></a></p>
+<p align="center"><a href="#whats-new-in-version-08"><b>New in version 0.8: the Links view, every link from your notes in one place →</b></a></p>
 
 <p align="center">
   <b>Windows · macOS · Linux · Android</b><br>
@@ -29,7 +29,7 @@ Google Drive. A private Google Keep alternative for Windows, macOS, Linux and An
   <img src="site/img/notas.webp" alt="Ideario main screen: colorful note cards with checklists, photos and reminders, and categories in the sidebar">
 </picture>
 
-## One note, six views
+## One note, seven views
 
 Everything starts as a note. The rest are views of it, and nothing is copied: change it in one place and it changes
 everywhere. Categories and tags filter any view.
@@ -42,18 +42,22 @@ everywhere. Categories and tags filter any view.
 | **Kanban** | Every note with a status, in three columns: to do, in progress and done. |
 | **Files** | PDFs, audio, video and documents from all your notes, with a built-in PDF reader. |
 | **Moodboard** | All your photos on one board, each with its own color palette. |
+| **Links** | Every link from your notes in one place, like a bookmark manager: filter by type, site, tag or status, and read later. |
 
-## What’s new in version 0.7
+## What’s new in version 0.8
 
-- **Prompts:** mark part of a note as an instruction for Claude (the ✦ button or Ctrl+Shift+P). It shows in orange, between brackets, and Claude reads and follows it.
-- **Links on words:** select a word and press Ctrl+K; Ctrl+click opens it. Every link in the note is gathered in a **Links** list at the end, where you can also add one.
-- **Open in new window:** a note can get a window of its own, next to the list; changes show up everywhere right away.
-- **Copy as card** now carries the reminder, the status and the photos and files (up to 25 MB), also into Nodo.
+- **Links view:** link cards and links on words from every note, one row per address, with the notes each one is in.
+- **Four ways to look:** cards with the page’s image, a list, headlines only, or a wall of images.
+- **Filters:** by type (articles, videos, audio, images, documents, code), by site, by tag and by status; group by date, tag, site or category.
+- **Read later:** the + in the Links view saves an address as a new note in To do, with the page’s title and image. The status is the note’s own three colors.
+- **Claude** can list your links and save new ones for you.
 
-In 0.6.5: a note’s PDF opens with the card on top (color, emoji, the full title, category, reminder, status and tags), always on light paper. In 0.6.4: on the phone, pull the list down to sync. In 0.6.1 and 0.6.3: tables in a note show on the closed card as a summary (columns and rows).
+In 0.7: prompts for Claude inside the text, links on words with a Links list at the end of each note, notes in their own window, and Copy as card with photos and files.
 
 <details>
 <summary>Earlier versions</summary>
+
+**0.6.1 to 0.6.5:** the note’s PDF with the card on top, pull to sync on the phone, tables on the closed card as a summary.
 
 **0.6:** Ideario in English and Portuguese (Settings → Language); the license is now GPL-3.0-or-later.
 
@@ -113,6 +117,21 @@ Every image from every note on a single board, each with its color palette. Filt
 without remembering which note it was in.
 
 <img src="site/img/moodboard.webp" alt="Moodboard with images from the notes in a mosaic, each with its color palette">
+
+## All your links in one place
+
+The Links view gathers every link from your notes, like a bookmark manager: the cards you pasted and the links on
+words. The same address in several notes is a single row. Categories work as collections and tags as tags.
+
+- Cards, list, headlines or a wall of images
+- Filter by type, site, tag and status; group by date, tag, site or category
+- Save a link with + and it lands in To do, with the page’s title and image
+- Click opens the site; the preview shows the notes it is in
+
+<picture>
+  <source srcset="site/img/links-escuro.webp" media="(prefers-color-scheme: dark)">
+  <img src="site/img/links.webp" alt="The Links view: link cards with the page image, title, site, tags and the three-color status">
+</picture>
 
 ## When a note grows, it becomes a document
 

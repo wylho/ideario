@@ -71,6 +71,7 @@
     "https://ideario.pages.dev/img/pt/notas.webp",
     "https://ideario.pages.dev/img/pt/nota.webp",
     "https://ideario.pages.dev/img/pt/prompt.webp",
+    "https://ideario.pages.dev/img/pt/links.webp",
     "https://ideario.pages.dev/img/pt/calendario.webp",
     "https://ideario.pages.dev/img/pt/kanban.webp"
   ],
@@ -85,7 +86,8 @@
     "Prompts para o Claude dentro do texto da nota",
     "Link na palavra, reunido numa lista de Links",
     "Abrir uma nota numa nova janela",
-    "Em português e inglês"
+    "Em português e inglês",
+    "Visão Links: todos os links das notas, com filtros por tipo, site, tag e status"
   ],
   "author": {
     "@type": "Person",
@@ -130,7 +132,7 @@
       <a class="btn primary" href="#baixar"><svg class="lucide" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg>Baixar grátis</a>
       <a class="btn soft" href="https://github.com/wylho/ideario"><svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg>Ver no GitHub</a>
     </div>
-    <p class="fine">Grátis e de código aberto · <a href="#novidades">Novo na versão 0.7: prompts para o Claude, link na palavra e a nota numa nova janela<svg class="lucide" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></a></p>
+    <p class="fine">Grátis e de código aberto · <a href="#novidades">Novo na versão 0.8: a visão Links, todos os links das suas notas num lugar só<svg class="lucide" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></a></p>
   </div>
 </section>
 
@@ -144,7 +146,7 @@
 <section class="section">
   <div class="wrap">
     <div class="section-head">
-      <span class="chip accent"><svg class="lucide" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z"/><path d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12"/><path d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17"/></svg>Uma nota, seis jeitos de ver</span>
+      <span class="chip accent"><svg class="lucide" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z"/><path d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12"/><path d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17"/></svg>Uma nota, sete jeitos de ver</span>
       <h2>Escreva uma vez. Veja do jeito que precisar.</h2>
       <p>Tudo começa numa nota. O resto são visões dela, e nada é copiado: mudou num lugar, mudou em todos. Categorias
       e tags filtram qualquer visão.</p>
@@ -156,6 +158,7 @@
       <div class="box"><span class="ico"><svg class="lucide" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M8 7v7"/><path d="M12 7v4"/><path d="M16 7v9"/></svg></span><h3>Kanban</h3><p>Toda nota com status, em três colunas: a fazer, em andamento e concluído.</p></div>
       <div class="box"><span class="ico"><svg class="lucide" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m16 6-8.414 8.586a2 2 0 0 0 2.829 2.829l8.414-8.586a4 4 0 1 0-5.657-5.657l-8.379 8.551a6 6 0 1 0 8.485 8.485l8.379-8.551"/></svg></span><h3>Arquivos</h3><p>PDFs, áudios, vídeos e documentos de todas as notas, com leitor de PDF.</p></div>
       <div class="box"><span class="ico"><svg class="lucide" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m22 11-1.296-1.296a2.4 2.4 0 0 0-3.408 0L11 16"/><path d="M4 8a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2"/><circle cx="13" cy="7" r="1" fill="currentColor"/><rect x="8" y="2" width="14" height="14" rx="2"/></svg></span><h3>Moodboard</h3><p>Todas as fotos num mural, com a paleta de cores de cada uma.</p></div>
+      <div class="box" style="grid-column: 1 / -1"><span class="ico"><svg class="lucide" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></span><h3>Links</h3><p>Todos os links das suas notas num lugar só, como um gerenciador de favoritos: filtre por tipo, site, tag ou status, e leia depois.</p></div>
     </div>
   </div>
 </section>
@@ -164,19 +167,21 @@
   <div class="wrap">
     <div class="section-head center">
       <span class="chip accent"><svg class="lucide" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"/><path d="M20 2v4"/><path d="M22 4h-4"/><circle cx="4" cy="20" r="2"/></svg>Novidades</span>
-      <h2>Versão 0.7</h2>
-      <p>Prompts para o Claude dentro das notas, link na palavra e a nota numa janela só dela.</p>
+      <h2>Versão 0.8</h2>
+      <p>A visão Links: todos os links das suas notas num lugar só, como um gerenciador de favoritos.</p>
     </div>
     <div class="box news">
   <ul>
-    <li><b>Prompts:</b> marque um trecho da nota como instrução para o Claude (o botão ✦ ou Ctrl+Shift+P). Ele aparece em laranja, entre colchetes, e o Claude lê e segue.</li>
-    <li><b>Link na palavra:</b> escolha a palavra e aperte Ctrl+K; Ctrl+clique abre. Todos os links da nota se juntam numa lista <b>Links</b> no fim, onde dá para adicionar outros.</li>
-    <li><b>Abrir em nova janela:</b> a nota ganha uma janela só dela, ao lado da lista; o que muda aparece em todo lugar na hora.</li>
-    <li><b>Copiar como card</b> agora leva o lembrete, o status e as fotos e arquivos (até 25 MB), também para o Nodo.</li>
+    <li><b>Visão Links:</b> os cartões de link e os links na palavra de todas as notas, uma linha por endereço, com as notas onde cada um está.</li>
+    <li><b>Quatro jeitos de ver:</b> cards com a imagem da página, lista, só os títulos ou um mural de imagens.</li>
+    <li><b>Filtros:</b> por tipo (artigos, vídeos, áudio, imagens, documentos, código), por site, por tag e por status; agrupe por data, tag, site ou categoria.</li>
+    <li><b>Ler depois:</b> o + da visão Links salva um endereço numa nota nova em A fazer, com o título e a imagem da página. O status é o da própria nota, nas três cores.</li>
+    <li><b>O Claude</b> lista os seus links e salva links novos para você.</li>
   </ul>
-  <p class="muted">Na 0.6.5: o PDF da nota sai com o card no topo (cor, emoji, o título inteiro, categoria, lembrete, status e etiquetas), sempre em papel claro. Na 0.6.4: no celular, puxe a lista para baixo para sincronizar. Na 0.6.1 e na 0.6.3: a tabela da nota aparece no card fechado como um resumo (colunas e linhas).</p>
+  <p class="muted">Na 0.7: prompts para o Claude dentro do texto, link na palavra com a lista Links no fim de cada nota, a nota numa janela só dela e Copiar como card com fotos e arquivos.</p>
   <details>
     <summary>Versões anteriores</summary>
+    <p><b>0.6.1 a 0.6.5:</b> o PDF da nota com o card no topo, puxar para sincronizar no celular, a tabela no card fechado como resumo.</p>
     <p><b>0.6:</b> o Ideario em português e inglês (Configurações → Idioma); a licença passa a ser GPL-3.0-or-later.</p>
     <p><b>0.5:</b> um editor de notas novo, o mesmo do Nodo; mude o status da nota no próprio card, sem abrir.</p>
     <p><b>0.4:</b> calendário e kanban, status em três cores em qualquer nota, um ícone novo e sincronização mais rápida.</p>
@@ -239,6 +244,20 @@
         <p>Todas as imagens de todas as notas num mural só, com a paleta de cores de cada uma. Filtre por tom e encontre
     aquela referência sem lembrar em que nota ela estava.</p>
         <div class="media"><img src="/img/pt/moodboard.webp" width="2880" height="1800" loading="lazy" alt="Moodboard com as imagens das notas em mosaico e a paleta de cores de cada uma"></div>
+      </div>
+      <div class="card wide">
+        <div>
+          <h3>Todos os seus links num lugar só</h3>
+          <p>A visão Links junta todos os links das suas notas, como um gerenciador de favoritos: os cartões que você
+    colou e os links na palavra. O mesmo endereço em várias notas é uma linha só. As categorias funcionam como coleções e as tags como tags.</p>
+    <ul>
+      <li>Cards, lista, títulos ou um mural de imagens</li>
+      <li>Filtre por tipo, site, tag e status; agrupe por data, tag, site ou categoria</li>
+      <li>Salve um link no + e ele entra em A fazer, com o título e a imagem da página</li>
+      <li>O clique abre o site; a prévia mostra as notas onde ele está</li>
+    </ul>
+        </div>
+        <div class="media"><picture><source srcset="/img/pt/links-escuro.webp" media="(prefers-color-scheme: dark)"><img src="/img/pt/links.webp" width="2880" height="1800" loading="lazy" alt="A visão Links: cartões de link com a imagem da página, título, site, tags e o status de três cores"></picture></div>
       </div>
       <div class="card wide">
         <div>

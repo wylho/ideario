@@ -111,6 +111,13 @@ try {
       await sleep(800)
       await p.locator('#corpo').evaluate((el) => (el.querySelector('.ProseMirror') ?? el).blur())
     })
+    // Visão Links: os links das notas em cards (o jeito de ver ao abrir).
+    await shot(browser, 'links', desk, (p) => p.locator('.view-switch .lens', { hasText: 'Links' }).click())
+    await shot(browser, 'links-escuro', { ...desk, dark: true }, async (p) => {
+      await p.locator('.view-switch .lens', { hasText: 'Links' }).click()
+      await p.getByRole('button', { name: new RegExp('^' + L('Ver como', 'View as')) }).click()
+      await p.getByRole('menuitemradio', { name: L('Lista', 'List') }).click()
+    })
     await shot(browser, 'documento', desk, async (p) => {
       await openCard(L('Ideias de campanha Q4', 'Q4 campaign ideas'))(p)
       await p.getByRole('button', { name: L('Abrir como documento', 'Open as document') }).click()
