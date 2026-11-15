@@ -230,6 +230,9 @@ Single-context: `GLOSSARY.md` na raiz (quando houver); as decisões são as do `
   mesmo do Nodo; antes o `Editor.svelte` montava o próprio `Dialog` do bits-ui, igual por fora). O fechar do Ideario
   já esperava o `settle` e já parava os atalhos (`app.editor`); a `CardSession`/`cardOpen()` do Atrio levaram a
   mesma regra ao Nodo.
+- **Atrio 0.26.6: o título do botão H volta a texto** (defeito achado pelo usuário): o menu de títulos ganhou "Texto",
+  o ✓ segue o bloco onde a seleção começa (antes sumia ao abrir o menu) e o mesmo tamanho de novo volta a texto, sem
+  desmanchar a lista que esteja na seleção. Ainda não lançado. e2e "título pelo botão H".
 - **Versão 0.8.0 lançada** (08/11/2026, Release `v0.8.0`, pedido do usuário: "pode fazer o release"): a visão Links (abaixo).
   Site e README na 0.8 (sete visões, seção "Todos os seus links num lugar só", prints `links.webp`/`links-escuro.webp`).
 - **Visão Links (alternativa ao Raindrop; pedido do usuário, prévia aprovada, spec em `.scratch/visao-links/`): os cartões de link e os links na palavra
