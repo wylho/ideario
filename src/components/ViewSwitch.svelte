@@ -17,3 +17,14 @@
     </button>
   {/each}
 </nav>
+
+<style>
+  /* Com as sete visões, os nomes só cabem ao lado das ações da visão (o Calendário tem várias) com a janela bem
+     larga: abaixo de 1600 px (margem para as fontes de cada sistema), só os ícones (o nome fica na dica) e o número vira um selo no canto. O atrio.css faz o
+     mesmo abaixo de 1200 px, que bastava com seis visões. */
+  @media (max-width: 1599px) {
+    .lens { padding: 0 11px; }
+    .lens-label { display: none; }
+    .lens .n { position: absolute; top: 3px; right: 2px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 999px; display: grid; place-items: center; font-size: 10px; background: var(--bg); }
+  }
+</style>

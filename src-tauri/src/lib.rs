@@ -177,9 +177,9 @@ pub fn run() {
             #[cfg(desktop)]
             updates::update_install,
             #[cfg(target_os = "android")]
-            apk_update::update_check,
+            apk_update::android::update_check,
             #[cfg(target_os = "android")]
-            apk_update::update_install,
+            apk_update::android::update_install,
             #[cfg(desktop)]
             background::set_background,
             commands::list_notes,

@@ -57,7 +57,7 @@ fn read_latest(json: &Value) -> Option<UpdateInfo> {
 }
 
 #[cfg(target_os = "android")]
-mod android {
+pub(crate) mod android {
     use std::io::{Read, Write};
     use std::sync::Mutex;
 
@@ -153,8 +153,9 @@ mod android {
     }
 }
 
+// Os comandos ficam no `android` (o `generate_handler!` precisa do caminho onde o `#[tauri::command]` os criou).
 #[cfg(target_os = "android")]
-pub(crate) use android::{plugin, update_check, update_install};
+pub(crate) use android::plugin;
 
 #[cfg(test)]
 mod tests {

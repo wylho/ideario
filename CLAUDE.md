@@ -242,6 +242,9 @@ Single-context: `GLOSSARY.md` na raiz (quando houver); as decisões são as do `
   justificativa lá). "Procurar atualizações" nas Configurações também no Android; o aviso diz "Instalando…" quando o
   download chega a 100%. Testes: `apk_update` (versão, `latest.json`, nome do APK conferido no `release.yml`) e e2e
   "Android: atualizar pelo app". Só vale da primeira versão que tiver isto em diante (a anterior se instala à mão).
+- **Seletor de visão com sete visões** (o CI do `main` falhava desde a visão Links): a 1280 px os nomes das visões
+  invadiam as ações da barra (no Calendário, o "Mostrar concluídos" não recebia o clique). `ViewSwitch.svelte` só mostra
+  os nomes a partir de 1600 px (antes 1200, regra do `atrio.css`, que bastava com seis); abaixo, ícones com o nome na dica.
 - **Versão 0.8.2 lançada** (27/11/2026, Release `v0.8.2`, pedido do usuário: "pode fazer o release dos dois apps"): APK do Android incluso. as correções do editor do Atrio 0.27.0 (abaixo).
 - **Atrio 0.27.0: varredura de defeitos do editor** (pedido do usuário; o registro completo está no CLAUDE.md do Atrio):
   checklist, menu do bloco, fechar o card com Esc/clique fora sem perder gravação nem foto (e a nota nova), anexo que não
