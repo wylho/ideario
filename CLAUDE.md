@@ -245,6 +245,10 @@ Single-context: `GLOSSARY.md` na raiz (quando houver); as decisões são as do `
 - **Seletor de visão com sete visões** (o CI do `main` falhava desde a visão Links): a 1280 px os nomes das visões
   invadiam as ações da barra (no Calendário, o "Mostrar concluídos" não recebia o clique). `ViewSwitch.svelte` só mostra
   os nomes a partir de 1600 px (antes 1200, regra do `atrio.css`, que bastava com seis); abaixo, ícones com o nome na dica.
+- **CI verde de novo** (27/11/2026): os testes do app nativo (WebKitGTK) rodavam o app em inglês desde a 0.6.0 (o
+  runner é inglês) e procuravam os textos em português; o passo do `build.yml` gera o `pt_BR.UTF-8` e roda com
+  `LANG`/`LANGUAGE` em português. O APK com o atualizador compila (os comandos vão pelo caminho
+  `apk_update::android::…` no `generate_handler!`).
 - **Versão 0.8.2 lançada** (27/11/2026, Release `v0.8.2`, pedido do usuário: "pode fazer o release dos dois apps"): APK do Android incluso. as correções do editor do Atrio 0.27.0 (abaixo).
 - **Atrio 0.27.0: varredura de defeitos do editor** (pedido do usuário; o registro completo está no CLAUDE.md do Atrio):
   checklist, menu do bloco, fechar o card com Esc/clique fora sem perder gravação nem foto (e a nota nova), anexo que não
