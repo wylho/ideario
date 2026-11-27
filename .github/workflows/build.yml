@@ -50,7 +50,8 @@ jobs:
           LANG: pt_BR.UTF-8
           LANGUAGE: pt_BR
         run: |
-          sudo apt-get install -y webkit2gtk-driver xvfb
+          sudo apt-get install -y webkit2gtk-driver xvfb locales
+          sudo locale-gen pt_BR.UTF-8
           cargo install tauri-driver --locked
           npx tauri build --debug --no-bundle
           xvfb-run -a -s "-screen 0 1400x900x24" node tests/native/run.mjs
