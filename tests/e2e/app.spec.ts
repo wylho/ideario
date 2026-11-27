@@ -2141,8 +2141,25 @@ test('versão nova do app: aviso no canto, atualizar mostra o progresso; "Depois
   await page.reload()
   await expect(notice).toBeVisible({ timeout: 8000 })
   await notice.getByRole('button', { name: 'Atualizar' }).click()
-  await expect(notice).toContainText('Baixando… 100%')
+  // baixou tudo: agora é o instalador
+  await expect(notice).toContainText('Instalando…')
   await expect(notice.getByRole('button')).toHaveCount(0)
+})
+
+test('Android: atualizar pelo app, com o recado de permitir instalar e o de cancelado', async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem('ideario.mock.update', '0.9.0')
+    localStorage.setItem('ideario.mock.updateFails', 'install-permission')
+    document.addEventListener('readystatechange', () => (document.documentElement.dataset.platform = 'android'))
+  })
+  await page.reload()
+  const notice = page.locator('.update-alerts')
+  await expect(notice).toContainText('Baixa e instala a versão nova.', { timeout: 8000 })
+  await notice.getByRole('button', { name: 'Atualizar' }).click()
+  await expect(notice).toContainText('Permita que o Ideario instale apps e toque em Tentar de novo.')
+  await page.evaluate(() => localStorage.setItem('ideario.mock.updateFails', 'install-cancelled'))
+  await notice.getByRole('button', { name: 'Tentar de novo' }).click()
+  await expect(notice).toContainText('Instalação cancelada.')
 })
 
 test.describe('Android: compartilhar com o Ideario', () => {

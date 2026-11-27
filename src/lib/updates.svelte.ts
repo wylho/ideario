@@ -10,6 +10,9 @@ class Updates {
   progress = $state<number | null>(null)
   /** O aviso do canto foi fechado ("Depois"). As Configurações continuam oferecendo a versão. */
   dismissed = $state(false)
+  /** Por que a última tentativa não instalou: no Android, falta permitir "instalar apps desta fonte" (`permission`) ou
+   *  a pessoa cancelou o aviso do sistema (`cancelled`). */
+  reason = $state<'permission' | 'cancelled' | null>(null)
 
   /** Procura versão nova. Devolve se achou; erro de rede conta como "sem novidade" (tenta na próxima abertura). */
   async check(): Promise<boolean> {
@@ -30,9 +33,12 @@ class Updates {
     this.phase = 'downloading'
     this.progress = null
     this.dismissed = false
+    this.reason = null
     try {
       await api.installUpdate((done, total) => (this.progress = total ? done / total : null))
-    } catch {
+    } catch (e) {
+      const msg = String(e)
+      this.reason = msg.includes('install-permission') ? 'permission' : msg.includes('install-cancelled') ? 'cancelled' : null
       this.phase = 'error'
     }
   }

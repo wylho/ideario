@@ -11,6 +11,10 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- Baixar anexo em Downloads: só o Android 9 ou anterior precisa (do 10 em diante vai pelo MediaStore). -->
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
+    <!-- Atualizar o app pelo próprio app (UpdatePlugin.kt): instalar o APK novo do Release e, do Android 12 em diante,
+         sem pedir confirmação de novo quando foi o Ideario que instalou a versão anterior. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <uses-permission android:name="android.permission.UPDATE_PACKAGES_WITHOUT_USER_ACTION" />
 
     <!-- AndroidTV support -->
     <uses-feature android:name="android.software.leanback" android:required="false" />

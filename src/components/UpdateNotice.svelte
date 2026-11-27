@@ -5,6 +5,8 @@
 
   // Versão nova do app, num cartão no canto (como os lembretes). Só aparece quando há novidade.
   const pct = $derived(updates.progress === null ? null : Math.round(updates.progress * 100))
+  // No Android o app não reabre sozinho: o sistema instala (às vezes pedindo para confirmar) e a pessoa abre de novo.
+  const android = document.documentElement.dataset.platform === 'android'
 </script>
 
 {#if updates.info && (!updates.dismissed || updates.phase === 'downloading')}
@@ -15,11 +17,15 @@
         <b>{t('Ideario {versao} disponível', { versao: updates.info.version })}</b>
         <small>
           {#if updates.phase === 'downloading'}
-            {pct === null ? t('Baixando…') : t('Baixando… {pct}%', { pct })}
+            {pct === 100 ? t('Instalando…') : pct === null ? t('Baixando…') : t('Baixando… {pct}%', { pct })}
+          {:else if updates.phase === 'error' && updates.reason === 'permission'}
+            {t('Permita que o Ideario instale apps e toque em Tentar de novo.')}
+          {:else if updates.phase === 'error' && updates.reason === 'cancelled'}
+            {t('Instalação cancelada.')}
           {:else if updates.phase === 'error'}
             {t('Não foi possível atualizar agora.')}
           {:else}
-            {t('Atualiza e reabre o app.')}
+            {android ? t('Baixa e instala a versão nova.') : t('Atualiza e reabre o app.')}
           {/if}
         </small>
       </div>

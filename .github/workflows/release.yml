@@ -68,7 +68,7 @@ jobs:
             - **macOS** (Apple Silicon e Intel): baixe o `.dmg`. Na primeira vez, clique com o botão direito no app → **Abrir** (o app ainda não é assinado pela Apple).
             - **Windows**: baixe o `-setup.exe` (ou o `.msi`).
             - **Linux**: pelo repositório (atualiza junto com o sistema), veja https://ideario.pages.dev/#linux. Ou baixe o `.AppImage` (atualiza sozinho), o `.deb` ou o `.rpm`.
-            - **Android**: baixe o `_android.apk` no celular e abra (o Android pede para permitir instalar apps desta fonte). Para atualizar, instale o novo por cima, ou use o Obtainium apontando para este repositório.
+            - **Android**: baixe o `_android.apk` no celular e abra (o Android pede para permitir instalar apps desta fonte). Da 0.8.3 em diante o próprio app avisa quando sai versão nova e se atualiza (toque em Atualizar); quem tem uma versão anterior instala esta por cima uma vez.
 
             Os arquivos `apt-*`, `rpm-*` e `latest.json` são dos repositórios Linux e do atualizador; não precisa baixar.
           releaseDraft: true

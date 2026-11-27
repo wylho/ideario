@@ -20,7 +20,7 @@
   let status = $state.raw<SyncStatus | null>(null)
   let version = $state<string | null>(null)
   coreVersion().then((v) => (version = v))
-  // No celular quem atualiza é a loja (ou o APK novo): sem "Procurar atualizações".
+  // "Procurar atualizações" no desktop e no Android (o app baixa o APK do Release); no navegador do celular, não.
   const android = document.documentElement.dataset.platform === 'android'
   const desktop = !android && !/Android|iPhone|iPad/i.test(navigator.userAgent)
   async function checkNow() {
@@ -383,7 +383,7 @@
               · <button class="link" onclick={() => updates.install()} disabled={updates.phase === 'downloading'}>
                 {updates.phase === 'downloading' ? t('Atualizando…') : t('Atualizar para a v{versao}', { versao: updates.info.version })}
               </button>
-            {:else if isTauri() && desktop}
+            {:else if isTauri() && (desktop || android)}
               · <button class="link" onclick={checkNow} disabled={updates.phase === 'checking'}>
                 {updates.phase === 'checking' ? t('Procurando…') : t('Procurar atualizações')}
               </button>

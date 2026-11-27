@@ -230,6 +230,18 @@ Single-context: `GLOSSARY.md` na raiz (quando houver); as decisões são as do `
   mesmo do Nodo; antes o `Editor.svelte` montava o próprio `Dialog` do bits-ui, igual por fora). O fechar do Ideario
   já esperava o `settle` e já parava os atalhos (`app.editor`); a `CardSession`/`cardOpen()` do Atrio levaram a
   mesma regra ao Nodo.
+- **Atualizar no Android pelo próprio app** (pedido do usuário, opção 2 entre Obtainium, atualizador próprio e Play
+  Store): o atualizador do Tauri não existe no celular, então `src-tauri/src/apk_update.rs` faz à mão, com os mesmos
+  comandos do desktop (`update_check`, `update_install`, evento `update-progress`): lê o `latest.json` do último Release
+  (o do desktop), compara a versão (`newer`), baixa `Ideario_<versão>_android.apk` do Release para o cache e entrega ao
+  `UpdatePlugin.kt` (`PackageInstaller`, `setRequireUserAction(USER_ACTION_NOT_REQUIRED)` no Android 12+: quando foi o
+  próprio Ideario que instalou a versão anterior, entra sem confirmar). O Android só aceita o APK assinado pela mesma
+  chave. Sem "instalar apps desta fonte" permitido, abre a tela do sistema e a UI pede para tentar de novo
+  (`install-permission`; cancelado = `install-cancelled`, `updates.reason`). Manifesto com `REQUEST_INSTALL_PACKAGES` e
+  `UPDATE_PACKAGES_WITHOUT_USER_ACTION` (atenção se um dia for para a Play Store: a permissão de instalar pacotes pede
+  justificativa lá). "Procurar atualizações" nas Configurações também no Android; o aviso diz "Instalando…" quando o
+  download chega a 100%. Testes: `apk_update` (versão, `latest.json`, nome do APK conferido no `release.yml`) e e2e
+  "Android: atualizar pelo app". Só vale da primeira versão que tiver isto em diante (a anterior se instala à mão).
 - **Versão 0.8.2 lançada** (27/11/2026, Release `v0.8.2`, pedido do usuário: "pode fazer o release dos dois apps"): APK do Android incluso. as correções do editor do Atrio 0.27.0 (abaixo).
 - **Atrio 0.27.0: varredura de defeitos do editor** (pedido do usuário; o registro completo está no CLAUDE.md do Atrio):
   checklist, menu do bloco, fechar o card com Esc/clique fora sem perder gravação nem foto (e a nota nova), anexo que não

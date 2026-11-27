@@ -31,6 +31,8 @@ mod system_theme;
 use atrio::text;
 #[cfg(desktop)]
 mod updates;
+/// Atualizar no Android (o atualizador do Tauri não existe lá): baixa o APK do Release e chama o instalador.
+mod apk_update;
 #[cfg(test)]
 use atrio::testdoc;
 mod ydoc;
@@ -75,7 +77,7 @@ pub fn run() {
     );
     // Android: lembretes agendados no sistema, login com a conta do aparelho e "compartilhar com o Ideario".
     #[cfg(target_os = "android")]
-    let app = app.plugin(tauri_plugin_notification::init()).plugin(sync::android::plugin()).plugin(share::plugin()).plugin(system_bars::plugin()).plugin(device::plugin());
+    let app = app.plugin(tauri_plugin_notification::init()).plugin(sync::android::plugin()).plugin(share::plugin()).plugin(system_bars::plugin()).plugin(device::plugin()).plugin(apk_update::plugin());
     let app = app
         // Fotos, vídeos, áudios e documentos das notas: `att://localhost/<hash>` (convertFileSrc(hash, 'att')).
         .register_asynchronous_uri_scheme_protocol("att", |ctx, req, responder| {
@@ -174,6 +176,10 @@ pub fn run() {
             updates::update_check,
             #[cfg(desktop)]
             updates::update_install,
+            #[cfg(target_os = "android")]
+            apk_update::update_check,
+            #[cfg(target_os = "android")]
+            apk_update::update_install,
             #[cfg(desktop)]
             background::set_background,
             commands::list_notes,

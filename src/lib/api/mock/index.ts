@@ -959,11 +959,20 @@ export const mockApi: Api = {
       return done(null)
     }
   },
+  // Prévia e testes: `ideario.mock.updateFails` = o erro que o instalador do Android daria (`install-permission`,
+  // `install-cancelled`), depois de baixar.
   async installUpdate(onProgress) {
     for (let i = 1; i <= 4; i++) {
       await new Promise((r) => setTimeout(r, 150))
       onProgress(i * 25, 100)
     }
+    let fails: string | null = null
+    try {
+      fails = localStorage.getItem('ideario.mock.updateFails')
+    } catch {
+      // sem armazenamento: instala
+    }
+    if (fails) throw new Error(fails)
   },
 
   async downloadAttachment(a) {
