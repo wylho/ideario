@@ -230,6 +230,7 @@ Single-context: `GLOSSARY.md` na raiz (quando houver); as decisões são as do `
   mesmo do Nodo; antes o `Editor.svelte` montava o próprio `Dialog` do bits-ui, igual por fora). O fechar do Ideario
   já esperava o `settle` e já parava os atalhos (`app.editor`); a `CardSession`/`cardOpen()` do Atrio levaram a
   mesma regra ao Nodo.
+- **Versão 0.8.2 lançada** (27/11/2026, Release `v0.8.2`, pedido do usuário: "pode fazer o release dos dois apps"): APK do Android incluso. as correções do editor do Atrio 0.27.0 (abaixo).
 - **Atrio 0.27.0: varredura de defeitos do editor** (pedido do usuário; o registro completo está no CLAUDE.md do Atrio):
   checklist, menu do bloco, fechar o card com Esc/clique fora sem perder gravação nem foto (e a nota nova), anexo que não
   toma o lugar da seleção nem entra num item, colar, Tab/Shift+Tab, links e o Markdown de ida e volta do MCP. Aqui:
