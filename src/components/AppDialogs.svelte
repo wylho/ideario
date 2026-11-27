@@ -48,13 +48,20 @@
 
   function submit(e: SubmitEvent) {
     e.preventDefault()
-    if (d?.kind !== 'name' || !name.trim()) return
+    if (d?.kind !== 'name' || (!name.trim() && !d.allowEmpty)) return
     d.submit(name.trim(), color)
     app.dialog = null
   }
+
+  /** Fechar o pedido de nome sem confirmar (Cancelar, Esc, clique fora): quem pediu fica sabendo. */
+  function dismissName() {
+    const cancel = d?.kind === 'name' ? d.cancel : undefined
+    app.dialog = null
+    cancel?.()
+  }
 </script>
 
-<Dialog.Root open={d?.kind === 'name'} onOpenChange={(o) => !o && (app.dialog = null)}>
+<Dialog.Root open={d?.kind === 'name'} onOpenChange={(o) => !o && dismissName()}>
   <Dialog.Portal>
     <Dialog.Overlay class="overlay" />
     <Dialog.Content class="confirm" aria-describedby={undefined}>
@@ -76,8 +83,8 @@
             </div>
           {/if}
           <div class="confirm-actions">
-            <button type="button" class="btn ghost" onclick={() => (app.dialog = null)}>{t('Cancelar')}</button>
-            <button type="submit" class="btn primary" disabled={!name.trim()}>{d.confirm}</button>
+            <button type="button" class="btn ghost" onclick={dismissName}>{t('Cancelar')}</button>
+            <button type="submit" class="btn primary" disabled={!name.trim() && !d.allowEmpty}>{d.confirm}</button>
           </div>
         </form>
       {/if}

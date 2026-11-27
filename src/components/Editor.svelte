@@ -57,7 +57,8 @@
     clipboardImage: () => api.clipboardImage(),
     newCategory: (done) => newCategory(done),
     // O diálogo de nome do Ideario; fechar sem confirmar só deixa a pergunta sem resposta (nada é inserido).
-    askText: (o) => new Promise((resolve) => app.askName({ ...o, value: o.value ?? '', maxLength: 2048, submit: resolve })),
+    // Editando um link que já existe, vazio tira o link.
+    askText: (o) => new Promise((resolve) => app.askName({ ...o, value: o.value ?? '', maxLength: 2048, allowEmpty: !!o.value, submit: resolve, cancel: () => resolve(null) })),
     onReminderSet: () => void reminderSet(),
     afterImport: (added) => {
       // PDF e vídeo ganham prévia (primeira página, um quadro) em segundo plano.

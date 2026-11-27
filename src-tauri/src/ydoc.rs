@@ -379,7 +379,11 @@ use atrio::canon::canon;
 /// O filho `i` do Y na forma canônica (texto: a lista dos trechos).
 fn canon_child<T: ReadTxn>(child: &XmlOut, txn: &T) -> Value {
     match child {
-        XmlOut::Text(text) => Value::Array(text.diff(txn, |_| ()).iter().filter_map(text_node).collect()),
+        // na mesma forma de `canon_unit` (o link do editor traz target, rel, class e title nulos, que não contam)
+        XmlOut::Text(text) => {
+            let nodes: Vec<Value> = text.diff(txn, |_| ()).iter().filter_map(text_node).collect();
+            Value::Array(canon_texts(&nodes))
+        }
         XmlOut::Element(el) => canon_el(&element_json(el, txn)),
         XmlOut::Fragment(_) => Value::Null,
     }
@@ -776,6 +780,27 @@ mod tests {
         assert!(s.contains("Oi! Olá"), "{s}");
         assert_eq!(merged["content"][1]["content"][1]["attrs"]["checked"], json!(true));
         assert_eq!(merged["content"].as_array().unwrap().last().unwrap()["content"][0]["text"], json!("fim"));
+    }
+
+    #[test]
+    fn a_line_with_a_link_that_did_not_change_is_not_rewritten() {
+        // O editor (y-prosemirror) grava a marca do link com target, rel, class e title nulos; o MCP manda só o
+        // endereço. Editar a outra linha do mesmo parágrafo não pode regravar a linha do link (quem digita nela
+        // perderia a edição).
+        let body = |second: &str, attrs: Value| json!({"type":"doc","content":[{"type":"paragraph","content":[
+            {"type":"text","text":"Ver a "},
+            {"type":"text","text":"Apresentação","marks":[{"type":"link","attrs":attrs}]},
+            {"type":"hardBreak"},
+            {"type":"text","text":second}]}]});
+        let base = from_note(&note(body("Olá", json!({"href":"https://exemplo.com/p","target":null,"rel":null,"class":null,"title":null}))));
+        let mut n = to_note("n1", &base).unwrap();
+        n.body = body("Olá de novo", json!({"href":"https://exemplo.com/p"}));
+        let after = update(&base, &n, true).unwrap();
+        let sv = load(&base).unwrap().transact().state_vector();
+        let diff = load(&after).unwrap().transact().encode_state_as_update_v1(&sv);
+        let text = String::from_utf8_lossy(&diff);
+        assert!(text.contains("de novo"), "a edição entrou");
+        assert!(!text.contains("Apresenta"), "a linha do link não foi regravada");
     }
 
     #[test]

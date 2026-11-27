@@ -19,7 +19,11 @@ export interface NameDialog {
   confirm: string
   /** Tamanho máximo do texto (padrão 60, um nome). Endereços pedem mais. */
   maxLength?: number
+  /** Vazio vale (ex.: tirar o link da palavra). */
+  allowEmpty?: boolean
   submit: (name: string, color: string | undefined) => void
+  /** Fechou sem confirmar. */
+  cancel?: () => void
 }
 export interface ConfirmAsk {
   kind: 'confirm'

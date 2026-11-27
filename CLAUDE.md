@@ -230,6 +230,12 @@ Single-context: `GLOSSARY.md` na raiz (quando houver); as decisões são as do `
   mesmo do Nodo; antes o `Editor.svelte` montava o próprio `Dialog` do bits-ui, igual por fora). O fechar do Ideario
   já esperava o `settle` e já parava os atalhos (`app.editor`); a `CardSession`/`cardOpen()` do Atrio levaram a
   mesma regra ao Nodo.
+- **Atrio 0.27.0: varredura de defeitos do editor** (pedido do usuário; o registro completo está no CLAUDE.md do Atrio):
+  checklist, menu do bloco, fechar o card com Esc/clique fora sem perder gravação nem foto (e a nota nova), anexo que não
+  toma o lugar da seleção nem entra num item, colar, Tab/Shift+Tab, links e o Markdown de ida e volta do MCP. Aqui:
+  `ydoc.rs` (`canon_child` passa o texto pelo `canon_texts`: uma linha com link que não mudou não é recriada pelo
+  `patch_children`; teste `a_line_with_a_link_that_did_not_change_is_not_rewritten`) e o diálogo de texto
+  (`NameDialog.allowEmpty`/`cancel`): editando um link, vazio tira o link, e cancelar responde ao `askText`.
 - **Versão 0.8.1 lançada** (15/11/2026, Release `v0.8.1`, pedido do usuário: "pode fazer o release dos dois apps"): a correção abaixo.
 - **Atrio 0.26.6: o título do botão H volta a texto** (defeito achado pelo usuário): o menu de títulos ganhou "Texto",
   o ✓ segue o bloco onde a seleção começa (antes sumia ao abrir o menu) e o mesmo tamanho de novo volta a texto, sem
