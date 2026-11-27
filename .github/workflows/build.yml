@@ -45,6 +45,10 @@ jobs:
         working-directory: src-tauri
         run: cargo clippy --all-targets -- -D warnings
       - name: Testes no app nativo (WebKitGTK via WebDriver)
+        # Os testes procuram os textos em português; sem isto o app segue o sistema do runner (inglês).
+        env:
+          LANG: pt_BR.UTF-8
+          LANGUAGE: pt_BR
         run: |
           sudo apt-get install -y webkit2gtk-driver xvfb
           cargo install tauri-driver --locked
